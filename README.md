@@ -1,6 +1,6 @@
 # StandUp Event Planner
 
-Aplicação web em **PHP puro + MySQL + Bootstrap 5** para gestão de eventos de stand-up comedy.
+Aplicação web em **PHP puro + SQLite + Bootstrap 5** para gestão de eventos de stand-up comedy.
 
 ## Funcionalidades
 - Autenticação com sessões (`admin` e `comedian`)
@@ -15,13 +15,12 @@ Aplicação web em **PHP puro + MySQL + Bootstrap 5** para gestão de eventos de
    ```bash
    ./scripts/setup_db.sh
    ```
-   > Opcional: pode definir `DB_HOST`, `DB_PORT`, `DB_USER` e `DB_PASS` antes de correr o script.
-2. Ajuste credenciais em `app/config/database.php` se necessário.
-3. Inicie servidor local:
+   > Opcional: pode definir `SQLITE_PATH` para gravar a base de dados noutro local.
+2. Inicie servidor local:
    ```bash
    php -S localhost:8000
    ```
-4. Abra `http://localhost:8000/public/index.php`.
+3. Abra `http://localhost:8000/public/index.php`.
 
 ## Utilizadores de teste
 - **Admin**: `admin@standup.local` / `admin123`
