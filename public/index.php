@@ -5,10 +5,19 @@ require_once __DIR__ . '/../app/config/config.php';
 require_once __DIR__ . '/../app/config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-foreach (glob(__DIR__ . '/../app/models/*.php') as $file) {
+$modelFiles = glob(__DIR__ . '/../app/models/*.php') ?: [];
+sort($modelFiles);
+foreach ($modelFiles as $file) {
     require_once $file;
 }
-foreach (glob(__DIR__ . '/../app/controllers/*.php') as $file) {
+
+require_once __DIR__ . '/../app/controllers/BaseController.php';
+$controllerFiles = glob(__DIR__ . '/../app/controllers/*.php') ?: [];
+sort($controllerFiles);
+foreach ($controllerFiles as $file) {
+    if (basename($file) === 'BaseController.php') {
+        continue;
+    }
     require_once $file;
 }
 
