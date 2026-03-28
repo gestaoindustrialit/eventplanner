@@ -13,8 +13,9 @@ Aplicação web em **PHP puro + MySQL + Bootstrap 5** para gestão de eventos de
 ## Instalação rápida
 1. Crie a base de dados e dados iniciais:
    ```bash
-   mysql -u root -p < database/schema.sql
+   ./scripts/setup_db.sh
    ```
+   > Opcional: pode definir `DB_HOST`, `DB_PORT`, `DB_USER` e `DB_PASS` antes de correr o script.
 2. Ajuste credenciais em `app/config/database.php` se necessário.
 3. Inicie servidor local:
    ```bash
