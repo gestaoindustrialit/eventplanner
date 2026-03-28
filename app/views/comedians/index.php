@@ -1,0 +1,25 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Comediantes</h2>
+    <a class="btn btn-dark" href="<?= BASE_URL ?>?controller=comedian&action=create">Novo Comediante</a>
+</div>
+<input type="text" class="form-control mb-3 table-search" placeholder="Pesquisar comediante...">
+<div class="table-responsive">
+    <table class="table table-hover searchable-table">
+        <thead><tr><th>Nome</th><th>Nome artístico</th><th>Email</th><th>Phone</th><th>User Login</th><th>Ações</th></tr></thead>
+        <tbody>
+        <?php foreach ($comedians as $c): ?>
+            <tr>
+                <td><?= htmlspecialchars($c['name']) ?></td>
+                <td><?= htmlspecialchars($c['stage_name']) ?></td>
+                <td><?= htmlspecialchars($c['email']) ?></td>
+                <td><?= htmlspecialchars($c['phone']) ?></td>
+                <td><?= htmlspecialchars($c['user_name'] ?? '-') ?></td>
+                <td>
+                    <a class="btn btn-sm btn-outline-secondary" href="<?= BASE_URL ?>?controller=comedian&action=edit&id=<?= $c['id'] ?>">Editar</a>
+                    <a class="btn btn-sm btn-outline-danger delete-btn" href="<?= BASE_URL ?>?controller=comedian&action=delete&id=<?= $c['id'] ?>">Eliminar</a>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
