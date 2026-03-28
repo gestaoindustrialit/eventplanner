@@ -37,7 +37,7 @@ class Event
 
     public function lineup(int $eventId): array
     {
-        $stmt = $this->db->prepare('SELECT ec.*, cm.name, cm.stage_name FROM event_comedians ec JOIN comedians cm ON cm.id = ec.comedian_id WHERE ec.event_id=:event_id ORDER BY FIELD(ec.role, "host", "opener", "headliner"), cm.name');
+        $stmt = $this->db->prepare("SELECT ec.*, cm.name, cm.stage_name FROM event_comedians ec JOIN comedians cm ON cm.id = ec.comedian_id WHERE ec.event_id=:event_id ORDER BY CASE ec.role WHEN 'host' THEN 1 WHEN 'opener' THEN 2 WHEN 'headliner' THEN 3 ELSE 4 END, cm.name");
         $stmt->execute(['event_id' => $eventId]);
         return $stmt->fetchAll();
     }
@@ -74,7 +74,7 @@ class Event
 
     public function upcomingCount(): int
     {
-        $stmt = $this->db->query('SELECT COUNT(*) AS total FROM events WHERE date >= CURDATE()');
+        $stmt = $this->db->query("SELECT COUNT(*) AS total FROM events WHERE date >= date('now')");
         return (int)$stmt->fetch()['total'];
     }
 
