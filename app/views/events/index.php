@@ -1,11 +1,17 @@
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Eventos</h2>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h2 class="mb-1">Eventos</h2>
+        <p class="text-muted mb-0">Gestão de agenda e operações de cada espetáculo.</p>
+    </div>
     <div class="d-flex gap-2">
         <a class="btn btn-outline-dark" href="<?= BASE_URL ?>?controller=event&action=openSchedule">Alinhamentos</a>
         <a class="btn btn-dark" href="<?= BASE_URL ?>?controller=event&action=create">Novo Evento</a>
     </div>
 </div>
-<input type="text" class="form-control mb-3 table-search" placeholder="Pesquisar evento...">
+<div class="input-group mb-3">
+    <span class="input-group-text bg-white">🔎</span>
+    <input type="text" class="form-control table-search" placeholder="Pesquisar evento por título, local ou cliente...">
+</div>
 <div class="table-responsive">
     <table class="table table-striped searchable-table">
         <thead><tr><th>Título</th><th>Data</th><th>Local</th><th>Cliente</th><th>Cachet</th><th>Ações</th></tr></thead>

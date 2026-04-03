@@ -1,7 +1,103 @@
-body { background: #f5f5f5; color: #222; }
-.sidebar { width: 250px; min-height: 100vh; position: sticky; top: 0; }
-.content { min-height: 100vh; }
-.nav-link { border-radius: .35rem; }
-.nav-link:hover { background: rgba(255,255,255,.1); }
-.card { border: 1px solid #ddd; }
-.badge { text-transform: capitalize; }
+:root {
+    --brand-dark: #111827;
+    --brand-darker: #0b1220;
+    --brand-accent: #0d6efd;
+    --surface: #f2f5fb;
+}
+
+body {
+    background: linear-gradient(145deg, #eff3fb 0%, #f8faff 55%, #f0f4fa 100%);
+    color: #1f2937;
+}
+
+.app-shell {
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 280px;
+    min-height: 100vh;
+    position: sticky;
+    top: 0;
+    background: linear-gradient(180deg, var(--brand-dark) 0%, var(--brand-darker) 100%);
+    box-shadow: 8px 0 30px rgba(2, 6, 23, 0.2);
+}
+
+.sidebar-user {
+    padding: .75rem;
+    border-radius: .85rem;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(3px);
+}
+
+.content {
+    min-height: 100vh;
+}
+
+.content-body {
+    width: 100%;
+    max-width: 100%;
+}
+
+.topbar {
+    background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+    color: #fff;
+    z-index: 1020;
+}
+
+.nav-link {
+    border-radius: .6rem;
+    padding: .55rem .8rem;
+    transition: all .2s ease;
+}
+
+.nav-link:hover {
+    background: rgba(255, 255, 255, .14);
+    transform: translateX(2px);
+}
+
+.nav-link-logout:hover {
+    background: rgba(255, 193, 7, .2);
+}
+
+.card {
+    border: 1px solid #e6eaf1;
+    border-radius: 1rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-striped-bg: #f8faff;
+}
+
+.table > :not(caption) > * > * {
+    padding: .8rem .75rem;
+}
+
+.table-responsive {
+    background: #fff;
+    border: 1px solid #e6eaf1;
+    border-radius: .9rem;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+}
+
+.form-control,
+.form-select {
+    border-radius: .75rem;
+    border-color: #dbe3ef;
+}
+
+.btn {
+    border-radius: .7rem;
+}
+
+.badge {
+    text-transform: capitalize;
+}
+
+@media (max-width: 991px) {
+    .content-body {
+        padding-top: 1rem !important;
+    }
+}
