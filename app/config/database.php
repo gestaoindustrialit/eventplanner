@@ -18,6 +18,11 @@ class Database
 
     public function getConnection(): PDO
     {
+        $dbDir = dirname($this->sqlitePath);
+        if (!is_dir($dbDir) && !mkdir($dbDir, 0775, true) && !is_dir($dbDir)) {
+            throw new RuntimeException('Não foi possível criar a pasta da base de dados: ' . $dbDir);
+        }
+
         $dsn = "sqlite:{$this->sqlitePath}";
 
         $db = new PDO($dsn, null, null, [
