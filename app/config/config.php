@@ -8,7 +8,8 @@ date_default_timezone_set(DEFAULT_TIMEZONE);
 $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
 $scriptDir = str_replace('\\', '/', dirname($scriptName));
 $normalizedDir = $scriptDir === '.' ? '' : rtrim($scriptDir, '/');
-if (str_ends_with($normalizedDir, '/public')) {
+$endsWithPublic = substr($normalizedDir, -7) === '/public';
+if ($endsWithPublic) {
     $normalizedDir = substr($normalizedDir, 0, -7);
 }
 
