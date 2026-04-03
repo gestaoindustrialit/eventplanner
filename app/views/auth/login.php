@@ -1,7 +1,8 @@
-<div class="container py-5" style="max-width:420px;">
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <h3 class="mb-3 text-center">Login</h3>
+<div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center py-4">
+    <div class="card shadow-sm w-100" style="max-width:420px;">
+        <div class="card-body p-4">
+            <h3 class="mb-1 text-center">Login</h3>
+            <p class="text-muted text-center mb-4">Acede ao EventPlanner para gerir eventos e equipas.</p>
             <form method="post" action="<?= BASE_URL ?>?controller=auth&action=authenticate">
                 <div class="mb-3">
                     <label class="form-label">Email</label>
