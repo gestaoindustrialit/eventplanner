@@ -15,5 +15,10 @@ if ($endsWithPublic) {
 
 $computedBasePath = $normalizedDir . '/index.php';
 define('BASE_URL', getenv('BASE_URL') ?: $computedBasePath);
+$basePath = str_replace('\\', '/', dirname(BASE_URL));
+if ($basePath === '/' || $basePath === '.') {
+    $basePath = '';
+}
+define('BASE_PATH', $basePath);
 
 define('PUBLIC_SITE_DEFAULT_PATH', getenv('PUBLIC_SITE_PATH') ?: dirname(__DIR__, 3) . '/chorarderir.com');

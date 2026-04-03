@@ -8,6 +8,7 @@ class PublicPage
     public function __construct(PDO $db)
     {
         $this->db = $db;
+        $this->ensureTable();
     }
 
     public function all(): array
@@ -63,5 +64,22 @@ class PublicPage
     {
         $stmt = $this->db->prepare('DELETE FROM public_pages WHERE id = :id');
         $stmt->execute(['id' => $id]);
+    }
+
+    private function ensureTable(): void
+    {
+        $this->db->exec(
+            'CREATE TABLE IF NOT EXISTS public_pages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                slug TEXT NOT NULL UNIQUE,
+                excerpt TEXT DEFAULT NULL,
+                content TEXT DEFAULT NULL,
+                hero_image_url TEXT DEFAULT NULL,
+                is_published INTEGER NOT NULL DEFAULT 1,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
     }
 }
