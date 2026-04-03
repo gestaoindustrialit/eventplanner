@@ -67,7 +67,7 @@ if ($activePage === null && count($pages) > 0 && $pageSlug !== 'home') {
     $activePage = $pages[0];
 }
 
-$siteTitle = 'Chora de Rir';
+$siteTitle = 'Chorar de Rir';
 
 function safe_content(?string $html): string {
     return strip_tags((string)$html, '<h1><h2><h3><h4><p><ul><ol><li><strong><em><a><blockquote><br><hr>');
@@ -105,6 +105,7 @@ function safe_content(?string $html): string {
       height: 38px;
       width: auto;
       display: block;
+      filter: brightness(0) invert(1);
     }
     .nav-link { color: #e8edf7; }
     .nav-link.active, .nav-link:hover { color: var(--brand-accent) !important; }
@@ -145,7 +146,7 @@ function safe_content(?string $html): string {
   <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container">
       <a class="navbar-brand" href="index.php">
-        <img src="chorarderir-logo.svg" alt="Chora de Rir">
+        <img src="chorarderir-logo.svg" alt="Chorar de Rir">
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPublico">
         <span class="navbar-toggler-icon"></span>
@@ -233,7 +234,7 @@ function safe_content(?string $html): string {
 
   <footer class="py-4 mt-5">
     <div class="container d-flex justify-content-between">
-      <span>© <?php echo date('Y'); ?> Chora de Rir</span>
+      <span>© <?php echo date('Y'); ?> Chorar de Rir</span>
       <span>Produção & Booking</span>
     </div>
   </footer>

@@ -28,7 +28,7 @@
         </div>
         <div class="col-md-3 d-flex align-items-end">
             <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="is_published" id="is_published" <?= isset($page['is_published']) && (int)$page['is_published'] === 1 ? 'checked' : '' ?>>
+                <input class="form-check-input" type="checkbox" name="is_published" id="is_published" <?= (!$page || (int)($page['is_published'] ?? 0) === 1) ? 'checked' : '' ?>>
                 <label class="form-check-label" for="is_published">Publicado</label>
             </div>
         </div>
