@@ -6,7 +6,8 @@ class PublicSiteController extends BaseController
     {
         requireAdmin();
         $defaultPath = PUBLIC_SITE_DEFAULT_PATH;
-        $this->render('public_site/index', compact('defaultPath'));
+        $pages = (new PublicPage($this->db))->all();
+        $this->render('public_site/index', compact('defaultPath', 'pages'));
     }
 
     public function publish(): void
@@ -26,77 +27,168 @@ class PublicSiteController extends BaseController
 
         $eventModel = new Event($this->db);
         $events = $eventModel->openEvents();
+        $pages = (new PublicPage($this->db))->allPublished();
 
         $dbPath = (new Database())->getSqlitePath();
 
-        file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($events));
+        file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($events, $pages));
         file_put_contents($targetPath . '/reserve.php', $this->buildReserveHandler($dbPath));
 
         flash('success', 'Site público publicado em: ' . $targetPath);
         $this->redirect(BASE_URL . '?controller=publicsite&action=index');
     }
 
-    private function buildPublicIndex(array $events): string
+    private function buildPublicIndex(array $events, array $pages): string
     {
         $eventsJson = json_encode($events, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $pagesJson = json_encode($pages, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         $template = <<<'PHP'
 <?php
 $events = json_decode('__EVENTS_JSON__', true) ?: [];
+$pages = json_decode('__PAGES_JSON__', true) ?: [];
 $msg = $_GET['msg'] ?? '';
+$pageSlug = trim((string)($_GET['page'] ?? 'home'));
+$activePage = null;
+
+foreach ($pages as $item) {
+    if (($item['slug'] ?? '') === $pageSlug) {
+        $activePage = $item;
+        break;
+    }
+}
+
+if ($activePage === null && count($pages) > 0 && $pageSlug !== 'home') {
+    $activePage = $pages[0];
+}
+
+$siteTitle = 'Casa de Artistas';
+
+function safe_content(?string $html): string {
+    return strip_tags((string)$html, '<h1><h2><h3><h4><p><ul><ol><li><strong><em><a><blockquote><br><hr>');
+}
 ?>
 <!doctype html>
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chora de Rir - Próximos Eventos</title>
+  <title><?php echo htmlspecialchars($siteTitle); ?></title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background:#0f1115; color:#f8f9fa; }
+    .navbar { background:#141922; }
+    .navbar-brand { font-weight:700; letter-spacing:.6px; }
+    .hero { background:linear-gradient(120deg,rgba(0,0,0,.75),rgba(15,17,21,.65)), url('https://images.unsplash.com/photo-1527224538127-2104bb71c51b?auto=format&fit=crop&w=1600&q=80') center/cover; padding:100px 0; }
+    .hero-card, .event-card, .content-card { background:#1a1f29; border:1px solid #2a3342; border-radius:14px; }
+    .event-card input, .event-card textarea { background:#11151d; border-color:#2f3745; color:#f8f9fa; }
+    .event-card input::placeholder, .event-card textarea::placeholder { color:#9ba3b2; }
+    .section-title { font-weight:700; letter-spacing:.4px; }
+    footer { border-top:1px solid #29303d; color:#adb5bd; }
+    .page-cover { min-height:300px; border-radius:14px; background-size:cover; background-position:center; }
+  </style>
 </head>
-<body class="bg-light">
-  <div class="container py-4">
-    <h1 class="mb-3">🎭 Chora de Rir</h1>
-    <p class="text-muted">Reserva já o teu lugar nos próximos eventos.</p>
-
-    <?php if ($msg === 'ok'): ?>
-      <div class="alert alert-success">Reserva enviada com sucesso! Vamos confirmar por email/telefone.</div>
-    <?php elseif ($msg === 'error'): ?>
-      <div class="alert alert-danger">Não foi possível registar a reserva. Tenta novamente.</div>
-    <?php endif; ?>
-
-    <div class="row g-4">
-      <?php foreach ($events as $event): ?>
-        <div class="col-lg-6">
-          <div class="card h-100 shadow-sm">
-            <div class="card-body">
-              <h4 class="card-title"><?php echo htmlspecialchars($event['title']); ?></h4>
-              <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
-              <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
-
-              <form method="post" action="reserve.php" class="row g-2">
-                <input type="hidden" name="event_id" value="<?php echo (int)$event['id']; ?>">
-                <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
-                <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
-                <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
-                <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
-                <div class="col-md-6"><button class="btn btn-primary w-100">Reservar</button></div>
-                <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
-              </form>
-            </div>
-          </div>
-        </div>
-      <?php endforeach; ?>
-
-      <?php if (count($events) === 0): ?>
-        <p class="text-muted">Ainda não existem eventos abertos para reserva.</p>
-      <?php endif; ?>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+    <div class="container">
+      <a class="navbar-brand" href="index.php">CASA DE ARTISTAS</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPublico">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="menuPublico">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link <?php echo $pageSlug === 'home' ? 'active' : ''; ?>" href="index.php">Início</a></li>
+          <?php foreach ($pages as $menuPage): ?>
+            <li class="nav-item"><a class="nav-link <?php echo $pageSlug === ($menuPage['slug'] ?? '') ? 'active' : ''; ?>" href="index.php?page=<?php echo urlencode((string)$menuPage['slug']); ?>"><?php echo htmlspecialchars((string)$menuPage['title']); ?></a></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
     </div>
-  </div>
+  </nav>
+
+  <?php if ($pageSlug === 'home'): ?>
+    <section class="hero">
+      <div class="container">
+        <div class="hero-card p-4 p-lg-5">
+          <h1 class="display-5 fw-bold mb-3">Produção de shows, artistas e experiências ao vivo.</h1>
+          <p class="lead text-light">Uma presença pública mais moderna, inspirada em agências artísticas: destaque para eventos e reservas online.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-5">
+      <div class="container">
+        <h2 class="section-title mb-4">Próximos eventos</h2>
+
+        <?php if ($msg === 'ok'): ?>
+          <div class="alert alert-success">Reserva enviada com sucesso! Vamos confirmar por email/telefone.</div>
+        <?php elseif ($msg === 'error'): ?>
+          <div class="alert alert-danger">Não foi possível registar a reserva. Tenta novamente.</div>
+        <?php endif; ?>
+
+        <div class="row g-4">
+          <?php foreach ($events as $event): ?>
+            <div class="col-lg-6">
+              <div class="event-card p-4 h-100">
+                <h4><?php echo htmlspecialchars($event['title']); ?></h4>
+                <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
+                <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
+
+                <form method="post" action="reserve.php" class="row g-2">
+                  <input type="hidden" name="event_id" value="<?php echo (int)$event['id']; ?>">
+                  <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
+                  <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
+                  <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
+                  <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
+                  <div class="col-md-6"><button class="btn btn-warning w-100 fw-bold">Reservar</button></div>
+                  <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
+                </form>
+              </div>
+            </div>
+          <?php endforeach; ?>
+
+          <?php if (count($events) === 0): ?>
+            <p class="text-light-emphasis">Ainda não existem eventos abertos para reserva.</p>
+          <?php endif; ?>
+        </div>
+      </div>
+    </section>
+  <?php else: ?>
+    <section class="py-5">
+      <div class="container">
+        <?php if ($activePage): ?>
+          <?php if (!empty($activePage['hero_image_url'])): ?>
+            <div class="page-cover mb-4" style="background-image:url('<?php echo htmlspecialchars((string)$activePage['hero_image_url']); ?>');"></div>
+          <?php endif; ?>
+
+          <div class="content-card p-4 p-lg-5">
+            <h1 class="mb-3"><?php echo htmlspecialchars((string)$activePage['title']); ?></h1>
+            <?php if (!empty($activePage['excerpt'])): ?>
+              <p class="lead text-light-emphasis"><?php echo htmlspecialchars((string)$activePage['excerpt']); ?></p>
+            <?php endif; ?>
+            <div><?php echo safe_content($activePage['content'] ?? ''); ?></div>
+          </div>
+        <?php else: ?>
+          <div class="alert alert-warning">Página não encontrada.</div>
+        <?php endif; ?>
+      </div>
+    </section>
+  <?php endif; ?>
+
+  <footer class="py-4 mt-5">
+    <div class="container d-flex justify-content-between">
+      <span>© <?php echo date('Y'); ?> Casa de Artistas</span>
+      <span>Produção & Booking</span>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
 PHP;
 
-        return str_replace('__EVENTS_JSON__', addslashes((string)$eventsJson), $template);
+        $template = str_replace('__EVENTS_JSON__', addslashes((string)$eventsJson), $template);
+        return str_replace('__PAGES_JSON__', addslashes((string)$pagesJson), $template);
     }
 
     private function buildReserveHandler(string $dbPath): string
@@ -137,4 +229,3 @@ PHP;
         return str_replace('__DB_PATH__', addslashes($dbPath), $template);
     }
 }
-
