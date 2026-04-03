@@ -1,6 +1,7 @@
 PRAGMA foreign_keys = OFF;
 
 DROP TABLE IF EXISTS event_comedians;
+DROP TABLE IF EXISTS event_schedule_items;
 DROP TABLE IF EXISTS events;
 DROP TABLE IF EXISTS comedians;
 DROP TABLE IF EXISTS clients;
@@ -64,6 +65,20 @@ CREATE TABLE event_comedians (
   FOREIGN KEY (comedian_id) REFERENCES comedians(id) ON DELETE CASCADE
 );
 
+CREATE TABLE event_schedule_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL,
+  starts_at TEXT NOT NULL,
+  duration_minutes INTEGER NOT NULL DEFAULT 15,
+  item_type TEXT NOT NULL DEFAULT 'artist' CHECK (item_type IN ('artist', 'break', 'technical', 'doors', 'other')),
+  title TEXT NOT NULL,
+  responsible TEXT DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
 INSERT INTO users (name, email, password, role) VALUES
 ('Admin', 'admin@standup.local', '$2y$12$sfHHEGGOErVolRpcZ83vDe/JN3e4dQ6I7MQe1x2VV40K50K.bmf.e', 'admin'),
 ('Ana Ribeiro', 'ana@standup.local', '$2y$12$jKmXi3xg8.OTAFanG3O5R.6Ow6KWyoBS0oq/UxQ0sMA4fuPGXYTty', 'comedian'),
@@ -86,5 +101,12 @@ INSERT INTO event_comedians (event_id, comedian_id, role, cachet, notes) VALUES
 (1, 2, 'headliner', 350.00, 'Set principal de 40 minutos.'),
 (2, 1, 'opener', 250.00, 'Abertura de 20 minutos.'),
 (2, 2, 'headliner', 450.00, 'Headliner com 50 minutos.');
+
+INSERT INTO event_schedule_items (event_id, starts_at, duration_minutes, item_type, title, responsible, notes, sort_order) VALUES
+(1, '20:30', 30, 'doors', 'Abertura de portas', 'Produção', 'Check-in de convidados e confirmação técnica.', 1),
+(1, '21:00', 15, 'artist', 'Boas-vindas e aquecimento', 'Ana Riso', 'Introdução ao formato da noite.', 2),
+(1, '21:15', 40, 'artist', 'Set principal', 'Bruno Punch', 'Material principal + crowd work.', 3),
+(1, '21:55', 10, 'break', 'Pausa técnica', 'Técnico de som', 'Ajuste de microfones e luz.', 4),
+(1, '22:05', 20, 'artist', 'Encerramento e fotos', 'Ana Riso', 'Agradecimentos e conteúdo para redes.', 5);
 
 PRAGMA foreign_keys = ON;

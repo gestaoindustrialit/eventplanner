@@ -21,6 +21,7 @@
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=comedian&action=index">Comediantes</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=client&action=index">Clientes</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=index">Eventos</a>
+                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=openSchedule">Alinhamentos</a>
                 <?php else: ?>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=comedianarea&action=index">Os meus eventos</a>
                 <?php endif; ?>

@@ -28,6 +28,12 @@ class Event
         return $stmt->fetchAll();
     }
 
+    public function openEvents(): array
+    {
+        $stmt = $this->db->query("SELECT e.*, c.name as client_name FROM events e LEFT JOIN clients c ON c.id = e.client_id WHERE e.date >= date('now') ORDER BY e.date ASC, e.time ASC");
+        return $stmt->fetchAll();
+    }
+
     public function find(int $id): ?array
     {
         $stmt = $this->db->prepare('SELECT e.*, c.name as client_name, c.contact_person, c.phone as client_phone, c.email as client_email, c.address as client_address FROM events e LEFT JOIN clients c ON c.id=e.client_id WHERE e.id=:id');
@@ -40,6 +46,39 @@ class Event
         $stmt = $this->db->prepare("SELECT ec.*, cm.name, cm.stage_name FROM event_comedians ec JOIN comedians cm ON cm.id = ec.comedian_id WHERE ec.event_id=:event_id ORDER BY CASE ec.role WHEN 'host' THEN 1 WHEN 'opener' THEN 2 WHEN 'headliner' THEN 3 ELSE 4 END, cm.name");
         $stmt->execute(['event_id' => $eventId]);
         return $stmt->fetchAll();
+    }
+
+    public function scheduleItems(int $eventId): array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM event_schedule_items WHERE event_id = :event_id ORDER BY sort_order ASC, starts_at ASC, id ASC');
+        $stmt->execute(['event_id' => $eventId]);
+        return $stmt->fetchAll();
+    }
+
+    public function saveScheduleItems(int $eventId, array $items): void
+    {
+        $allowedTypes = ['artist', 'break', 'technical', 'doors', 'other'];
+        $delete = $this->db->prepare('DELETE FROM event_schedule_items WHERE event_id = :event_id');
+        $delete->execute(['event_id' => $eventId]);
+
+        $stmt = $this->db->prepare('INSERT INTO event_schedule_items (event_id, starts_at, duration_minutes, item_type, title, responsible, notes, sort_order) VALUES (:event_id, :starts_at, :duration_minutes, :item_type, :title, :responsible, :notes, :sort_order)');
+
+        foreach ($items as $index => $item) {
+            if (empty($item['title']) || empty($item['starts_at'])) {
+                continue;
+            }
+
+            $stmt->execute([
+                'event_id' => $eventId,
+                'starts_at' => $item['starts_at'],
+                'duration_minutes' => max(1, (int)($item['duration_minutes'] ?? 15)),
+                'item_type' => in_array($item['item_type'] ?? '', $allowedTypes, true) ? $item['item_type'] : 'other',
+                'title' => $item['title'],
+                'responsible' => $item['responsible'] ?: null,
+                'notes' => $item['notes'] ?: null,
+                'sort_order' => $index + 1,
+            ]);
+        }
     }
 
     public function create(array $data, array $lineup): int

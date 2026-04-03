@@ -1,4 +1,10 @@
 <h2 class="mb-3"><?= htmlspecialchars($event['title']) ?></h2>
+<?php if (isAdmin()): ?>
+    <div class="mb-3 d-flex gap-2">
+        <a class="btn btn-sm btn-outline-dark" href="<?= BASE_URL ?>?controller=event&action=schedule&id=<?= (int)$event['id'] ?>">Gerir alinhamento</a>
+        <a class="btn btn-sm btn-dark" target="_blank" href="<?= BASE_URL ?>?controller=event&action=schedulePdf&id=<?= (int)$event['id'] ?>">Exportar PDF</a>
+    </div>
+<?php endif; ?>
 <div class="card mb-3"><div class="card-body">
     <p><strong>Data:</strong> <?= htmlspecialchars($event['date']) ?> <?= htmlspecialchars(substr($event['time'], 0, 5)) ?></p>
     <p><strong>Local:</strong> <?= htmlspecialchars($event['location']) ?></p>

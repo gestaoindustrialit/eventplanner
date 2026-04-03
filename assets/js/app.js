@@ -36,3 +36,22 @@ if (addRowBtn && lineupTemplate && lineupWrapper) {
     }
   });
 }
+
+const addScheduleRowBtn = document.getElementById('add-schedule-row');
+const scheduleTemplate = document.getElementById('schedule-template');
+const scheduleWrapper = document.getElementById('schedule-wrapper');
+
+if (addScheduleRowBtn && scheduleTemplate && scheduleWrapper) {
+  addScheduleRowBtn.addEventListener('click', () => {
+    scheduleWrapper.insertAdjacentHTML('beforeend', scheduleTemplate.innerHTML);
+  });
+
+  scheduleWrapper.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-schedule-row')) {
+      const rows = scheduleWrapper.querySelectorAll('.schedule-row');
+      if (rows.length > 1) {
+        e.target.closest('.schedule-row').remove();
+      }
+    }
+  });
+}

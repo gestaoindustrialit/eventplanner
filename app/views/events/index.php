@@ -1,6 +1,9 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Eventos</h2>
-    <a class="btn btn-dark" href="<?= BASE_URL ?>?controller=event&action=create">Novo Evento</a>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-dark" href="<?= BASE_URL ?>?controller=event&action=openSchedule">Alinhamentos</a>
+        <a class="btn btn-dark" href="<?= BASE_URL ?>?controller=event&action=create">Novo Evento</a>
+    </div>
 </div>
 <input type="text" class="form-control mb-3 table-search" placeholder="Pesquisar evento...">
 <div class="table-responsive">
