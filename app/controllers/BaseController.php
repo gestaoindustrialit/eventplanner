@@ -2,7 +2,8 @@
 
 abstract class BaseController
 {
-    protected PDO $db;
+    /** @var PDO */
+    protected $db;
 
     public function __construct(PDO $db)
     {
