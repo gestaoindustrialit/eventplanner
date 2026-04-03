@@ -13,18 +13,33 @@ class ComedianController extends BaseController
     public function create(): void
     {
         requireAdmin();
-        $userModel = new User($this->db);
-        $users = $userModel->allComedianUsers();
-        $this->render('comedians/form', ['comedian' => null, 'users' => $users]);
+        $this->render('comedians/form', ['comedian' => null, 'user' => null]);
     }
 
     public function store(): void
     {
         requireAdmin();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '?controller=comedian&action=create');
+        }
+
         $data = $this->validatedData();
-        $comedianModel = new Comedian($this->db);
-        $comedianModel->create($data);
-        flash('success', 'Comediante criado com sucesso.');
+        $userData = $this->validatedUserData();
+
+        try {
+            $this->db->beginTransaction();
+            $data['user_id'] = $this->syncUserAccess(null, $userData);
+            (new Comedian($this->db))->create($data);
+            $this->db->commit();
+            flash('success', 'Comediante criado com sucesso.');
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            flash('error', 'Não foi possível criar o comediante: ' . $e->getMessage());
+            $this->redirect(BASE_URL . '?controller=comedian&action=create');
+        }
+
         $this->redirect(BASE_URL . '?controller=comedian&action=index');
     }
 
@@ -34,17 +49,46 @@ class ComedianController extends BaseController
         $id = (int)($_GET['id'] ?? 0);
         $comedianModel = new Comedian($this->db);
         $comedian = $comedianModel->find($id);
-        $users = (new User($this->db))->allComedianUsers();
-        $this->render('comedians/form', compact('comedian', 'users'));
+        $user = null;
+        if ($comedian && !empty($comedian['user_id'])) {
+            $user = (new User($this->db))->find((int)$comedian['user_id']);
+        }
+        $this->render('comedians/form', compact('comedian', 'user'));
     }
 
     public function update(): void
     {
         requireAdmin();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $id = (int)($_GET['id'] ?? 0);
+            $this->redirect(BASE_URL . '?controller=comedian&action=edit&id=' . $id);
+        }
+
         $id = (int)($_GET['id'] ?? 0);
+        $comedianModel = new Comedian($this->db);
+        $existing = $comedianModel->find($id);
+        if (!$existing) {
+            flash('error', 'Comediante não encontrado.');
+            $this->redirect(BASE_URL . '?controller=comedian&action=index');
+        }
+
         $data = $this->validatedData();
-        (new Comedian($this->db))->update($id, $data);
-        flash('success', 'Comediante atualizado.');
+        $userData = $this->validatedUserData();
+
+        try {
+            $this->db->beginTransaction();
+            $data['user_id'] = $this->syncUserAccess($existing, $userData);
+            $comedianModel->update($id, $data);
+            $this->db->commit();
+            flash('success', 'Comediante atualizado.');
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            flash('error', 'Não foi possível atualizar o comediante: ' . $e->getMessage());
+            $this->redirect(BASE_URL . '?controller=comedian&action=edit&id=' . $id);
+        }
+
         $this->redirect(BASE_URL . '?controller=comedian&action=index');
     }
 
@@ -68,7 +112,41 @@ class ComedianController extends BaseController
             'price_bar' => (float)($_POST['price_bar'] ?? 0),
             'price_auditorium' => (float)($_POST['price_auditorium'] ?? 0),
             'notes' => trim($_POST['notes'] ?? ''),
-            'user_id' => !empty($_POST['user_id']) ? (int)$_POST['user_id'] : null,
+            'user_id' => null,
         ];
+    }
+
+    private function validatedUserData(): array
+    {
+        return [
+            'enabled' => !empty($_POST['user_enabled']),
+            'name' => trim($_POST['user_name'] ?? ''),
+            'email' => trim($_POST['user_email'] ?? ''),
+            'password' => (string)($_POST['user_password'] ?? ''),
+        ];
+    }
+
+    private function syncUserAccess(?array $existingComedian, array $userData): ?int
+    {
+        $currentUserId = !empty($existingComedian['user_id']) ? (int)$existingComedian['user_id'] : null;
+        if (!$userData['enabled']) {
+            return null;
+        }
+
+        if ($userData['name'] === '' || $userData['email'] === '') {
+            throw new RuntimeException('Preencha nome e email para ativar o acesso ao site.');
+        }
+
+        $userModel = new User($this->db);
+        if ($currentUserId) {
+            $userModel->updateComedian($currentUserId, $userData);
+            return $currentUserId;
+        }
+
+        if ($userData['password'] === '') {
+            throw new RuntimeException('Defina uma palavra-passe para criar o acesso ao site.');
+        }
+
+        return $userModel->createComedian($userData);
     }
 }
