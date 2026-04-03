@@ -60,6 +60,62 @@ class EventController extends BaseController
         $this->render('events/show', compact('event', 'lineup'));
     }
 
+    public function openSchedule(): void
+    {
+        requireAdmin();
+        $events = (new Event($this->db))->openEvents();
+        $this->render('events/open_schedule', compact('events'));
+    }
+
+    public function schedule(): void
+    {
+        requireAdmin();
+        $id = (int)($_GET['id'] ?? 0);
+        $eventModel = new Event($this->db);
+        $event = $eventModel->find($id);
+        $scheduleItems = $eventModel->scheduleItems($id);
+
+        if (!$event) {
+            flash('error', 'Evento não encontrado.');
+            $this->redirect(BASE_URL . '?controller=event&action=openSchedule');
+        }
+
+        $this->render('events/schedule', compact('event', 'scheduleItems'));
+    }
+
+    public function saveSchedule(): void
+    {
+        requireAdmin();
+        $id = (int)($_GET['id'] ?? 0);
+        $eventModel = new Event($this->db);
+
+        if (!$eventModel->find($id)) {
+            flash('error', 'Evento não encontrado.');
+            $this->redirect(BASE_URL . '?controller=event&action=openSchedule');
+        }
+
+        $eventModel->saveScheduleItems($id, $this->scheduleData());
+        flash('success', 'Alinhamento guardado com sucesso.');
+        $this->redirect(BASE_URL . '?controller=event&action=schedule&id=' . $id);
+    }
+
+    public function schedulePdf(): void
+    {
+        requireLogin();
+        $id = (int)($_GET['id'] ?? 0);
+        $eventModel = new Event($this->db);
+        $event = $eventModel->find($id);
+        $scheduleItems = $eventModel->scheduleItems($id);
+
+        if (!$event) {
+            http_response_code(404);
+            echo 'Evento não encontrado.';
+            exit;
+        }
+
+        include __DIR__ . '/../views/events/schedule_pdf.php';
+    }
+
     public function delete(): void
     {
         requireAdmin();
@@ -100,5 +156,29 @@ class EventController extends BaseController
         }
 
         return $lineup;
+    }
+
+    private function scheduleData(): array
+    {
+        $startsAt = $_POST['schedule_starts_at'] ?? [];
+        $durations = $_POST['schedule_duration'] ?? [];
+        $types = $_POST['schedule_type'] ?? [];
+        $titles = $_POST['schedule_title'] ?? [];
+        $responsibles = $_POST['schedule_responsible'] ?? [];
+        $notes = $_POST['schedule_notes'] ?? [];
+
+        $schedule = [];
+        foreach ($titles as $i => $title) {
+            $schedule[] = [
+                'starts_at' => $startsAt[$i] ?? '',
+                'duration_minutes' => $durations[$i] ?? 15,
+                'item_type' => $types[$i] ?? 'other',
+                'title' => trim((string)$title),
+                'responsible' => trim((string)($responsibles[$i] ?? '')),
+                'notes' => trim((string)($notes[$i] ?? '')),
+            ];
+        }
+
+        return $schedule;
     }
 }
