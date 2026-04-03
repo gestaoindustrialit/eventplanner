@@ -2,7 +2,8 @@
 
 class Database
 {
-    private string $sqlitePath;
+    /** @var string */
+    private $sqlitePath;
 
     public function __construct()
     {
@@ -11,12 +12,12 @@ class Database
     }
 
 
-    public function getSqlitePath(): string
+    public function getSqlitePath()
     {
         return $this->sqlitePath;
     }
 
-    public function getConnection(): PDO
+    public function getConnection()
     {
         $dbDir = dirname($this->sqlitePath);
         if (!is_dir($dbDir) && !mkdir($dbDir, 0775, true) && !is_dir($dbDir)) {
