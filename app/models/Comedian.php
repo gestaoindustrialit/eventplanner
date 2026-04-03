@@ -32,14 +32,14 @@ class Comedian
 
     public function create(array $data): bool
     {
-        $stmt = $this->db->prepare('INSERT INTO comedians (name, stage_name, email, phone, instagram, notes, user_id) VALUES (:name, :stage_name, :email, :phone, :instagram, :notes, :user_id)');
+        $stmt = $this->db->prepare('INSERT INTO comedians (name, stage_name, email, phone, instagram, price_bar, price_auditorium, notes, user_id) VALUES (:name, :stage_name, :email, :phone, :instagram, :price_bar, :price_auditorium, :notes, :user_id)');
         return $stmt->execute($data);
     }
 
     public function update(int $id, array $data): bool
     {
         $data['id'] = $id;
-        $stmt = $this->db->prepare('UPDATE comedians SET name=:name, stage_name=:stage_name, email=:email, phone=:phone, instagram=:instagram, notes=:notes, user_id=:user_id WHERE id=:id');
+        $stmt = $this->db->prepare('UPDATE comedians SET name=:name, stage_name=:stage_name, email=:email, phone=:phone, instagram=:instagram, price_bar=:price_bar, price_auditorium=:price_auditorium, notes=:notes, user_id=:user_id WHERE id=:id');
         return $stmt->execute($data);
     }
 

@@ -65,6 +65,8 @@ class ComedianController extends BaseController
             'email' => trim($_POST['email'] ?? ''),
             'phone' => trim($_POST['phone'] ?? ''),
             'instagram' => trim($_POST['instagram'] ?? ''),
+            'price_bar' => (float)($_POST['price_bar'] ?? 0),
+            'price_auditorium' => (float)($_POST['price_auditorium'] ?? 0),
             'notes' => trim($_POST['notes'] ?? ''),
             'user_id' => !empty($_POST['user_id']) ? (int)$_POST['user_id'] : null,
         ];
