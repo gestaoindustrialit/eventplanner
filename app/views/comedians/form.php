@@ -6,6 +6,8 @@
         <div class="col-md-4"><label class="form-label">Email</label><input class="form-control" type="email" name="email" value="<?= htmlspecialchars($comedian['email'] ?? '') ?>"></div>
         <div class="col-md-4"><label class="form-label">Phone</label><input class="form-control" name="phone" value="<?= htmlspecialchars($comedian['phone'] ?? '') ?>"></div>
         <div class="col-md-4"><label class="form-label">Instagram</label><input class="form-control" name="instagram" value="<?= htmlspecialchars($comedian['instagram'] ?? '') ?>"></div>
+        <div class="col-md-6"><label class="form-label">Valor Bar</label><input class="form-control" type="number" step="0.01" name="price_bar" value="<?= htmlspecialchars($comedian['price_bar'] ?? '0') ?>"></div>
+        <div class="col-md-6"><label class="form-label">Valor Auditório</label><input class="form-control" type="number" step="0.01" name="price_auditorium" value="<?= htmlspecialchars($comedian['price_auditorium'] ?? '0') ?>"></div>
         <div class="col-md-6"><label class="form-label">Associar utilizador</label>
             <select name="user_id" class="form-select">
                 <option value="">-- sem associação --</option>
