@@ -43,6 +43,7 @@ $map = [
     'event' => EventController::class,
     'reservation' => ReservationController::class,
     'publicsite' => PublicSiteController::class,
+    'publicpage' => PublicPageController::class,
     'comedianarea' => ComedianAreaController::class,
 ];
 

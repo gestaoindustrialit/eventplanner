@@ -10,6 +10,7 @@ Aplicação web em **PHP puro + SQLite + Bootstrap 5** para gestão de eventos d
 - Área privada para comediante (vê apenas os seus eventos)
 - Pesquisa simples em tabelas e confirmação antes de apagar
 - Website público exportável para pasta externa (ex.: `chorarderir.com`)
+- Gestão de páginas públicas (conteúdos institucionais, menu e ordem de destaque)
 - Reservas públicas por evento com gestão de estado no painel admin
 
 ## Instalação rápida
