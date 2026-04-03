@@ -34,6 +34,11 @@ class PublicSiteController extends BaseController
         file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($events, $pages));
         file_put_contents($targetPath . '/reserve.php', $this->buildReserveHandler($dbPath));
 
+        $logoSource = dirname(__DIR__, 2) . '/assets/branding/chorarderir-logo.svg';
+        if (is_file($logoSource)) {
+            copy($logoSource, $targetPath . '/chorarderir-logo.svg');
+        }
+
         flash('success', 'Site público publicado em: ' . $targetPath);
         $this->redirect(BASE_URL . '?controller=publicsite&action=index');
     }
@@ -62,7 +67,7 @@ if ($activePage === null && count($pages) > 0 && $pageSlug !== 'home') {
     $activePage = $pages[0];
 }
 
-$siteTitle = 'Casa de Artistas';
+$siteTitle = 'Chora de Rir';
 
 function safe_content(?string $html): string {
     return strip_tags((string)$html, '<h1><h2><h3><h4><p><ul><ol><li><strong><em><a><blockquote><br><hr>');
@@ -76,22 +81,72 @@ function safe_content(?string $html): string {
   <title><?php echo htmlspecialchars($siteTitle); ?></title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background:#0f1115; color:#f8f9fa; }
-    .navbar { background:#141922; }
-    .navbar-brand { font-weight:700; letter-spacing:.6px; }
-    .hero { background:linear-gradient(120deg,rgba(0,0,0,.75),rgba(15,17,21,.65)), url('https://images.unsplash.com/photo-1527224538127-2104bb71c51b?auto=format&fit=crop&w=1600&q=80') center/cover; padding:100px 0; }
-    .hero-card, .event-card, .content-card { background:#1a1f29; border:1px solid #2a3342; border-radius:14px; }
-    .event-card input, .event-card textarea { background:#11151d; border-color:#2f3745; color:#f8f9fa; }
-    .event-card input::placeholder, .event-card textarea::placeholder { color:#9ba3b2; }
-    .section-title { font-weight:700; letter-spacing:.4px; }
-    footer { border-top:1px solid #29303d; color:#adb5bd; }
-    .page-cover { min-height:300px; border-radius:14px; background-size:cover; background-position:center; }
+    :root {
+      --brand-bg: #080b10;
+      --brand-card: rgba(10, 14, 22, 0.72);
+      --brand-border: rgba(255, 255, 255, 0.16);
+      --brand-text: #f7f8fb;
+      --brand-muted: #cdd4e1;
+      --brand-accent: #f6c451;
+    }
+    body {
+      color: var(--brand-text);
+      background:
+        linear-gradient(130deg, rgba(8,11,16,.78), rgba(8,11,16,.58) 45%, rgba(8,11,16,.86)),
+        url('https://images.unsplash.com/photo-1470229538611-16ba8c7ffbd7?auto=format&fit=crop&w=1800&q=80') center/cover fixed;
+      min-height: 100vh;
+    }
+    .navbar {
+      backdrop-filter: blur(8px);
+      background: rgba(7, 11, 17, 0.7);
+      border-bottom: 1px solid rgba(255,255,255,.1);
+    }
+    .navbar-brand img {
+      height: 38px;
+      width: auto;
+      display: block;
+    }
+    .nav-link { color: #e8edf7; }
+    .nav-link.active, .nav-link:hover { color: var(--brand-accent) !important; }
+    .hero {
+      min-height: 62vh;
+      display: flex;
+      align-items: center;
+      padding: 72px 0 48px;
+    }
+    .glass-card {
+      background: var(--brand-card);
+      border: 1px solid var(--brand-border);
+      border-radius: 20px;
+      box-shadow: 0 20px 48px rgba(0,0,0,.36);
+      backdrop-filter: blur(8px);
+    }
+    .section-title { font-weight: 700; letter-spacing: .2px; }
+    .event-card input, .event-card textarea {
+      background: rgba(8, 11, 16, .6);
+      border-color: rgba(255,255,255,.2);
+      color: var(--brand-text);
+    }
+    .event-card input::placeholder, .event-card textarea::placeholder { color: #aab4c4; }
+    .btn-brand {
+      background: var(--brand-accent);
+      color: #1d1405;
+      border: none;
+      font-weight: 700;
+    }
+    .btn-brand:hover { background: #ffd97a; color: #1d1405; }
+    .content-card { background: rgba(11, 16, 25, 0.78); border: 1px solid rgba(255,255,255,.15); border-radius: 18px; }
+    .content-card .lead, .text-light-emphasis, .muted { color: var(--brand-muted) !important; }
+    .page-cover { min-height: 320px; border-radius: 14px; background-size: cover; background-position: center; }
+    footer { border-top: 1px solid rgba(255,255,255,.15); color: var(--brand-muted); background: rgba(7,11,17,.68); }
   </style>
 </head>
 <body>
   <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container">
-      <a class="navbar-brand" href="index.php">CASA DE ARTISTAS</a>
+      <a class="navbar-brand" href="index.php">
+        <img src="chorarderir-logo.svg" alt="Chora de Rir">
+      </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPublico">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -109,9 +164,10 @@ function safe_content(?string $html): string {
   <?php if ($pageSlug === 'home'): ?>
     <section class="hero">
       <div class="container">
-        <div class="hero-card p-4 p-lg-5">
-          <h1 class="display-5 fw-bold mb-3">Produção de shows, artistas e experiências ao vivo.</h1>
-          <p class="lead text-light">Uma presença pública mais moderna, inspirada em agências artísticas: destaque para eventos e reservas online.</p>
+        <div class="glass-card p-4 p-lg-5 col-12 col-xl-9">
+          <p class="text-uppercase small mb-2 fw-semibold text-warning">Produção • Booking • Experiências</p>
+          <h1 class="display-5 fw-bold mb-3">Humor e espetáculos com um palco inesquecível.</h1>
+          <p class="lead muted mb-0">Layout inspirado no visual "Big Picture": imagem de fundo marcante, tipografia forte e conteúdo em cartões translúcidos para foco total no evento.</p>
         </div>
       </div>
     </section>
@@ -129,7 +185,7 @@ function safe_content(?string $html): string {
         <div class="row g-4">
           <?php foreach ($events as $event): ?>
             <div class="col-lg-6">
-              <div class="event-card p-4 h-100">
+              <div class="event-card glass-card p-4 h-100">
                 <h4><?php echo htmlspecialchars($event['title']); ?></h4>
                 <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
                 <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
@@ -140,7 +196,7 @@ function safe_content(?string $html): string {
                   <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
                   <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
                   <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
-                  <div class="col-md-6"><button class="btn btn-warning w-100 fw-bold">Reservar</button></div>
+                  <div class="col-md-6"><button class="btn btn-brand w-100">Reservar</button></div>
                   <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
                 </form>
               </div>
@@ -177,7 +233,7 @@ function safe_content(?string $html): string {
 
   <footer class="py-4 mt-5">
     <div class="container d-flex justify-content-between">
-      <span>© <?php echo date('Y'); ?> Casa de Artistas</span>
+      <span>© <?php echo date('Y'); ?> Chora de Rir</span>
       <span>Produção & Booking</span>
     </div>
   </footer>
