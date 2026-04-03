@@ -8,6 +8,8 @@ DROP TABLE IF EXISTS comedians;
 DROP TABLE IF EXISTS clients;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS public_pages;
+DROP TABLE IF EXISTS newsletter_subscriptions;
+DROP TABLE IF EXISTS site_settings;
 
 CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,6 +112,25 @@ CREATE TABLE public_pages (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE newsletter_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT DEFAULT NULL,
+  gdpr_consent INTEGER NOT NULL DEFAULT 0,
+  consent_text TEXT NOT NULL,
+  source TEXT DEFAULT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'unsubscribed')),
+  subscribed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  unsubscribed_at TEXT DEFAULT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE site_settings (
+  setting_key TEXT PRIMARY KEY,
+  setting_value TEXT NOT NULL,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 INSERT INTO users (name, email, password, role) VALUES
 ('Admin', 'admin@standup.local', '$2y$12$sfHHEGGOErVolRpcZ83vDe/JN3e4dQ6I7MQe1x2VV40K50K.bmf.e', 'admin'),
 ('Ana Ribeiro', 'ana@standup.local', '$2y$12$jKmXi3xg8.OTAFanG3O5R.6Ow6KWyoBS0oq/UxQ0sMA4fuPGXYTty', 'comedian'),
@@ -145,5 +166,11 @@ INSERT INTO public_pages (title, slug, excerpt, content, hero_image_url, is_publ
 ('Sobre nós', 'sobre-nos', 'Conhece a nossa missão e equipa de produção.', '<p>Somos uma produtora artística focada em experiências ao vivo, booking de talentos e curadoria de eventos de comédia.</p><p>Trabalhamos com marcas, espaços culturais e artistas para criar noites memoráveis.</p>', 'https://images.unsplash.com/photo-1497032628192-86f99bcd76bc?auto=format&fit=crop&w=1400&q=80', 1, 10),
 ('Serviços', 'servicos', 'Produção, agenciamento e consultoria para espetáculos.', '<h3>O que fazemos</h3><ul><li>Produção executiva de eventos.</li><li>Booking e gestão de artistas.</li><li>Criação de conteúdos e ativações de marca.</li></ul>', 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1400&q=80', 1, 20),
 ('Contactos', 'contactos', 'Fala connosco para reservas e propostas comerciais.', '<p><strong>Email:</strong> booking@casadeartistas.pt</p><p><strong>Telefone:</strong> +351 210 000 000</p><p>Estamos disponíveis para parcerias em todo o país.</p>', 'https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=1400&q=80', 1, 30);
+
+INSERT INTO site_settings (setting_key, setting_value) VALUES
+('home_tagline', 'Produção • Booking • Experiências'),
+('home_title', 'Humor e espetáculos com um palco inesquecível.'),
+('home_description', 'Layout inspirado no visual Big Picture com imagem de fundo marcante e conteúdo em cartões translúcidos.'),
+('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.');
 
 PRAGMA foreign_keys = ON;

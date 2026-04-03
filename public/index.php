@@ -45,6 +45,7 @@ $map = [
     'publicsite' => PublicSiteController::class,
     'publicpage' => PublicPageController::class,
     'comedianarea' => ComedianAreaController::class,
+    'newsletter' => NewsletterController::class,
 ];
 
 if (!isset($map[$controllerName])) {
