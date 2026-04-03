@@ -1,0 +1,23 @@
+<svg width="320" height="84" viewBox="0 0 320 84" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="logoTitle logoDesc">
+  <title id="logoTitle">Chorar de Rir</title>
+  <desc id="logoDesc">Logotipo Chorar de Rir com ícone de palco e tipografia moderna.</desc>
+  <defs>
+    <linearGradient id="gold" x1="16" y1="10" x2="88" y2="74" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE28A"/>
+      <stop offset="1" stop-color="#F2B940"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="104" y1="18" x2="302" y2="70" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D7E3FF"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="6" width="80" height="72" rx="16" fill="#0B1220" stroke="#2F3C5D" stroke-width="2"/>
+  <path d="M16 56C24 43.5 32 33 44 33C56 33 64 43.5 72 56" stroke="url(#gold)" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="31" cy="31" r="4" fill="#F8D16F"/>
+  <circle cx="57" cy="31" r="4" fill="#F8D16F"/>
+  <path d="M44 20V50" stroke="#F8D16F" stroke-width="4" stroke-linecap="round"/>
+
+  <text x="104" y="37" fill="url(#textGrad)" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="0.8">CHORA DE RIR</text>
+  <text x="104" y="60" fill="#C7D4F2" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="500" letter-spacing="1.2">PRODUÇÃO E BOOKING</text>
+</svg>

@@ -96,6 +96,12 @@ body {
     text-transform: capitalize;
 }
 
+.brand-logo-login {
+    width: min(260px, 100%);
+    height: auto;
+    filter: brightness(0) saturate(100%);
+}
+
 @media (max-width: 991px) {
     .content-body {
         padding-top: 1rem !important;
