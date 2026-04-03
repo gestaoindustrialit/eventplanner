@@ -97,7 +97,9 @@ body {
 }
 
 .brand-logo-login {
-    width: min(260px, 100%);
+    max-width: min(220px, 85%);
+    max-height: 72px;
+    width: auto;
     height: auto;
     filter: brightness(0) saturate(100%);
 }
