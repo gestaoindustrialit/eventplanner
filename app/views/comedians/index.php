@@ -5,7 +5,7 @@
 <input type="text" class="form-control mb-3 table-search" placeholder="Pesquisar comediante...">
 <div class="table-responsive">
     <table class="table table-hover searchable-table">
-        <thead><tr><th>Nome</th><th>Nome artístico</th><th>Email</th><th>Phone</th><th>User Login</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Nome</th><th>Nome artístico</th><th>Email</th><th>Phone</th><th>Valor Bar</th><th>Valor Auditório</th><th>User Login</th><th>Ações</th></tr></thead>
         <tbody>
         <?php foreach ($comedians as $c): ?>
             <tr>
@@ -13,6 +13,8 @@
                 <td><?= htmlspecialchars($c['stage_name']) ?></td>
                 <td><?= htmlspecialchars($c['email']) ?></td>
                 <td><?= htmlspecialchars($c['phone']) ?></td>
+                <td>€<?= number_format((float)($c['price_bar'] ?? 0), 2, ',', '.') ?></td>
+                <td>€<?= number_format((float)($c['price_auditorium'] ?? 0), 2, ',', '.') ?></td>
                 <td><?= htmlspecialchars($c['user_name'] ?? '-') ?></td>
                 <td>
                     <a class="btn btn-sm btn-outline-secondary" href="<?= BASE_URL ?>?controller=comedian&action=edit&id=<?= $c['id'] ?>">Editar</a>

@@ -26,6 +26,8 @@ CREATE TABLE comedians (
   email TEXT DEFAULT NULL,
   phone TEXT DEFAULT NULL,
   instagram TEXT DEFAULT NULL,
+  price_bar NUMERIC DEFAULT 0,
+  price_auditorium NUMERIC DEFAULT 0,
   notes TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
@@ -113,9 +115,9 @@ INSERT INTO users (name, email, password, role) VALUES
 ('Ana Ribeiro', 'ana@standup.local', '$2y$12$jKmXi3xg8.OTAFanG3O5R.6Ow6KWyoBS0oq/UxQ0sMA4fuPGXYTty', 'comedian'),
 ('Bruno Silva', 'bruno@standup.local', '$2y$12$jKmXi3xg8.OTAFanG3O5R.6Ow6KWyoBS0oq/UxQ0sMA4fuPGXYTty', 'comedian');
 
-INSERT INTO comedians (user_id, name, stage_name, email, phone, instagram, notes) VALUES
-(2, 'Ana Ribeiro', 'Ana Riso', 'ana@standup.local', '910000001', '@anariso', 'Especialista em crowd work.'),
-(3, 'Bruno Silva', 'Bruno Punch', 'bruno@standup.local', '910000002', '@brunopunch', 'Headliner frequente em Lisboa.');
+INSERT INTO comedians (user_id, name, stage_name, email, phone, instagram, price_bar, price_auditorium, notes) VALUES
+(2, 'Ana Ribeiro', 'Ana Riso', 'ana@standup.local', '910000001', '@anariso', 300, 700, 'Especialista em crowd work.'),
+(3, 'Bruno Silva', 'Bruno Punch', 'bruno@standup.local', '910000002', '@brunopunch', 400, 900, 'Headliner frequente em Lisboa.');
 
 INSERT INTO clients (name, contact_person, phone, email, address, notes) VALUES
 ('Bar Gargalhada', 'Marta Costa', '210000001', 'marta@gargalhada.pt', 'Rua da Alegria 10, Lisboa', 'Eventos mensais'),
