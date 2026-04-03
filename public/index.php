@@ -21,7 +21,16 @@ foreach ($controllerFiles as $file) {
     require_once $file;
 }
 
-$db = (new Database())->getConnection();
+try {
+    $db = (new Database())->getConnection();
+} catch (Throwable $e) {
+    http_response_code(500);
+    $errorMessage = 'Erro ao ligar à base de dados SQLite. '
+        . 'Confirma permissões de escrita e executa /install.php. '
+        . 'Detalhe: ' . $e->getMessage();
+    echo nl2br(htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'));
+    exit;
+}
 
 $controllerName = strtolower($_GET['controller'] ?? 'dashboard');
 $actionName = $_GET['action'] ?? 'index';
