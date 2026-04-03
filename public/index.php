@@ -32,6 +32,8 @@ $map = [
     'comedian' => ComedianController::class,
     'client' => ClientController::class,
     'event' => EventController::class,
+    'reservation' => ReservationController::class,
+    'publicsite' => PublicSiteController::class,
     'comedianarea' => ComedianAreaController::class,
 ];
 

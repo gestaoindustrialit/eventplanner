@@ -10,6 +10,12 @@ class Database
         $this->sqlitePath = getenv('SQLITE_PATH') ?: $defaultPath;
     }
 
+
+    public function getSqlitePath(): string
+    {
+        return $this->sqlitePath;
+    }
+
     public function getConnection(): PDO
     {
         $dsn = "sqlite:{$this->sqlitePath}";

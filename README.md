@@ -9,18 +9,21 @@ Aplicação web em **PHP puro + SQLite + Bootstrap 5** para gestão de eventos d
 - Gestão de lineup (host/opener/headliner + cachet)
 - Área privada para comediante (vê apenas os seus eventos)
 - Pesquisa simples em tabelas e confirmação antes de apagar
+- Website público exportável para pasta externa (ex.: `chorarderir.com`)
+- Reservas públicas por evento com gestão de estado no painel admin
 
 ## Instalação rápida
-1. Crie a base de dados e dados iniciais:
+1. Crie a base de dados e dados iniciais (CLI):
    ```bash
    ./scripts/setup_db.sh
    ```
    > Opcional: pode definir `SQLITE_PATH` para gravar a base de dados noutro local.
-2. Inicie servidor local:
+2. Alternativa web: abra `http://localhost:8000/install.php` para instalar/resetar a BD (útil para erro 500).
+3. Inicie servidor local:
    ```bash
    php -S localhost:8000
    ```
-3. Abra `http://localhost:8000/public/index.php`.
+4. Abra `http://localhost:8000/public/index.php`.
 
 ## Utilizadores de teste
 - **Admin**: `admin@standup.local` / `admin123`

@@ -2,6 +2,7 @@ PRAGMA foreign_keys = OFF;
 
 DROP TABLE IF EXISTS event_comedians;
 DROP TABLE IF EXISTS event_schedule_items;
+DROP TABLE IF EXISTS event_reservations;
 DROP TABLE IF EXISTS events;
 DROP TABLE IF EXISTS comedians;
 DROP TABLE IF EXISTS clients;
@@ -63,6 +64,20 @@ CREATE TABLE event_comedians (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
   FOREIGN KEY (comedian_id) REFERENCES comedians(id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE event_reservations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL,
+  customer_name TEXT NOT NULL,
+  customer_email TEXT NOT NULL,
+  customer_phone TEXT DEFAULT NULL,
+  tickets INTEGER NOT NULL DEFAULT 1,
+  notes TEXT DEFAULT NULL,
+  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'confirmed', 'cancelled')),
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
 );
 
 CREATE TABLE event_schedule_items (
