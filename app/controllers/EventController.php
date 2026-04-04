@@ -126,6 +126,30 @@ class EventController extends BaseController
         $this->redirect(BASE_URL . '?controller=event&action=index');
     }
 
+    public function duplicate(): void
+    {
+        requireAdmin();
+
+        $id = (int)($_GET['id'] ?? 0);
+        $newDate = $_POST['date'] ?? '';
+
+        if (!$newDate) {
+            flash('error', 'Selecione a nova data para duplicar o evento.');
+            $this->redirect(BASE_URL . '?controller=event&action=index');
+        }
+
+        $eventModel = new Event($this->db);
+        $newEventId = $eventModel->duplicate($id, $newDate);
+
+        if (!$newEventId) {
+            flash('error', 'Não foi possível duplicar o evento.');
+            $this->redirect(BASE_URL . '?controller=event&action=index');
+        }
+
+        flash('success', 'Evento duplicado com sucesso.');
+        $this->redirect(BASE_URL . '?controller=event&action=index');
+    }
+
     private function validatedData(): array
     {
         return [
