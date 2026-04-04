@@ -44,8 +44,16 @@ class ClientController extends BaseController
     {
         requireAdmin();
         $id = (int)($_GET['id'] ?? 0);
-        (new Client($this->db))->delete($id);
-        flash('success', 'Cliente eliminado.');
+        $clientModel = new Client($this->db);
+
+        if ($clientModel->hasEvents($id)) {
+            flash('error', 'Não foi possível eliminar o cliente porque existem eventos associados.');
+            $this->redirect(BASE_URL . '?controller=client&action=index');
+            return;
+        }
+
+        $clientModel->delete($id);
+        flash('success', 'Cliente eliminado com sucesso.');
         $this->redirect(BASE_URL . '?controller=client&action=index');
     }
 
