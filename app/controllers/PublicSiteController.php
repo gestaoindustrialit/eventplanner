@@ -44,7 +44,11 @@ class PublicSiteController extends BaseController
 
             $eventModel = new Event($this->db);
             $events = $eventModel->openEvents();
-            $pages = (new PublicPage($this->db))->allPublished();
+            $pageModel = new PublicPage($this->db);
+            $pages = $pageModel->allPublished();
+            if (count($pages) === 0) {
+                $pages = $pageModel->all();
+            }
 
             $dbPath = (new Database())->getSqlitePath();
             $homeCopy = [
@@ -104,6 +108,16 @@ if ($activePage === null && count($pages) > 0 && $pageSlug !== 'home') {
 }
 
 $siteTitle = 'Chorar de Rir';
+$defaultHomeCopy = [
+    'tagline' => 'Produção • Booking • Experiências',
+    'title' => 'Humor e espetáculos com um palco inesquecível.',
+    'description' => 'Eventos únicos, noites memoráveis e talento nacional num ambiente vibrante.',
+];
+$homeCopy = [
+    'tagline' => trim((string)($homeCopy['tagline'] ?? '')) !== '' ? (string)$homeCopy['tagline'] : $defaultHomeCopy['tagline'],
+    'title' => trim((string)($homeCopy['title'] ?? '')) !== '' ? (string)$homeCopy['title'] : $defaultHomeCopy['title'],
+    'description' => trim((string)($homeCopy['description'] ?? '')) !== '' ? (string)$homeCopy['description'] : $defaultHomeCopy['description'],
+];
 
 function safe_content(?string $html): string {
     return strip_tags((string)$html, '<h1><h2><h3><h4><p><ul><ol><li><strong><em><a><blockquote><br><hr>');
@@ -196,6 +210,10 @@ function safe_content(?string $html): string {
     .btn-brand:hover { background: #ffd97a; color: #1d1405; }
     .content-card { background: rgba(11, 16, 25, 0.78); border: 1px solid rgba(255,255,255,.15); border-radius: 18px; }
     .content-card .lead, .text-light-emphasis, .muted { color: var(--brand-muted) !important; }
+    .newsletter-card { padding: 1.25rem 1.25rem; border-radius: 16px; }
+    .newsletter-form .form-control { height: 42px; }
+    .newsletter-form .btn { height: 42px; }
+    .newsletter-note { font-size: .9rem; color: var(--brand-muted); }
     .page-cover { min-height: 320px; border-radius: 14px; background-size: cover; background-position: center; }
     footer { border-top: 1px solid rgba(255,255,255,.15); color: var(--brand-muted); background: rgba(7,11,17,.68); }
   </style>
@@ -273,18 +291,20 @@ function safe_content(?string $html): string {
           <?php endif; ?>
         </div>
 
-        <div class="glass-card p-4 p-lg-5">
-          <h3 class="mb-3">Newsletter</h3>
-          <p class="muted mb-3">Recebe novidades de novos espetáculos, datas e conteúdos exclusivos.</p>
-          <form method="post" action="subscribe.php" class="row g-2">
-            <div class="col-md-5"><input type="email" name="email" required class="form-control" placeholder="Email"></div>
-            <div class="col-md-4"><input type="text" name="name" class="form-control" placeholder="Nome (opcional)"></div>
-            <div class="col-md-3"><button class="btn btn-brand w-100">Subscrever</button></div>
-            <div class="col-12">
-              <label class="form-check-label d-flex gap-2 align-items-start">
+        <div class="glass-card newsletter-card">
+          <h3 class="h5 mb-2">Newsletter</h3>
+          <form method="post" action="subscribe.php" class="row g-2 align-items-center newsletter-form">
+            <div class="col-lg-4"><input type="email" name="email" required class="form-control" placeholder="Email"></div>
+            <div class="col-lg-4"><input type="text" name="name" class="form-control" placeholder="Nome (opcional)"></div>
+            <div class="col-lg-2"><button class="btn btn-brand w-100">Subscrever</button></div>
+            <div class="col-lg-2">
+              <label class="form-check-label d-flex gap-2 align-items-start newsletter-note">
                 <input class="form-check-input mt-1" type="checkbox" name="gdpr_consent" value="1" required>
-                <span><?php echo htmlspecialchars('__NEWSLETTER_CONSENT__'); ?></span>
+                <span>RGPD</span>
               </label>
+            </div>
+            <div class="col-12">
+              <p class="newsletter-note mb-0"><?php echo htmlspecialchars('__NEWSLETTER_CONSENT__'); ?></p>
             </div>
           </form>
         </div>
