@@ -24,8 +24,12 @@
                 <td><?= htmlspecialchars($event['client_name'] ?? '-') ?></td>
                 <td>€<?= number_format((float)$event['cachet_total'], 2, ',', '.') ?></td>
                 <td>
-                    <a class="btn btn-sm btn-outline-dark" href="<?= BASE_URL ?>?controller=event&action=show&id=<?= $event['id'] ?>">Ver</a>
-                    <a class="btn btn-sm btn-outline-secondary" href="<?= BASE_URL ?>?controller=event&action=edit&id=<?= $event['id'] ?>">Editar</a>
+                    <a class="btn btn-sm btn-outline-dark" href="<?= BASE_URL ?>?controller=event&action=show&id=<?= $event['id'] ?>" title="Ver">
+                        <i class="bi bi-eye"></i><span class="visually-hidden">Ver</span>
+                    </a>
+                    <a class="btn btn-sm btn-outline-secondary" href="<?= BASE_URL ?>?controller=event&action=edit&id=<?= $event['id'] ?>" title="Editar">
+                        <i class="bi bi-pencil"></i><span class="visually-hidden">Editar</span>
+                    </a>
                     <button
                         type="button"
                         class="btn btn-sm btn-outline-primary duplicate-btn"
@@ -35,8 +39,13 @@
                         data-event-title="<?= htmlspecialchars($event['title']) ?>"
                         data-event-date="<?= htmlspecialchars($event['date']) ?>"
                         data-duplicate-url="<?= BASE_URL ?>?controller=event&action=duplicate&id=<?= $event['id'] ?>"
-                    >Duplicar</button>
-                    <a class="btn btn-sm btn-outline-danger delete-btn" href="<?= BASE_URL ?>?controller=event&action=delete&id=<?= $event['id'] ?>">Eliminar</a>
+                        title="Duplicar"
+                    >
+                        <i class="bi bi-copy"></i><span class="visually-hidden">Duplicar</span>
+                    </button>
+                    <a class="btn btn-sm btn-outline-danger delete-btn" href="<?= BASE_URL ?>?controller=event&action=delete&id=<?= $event['id'] ?>" title="Eliminar">
+                        <i class="bi bi-trash"></i><span class="visually-hidden">Eliminar</span>
+                    </a>
                 </td>
             </tr>
         <?php endforeach; ?>

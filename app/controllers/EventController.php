@@ -147,7 +147,7 @@ class EventController extends BaseController
         }
 
         flash('success', 'Evento duplicado com sucesso.');
-        $this->redirect(BASE_URL . '?controller=event&action=edit&id=' . $newEventId);
+        $this->redirect(BASE_URL . '?controller=event&action=index');
     }
 
     private function validatedData(): array
