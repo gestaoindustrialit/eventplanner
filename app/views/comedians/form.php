@@ -8,8 +8,8 @@
         <div class="col-md-4"><label class="form-label">Phone</label><input class="form-control" name="phone" value="<?= htmlspecialchars($comedian['phone'] ?? '') ?>"></div>
         <div class="col-md-4"><label class="form-label">Localidade</label><input class="form-control" name="city" value="<?= htmlspecialchars($comedian['city'] ?? '') ?>"></div>
         <div class="col-md-4"><label class="form-label">Instagram</label><input class="form-control" name="instagram" value="<?= htmlspecialchars($comedian['instagram'] ?? '') ?>"></div>
-        <div class="col-md-6"><label class="form-label">Valor Bar</label><input class="form-control" type="number" step="0.01" name="price_bar" value="<?= htmlspecialchars($comedian['price_bar'] ?? '0') ?>"></div>
-        <div class="col-md-6"><label class="form-label">Valor Auditório</label><input class="form-control" type="number" step="0.01" name="price_auditorium" value="<?= htmlspecialchars($comedian['price_auditorium'] ?? '0') ?>"></div>
+        <div class="col-md-2"><label class="form-label">Valor Bar</label><input class="form-control" type="number" step="1" min="0" max="9999" name="price_bar" value="<?= htmlspecialchars($comedian['price_bar'] ?? '0') ?>"></div>
+        <div class="col-md-2"><label class="form-label">Valor Auditório</label><input class="form-control" type="number" step="1" min="0" max="9999" name="price_auditorium" value="<?= htmlspecialchars($comedian['price_auditorium'] ?? '0') ?>"></div>
         <div class="col-12"><label class="form-label">Biografia</label><textarea name="bio" class="form-control" rows="4"><?= htmlspecialchars($comedian['bio'] ?? '') ?></textarea></div>
         <div class="col-md-8">
             <label class="form-label">Ficheiro do comediante</label>

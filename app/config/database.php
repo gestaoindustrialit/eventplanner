@@ -52,6 +52,12 @@ class Database
         if (!in_array('attachment_path', $comedianColumns, true)) {
             $db->exec('ALTER TABLE comedians ADD COLUMN attachment_path TEXT DEFAULT NULL');
         }
+        if (!in_array('price_bar', $comedianColumns, true)) {
+            $db->exec('ALTER TABLE comedians ADD COLUMN price_bar NUMERIC DEFAULT 0');
+        }
+        if (!in_array('price_auditorium', $comedianColumns, true)) {
+            $db->exec('ALTER TABLE comedians ADD COLUMN price_auditorium NUMERIC DEFAULT 0');
+        }
 
         $eventColumns = array_column($db->query('PRAGMA table_info(events)')->fetchAll(), 'name');
         if (!in_array('artist_map_link', $eventColumns, true)) {
