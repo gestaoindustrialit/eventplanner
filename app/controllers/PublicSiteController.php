@@ -130,21 +130,30 @@ function safe_content(?string $html): string {
       background:
         linear-gradient(130deg, rgba(8,11,16,.78), rgba(8,11,16,.58) 45%, rgba(8,11,16,.86)),
         url('https://images.unsplash.com/photo-1470229538611-16ba8c7ffbd7?auto=format&fit=crop&w=1800&q=80') center/cover fixed;
-      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
     }
     .navbar {
       backdrop-filter: blur(8px);
       background: rgba(7, 11, 17, 0.7);
       border-bottom: 1px solid rgba(255,255,255,.1);
     }
+    .navbar-brand {
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
+      padding-top: .2rem;
+      padding-bottom: .2rem;
+    }
     .navbar-brand img {
-      height: 28px;
+      height: 36px;
+      max-height: 36px;
       width: auto;
       display: block;
       filter: brightness(0) invert(1);
     }
     @media (max-width: 767.98px) {
-      .navbar-brand img { height: 16px; }
+      .navbar-brand img { height: 22px; max-height: 22px; }
       .navbar { padding-top: .45rem; padding-bottom: .45rem; }
       .navbar .navbar-toggler { padding: .3rem .45rem; }
       .navbar .navbar-collapse {
@@ -159,10 +168,10 @@ function safe_content(?string $html): string {
     .nav-link { color: #e8edf7; }
     .nav-link.active, .nav-link:hover { color: var(--brand-accent) !important; }
     .hero {
-      min-height: 62vh;
+      min-height: clamp(300px, 52vh, 560px);
       display: flex;
       align-items: center;
-      padding: 72px 0 48px;
+      padding: 48px 0 32px;
     }
     .glass-card {
       background: var(--brand-card);
