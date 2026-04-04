@@ -12,6 +12,12 @@
         table { width: 100%; border-collapse: collapse; margin-top: 16px; }
         th, td { border: 1px solid #ddd; padding: 10px; font-size: 14px; text-align: left; }
         th { background: #f3f3f3; }
+        .time-cell,
+        .responsible-cell { font-weight: 700; }
+        .duration-cell,
+        .description-cell,
+        .responsible-cell,
+        .notes-cell { font-size: 11px; line-height: 1.25; }
         .empty { border: 1px dashed #999; padding: 14px; margin-top: 16px; }
         .footer {
             margin-top: 24px;
@@ -59,11 +65,11 @@
         <tbody>
         <?php foreach ($scheduleItems as $item): ?>
             <tr>
-                <td><?= htmlspecialchars(substr($item['starts_at'], 0, 5)) ?></td>
-                <td><?= (int)$item['duration_minutes'] ?> min</td>
-                <td><?= htmlspecialchars($item['title']) ?></td>
-                <td><?= htmlspecialchars($item['responsible'] ?? '-') ?></td>
-                <td><?= htmlspecialchars($item['notes'] ?? '-') ?></td>
+                <td class="time-cell"><?= htmlspecialchars(substr($item['starts_at'], 0, 5)) ?></td>
+                <td class="duration-cell"><?= (int)$item['duration_minutes'] ?> min</td>
+                <td class="description-cell"><?= htmlspecialchars($item['title']) ?></td>
+                <td class="responsible-cell"><?= htmlspecialchars($item['responsible'] ?? '-') ?></td>
+                <td class="notes-cell"><?= htmlspecialchars($item['notes'] ?? '-') ?></td>
             </tr>
         <?php endforeach; ?>
         </tbody>
