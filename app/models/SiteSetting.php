@@ -22,11 +22,19 @@ class SiteSetting
 
     public function set(string $settingKey, string $value): void
     {
-        $stmt = $this->db->prepare('INSERT INTO site_settings (setting_key, setting_value, updated_at) VALUES (:setting_key, :setting_value, CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value, updated_at = CURRENT_TIMESTAMP');
-        $stmt->execute([
+        $update = $this->db->prepare('UPDATE site_settings SET setting_value = :setting_value, updated_at = CURRENT_TIMESTAMP WHERE setting_key = :setting_key');
+        $update->execute([
             'setting_key' => $settingKey,
             'setting_value' => $value,
         ]);
+
+        if ($update->rowCount() === 0) {
+            $insert = $this->db->prepare('INSERT INTO site_settings (setting_key, setting_value, updated_at) VALUES (:setting_key, :setting_value, CURRENT_TIMESTAMP)');
+            $insert->execute([
+                'setting_key' => $settingKey,
+                'setting_value' => $value,
+            ]);
+        }
     }
 
     private function ensureTable(): void

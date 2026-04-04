@@ -11,12 +11,12 @@ body {
 }
 
 .app-shell {
-    min-height: 100vh;
+    min-height: 100dvh;
 }
 
 .sidebar {
     width: 280px;
-    min-height: 100vh;
+    min-height: 100dvh;
     position: sticky;
     top: 0;
     background: linear-gradient(180deg, var(--brand-dark) 0%, var(--brand-darker) 100%);
@@ -31,7 +31,7 @@ body {
 }
 
 .content {
-    min-height: 100vh;
+    min-height: 0;
 }
 
 .content-body {
