@@ -26,10 +26,40 @@
                 <td>
                     <a class="btn btn-sm btn-outline-dark" href="<?= BASE_URL ?>?controller=event&action=show&id=<?= $event['id'] ?>">Ver</a>
                     <a class="btn btn-sm btn-outline-secondary" href="<?= BASE_URL ?>?controller=event&action=edit&id=<?= $event['id'] ?>">Editar</a>
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary duplicate-btn"
+                        data-bs-toggle="modal"
+                        data-bs-target="#duplicateEventModal"
+                        data-event-id="<?= $event['id'] ?>"
+                        data-event-title="<?= htmlspecialchars($event['title']) ?>"
+                        data-event-date="<?= htmlspecialchars($event['date']) ?>"
+                    >Duplicar</button>
                     <a class="btn btn-sm btn-outline-danger delete-btn" href="<?= BASE_URL ?>?controller=event&action=delete&id=<?= $event['id'] ?>">Eliminar</a>
                 </td>
             </tr>
         <?php endforeach; ?>
         </tbody>
     </table>
+</div>
+
+<div class="modal fade" id="duplicateEventModal" tabindex="-1" aria-labelledby="duplicateEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" class="modal-content" id="duplicate-event-form">
+            <div class="modal-header">
+                <h5 class="modal-title" id="duplicateEventModalLabel">Duplicar evento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Selecione a nova data para o evento duplicado.</p>
+                <p class="small text-muted" id="duplicate-event-summary"></p>
+                <label for="duplicate-event-date" class="form-label">Nova data</label>
+                <input type="date" class="form-control" id="duplicate-event-date" name="date" required>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Duplicar evento</button>
+            </div>
+        </form>
+    </div>
 </div>
