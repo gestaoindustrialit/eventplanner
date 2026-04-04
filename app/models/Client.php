@@ -40,4 +40,11 @@ class Client
         $stmt = $this->db->prepare('DELETE FROM clients WHERE id=:id');
         return $stmt->execute(['id' => $id]);
     }
+
+    public function hasEvents(int $id): bool
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM events WHERE client_id = :id');
+        $stmt->execute(['id' => $id]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
 }
