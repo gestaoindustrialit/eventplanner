@@ -115,6 +115,41 @@ class Event
         return $stmt->execute(['id' => $id]);
     }
 
+    public function duplicate(int $id, string $newDate): ?int
+    {
+        $event = $this->find($id);
+        if (!$event) {
+            return null;
+        }
+
+        $lineup = $this->lineup($id);
+        $lineupData = array_map(static function (array $member): array {
+            return [
+                'comedian_id' => (int)$member['comedian_id'],
+                'role' => $member['role'],
+                'cachet' => (float)$member['cachet'],
+                'notes' => $member['notes'],
+            ];
+        }, $lineup);
+
+        $data = [
+            'title' => $event['title'],
+            'date' => $newDate,
+            'time' => $event['time'],
+            'location' => $event['location'],
+            'client_id' => (int)$event['client_id'],
+            'cachet_total' => (float)$event['cachet_total'],
+            'artist_map_link' => $event['artist_map_link'],
+            'artist_details' => $event['artist_details'],
+            'notes' => $event['notes'],
+        ];
+
+        $newEventId = $this->create($data, $lineupData);
+        $this->duplicateScheduleItems($id, $newEventId);
+
+        return $newEventId;
+    }
+
     public function upcomingCount(): int
     {
         $stmt = $this->db->query("SELECT COUNT(*) AS total FROM events WHERE date >= date('now')");
@@ -155,6 +190,29 @@ class Event
                 'role' => $member['role'] ?: 'opener',
                 'cachet' => (float)($member['cachet'] ?? 0),
                 'notes' => $member['notes'] ?? null,
+            ]);
+        }
+    }
+
+    private function duplicateScheduleItems(int $sourceEventId, int $targetEventId): void
+    {
+        $items = $this->scheduleItems($sourceEventId);
+        if (!$items) {
+            return;
+        }
+
+        $stmt = $this->db->prepare('INSERT INTO event_schedule_items (event_id, starts_at, duration_minutes, item_type, title, responsible, notes, sort_order) VALUES (:event_id, :starts_at, :duration_minutes, :item_type, :title, :responsible, :notes, :sort_order)');
+
+        foreach ($items as $item) {
+            $stmt->execute([
+                'event_id' => $targetEventId,
+                'starts_at' => $item['starts_at'],
+                'duration_minutes' => (int)$item['duration_minutes'],
+                'item_type' => $item['item_type'],
+                'title' => $item['title'],
+                'responsible' => $item['responsible'],
+                'notes' => $item['notes'],
+                'sort_order' => (int)$item['sort_order'],
             ]);
         }
     }
