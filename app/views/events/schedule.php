@@ -9,6 +9,31 @@
     </div>
 </div>
 
+<?php
+$artistMessage = "Detalhes do evento: " . ($event['title'] ?? '') . "\n"
+    . "Data: " . ($event['date'] ?? '') . ' ' . substr((string)($event['time'] ?? ''), 0, 5) . "\n"
+    . "Local: " . ($event['location'] ?? '') . "\n"
+    . (!empty($event['artist_map_link']) ? ("Google Maps: " . $event['artist_map_link'] . "\n") : '')
+    . (!empty($event['artist_details']) ? ("Detalhes: " . $event['artist_details']) : '');
+?>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="mb-3">Envio de detalhes aos artistas</h5>
+        <p class="text-muted mb-2">Depois de fechar o alinhamento, podes enviar este resumo por email/WhatsApp para os artistas.</p>
+        <textarea class="form-control mb-2" rows="5" readonly><?= htmlspecialchars($artistMessage) ?></textarea>
+        <div class="d-flex flex-wrap gap-2">
+            <?php foreach ($lineup as $member): ?>
+                <?php if (!empty($member['email'])): ?>
+                    <a class="btn btn-sm btn-outline-dark" href="mailto:<?= htmlspecialchars($member['email']) ?>?subject=<?= rawurlencode('Detalhes do evento: ' . ($event['title'] ?? '')) ?>&body=<?= rawurlencode($artistMessage) ?>">
+                        Email: <?= htmlspecialchars($member['stage_name'] ?: $member['name']) ?>
+                    </a>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+
 <form method="post" action="<?= BASE_URL ?>?controller=event&action=saveSchedule&id=<?= (int)$event['id'] ?>">
     <div id="schedule-wrapper">
         <?php if (empty($scheduleItems)): ?>

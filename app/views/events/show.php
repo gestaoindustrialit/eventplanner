@@ -11,6 +11,14 @@
     <p><strong>Cliente:</strong> <?= htmlspecialchars($event['client_name'] ?? '-') ?></p>
     <p><strong>Contacto cliente:</strong> <?= htmlspecialchars($event['contact_person'] ?? '-') ?> | <?= htmlspecialchars($event['client_phone'] ?? '-') ?> | <?= htmlspecialchars($event['client_email'] ?? '-') ?></p>
     <p><strong>Morada cliente:</strong> <?= htmlspecialchars($event['client_address'] ?? '-') ?></p>
+    <p><strong>Google Maps (artistas):</strong>
+        <?php if (!empty($event['artist_map_link'])): ?>
+            <a target="_blank" href="<?= htmlspecialchars($event['artist_map_link']) ?>">Abrir localização</a>
+        <?php else: ?>
+            -
+        <?php endif; ?>
+    </p>
+    <p><strong>Detalhes para artistas:</strong> <?= nl2br(htmlspecialchars($event['artist_details'] ?? '')) ?: '-' ?></p>
     <p><strong>Notas:</strong> <?= nl2br(htmlspecialchars($event['notes'] ?? '')) ?></p>
 </div></div>
 

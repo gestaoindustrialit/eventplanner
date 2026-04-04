@@ -20,6 +20,9 @@ class PublicSiteController extends BaseController
     public function publish(): void
     {
         requireAdmin();
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            $this->redirect(BASE_URL . '?controller=publicsite&action=index');
+        }
 
         $targetPath = trim((string)($_POST['target_path'] ?? PUBLIC_SITE_DEFAULT_PATH));
         if ($targetPath === '') {
@@ -32,31 +35,42 @@ class PublicSiteController extends BaseController
             $this->redirect(BASE_URL . '?controller=publicsite&action=index');
         }
 
-        $settings = new SiteSetting($this->db);
-        $settings->set('home_tagline', trim((string)($_POST['home_tagline'] ?? '')));
-        $settings->set('home_title', trim((string)($_POST['home_title'] ?? '')));
-        $settings->set('home_description', trim((string)($_POST['home_description'] ?? '')));
-        $settings->set('newsletter_consent_text', trim((string)($_POST['newsletter_consent_text'] ?? '')));
+        try {
+            $settings = new SiteSetting($this->db);
+            $settings->set('home_tagline', trim((string)($_POST['home_tagline'] ?? '')));
+            $settings->set('home_title', trim((string)($_POST['home_title'] ?? '')));
+            $settings->set('home_description', trim((string)($_POST['home_description'] ?? '')));
+            $settings->set('newsletter_consent_text', trim((string)($_POST['newsletter_consent_text'] ?? '')));
 
-        $eventModel = new Event($this->db);
-        $events = $eventModel->openEvents();
-        $pages = (new PublicPage($this->db))->allPublished();
+            $eventModel = new Event($this->db);
+            $events = $eventModel->openEvents();
+            $pages = (new PublicPage($this->db))->allPublished();
 
-        $dbPath = (new Database())->getSqlitePath();
-        $homeCopy = [
-            'tagline' => $settings->get('home_tagline', ''),
-            'title' => $settings->get('home_title', ''),
-            'description' => $settings->get('home_description', ''),
-        ];
-        $newsletterConsentText = $settings->get('newsletter_consent_text', '');
+            $dbPath = (new Database())->getSqlitePath();
+            $homeCopy = [
+                'tagline' => $settings->get('home_tagline', ''),
+                'title' => $settings->get('home_title', ''),
+                'description' => $settings->get('home_description', ''),
+            ];
+            $newsletterConsentText = $settings->get('newsletter_consent_text', '');
 
-        file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($events, $pages, $homeCopy, $newsletterConsentText));
-        file_put_contents($targetPath . '/reserve.php', $this->buildReserveHandler($dbPath));
-        file_put_contents($targetPath . '/subscribe.php', $this->buildSubscribeHandler($dbPath));
+            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($events, $pages, $homeCopy, $newsletterConsentText)) === false) {
+                throw new RuntimeException('Falha ao escrever index.php no destino.');
+            }
+            if (file_put_contents($targetPath . '/reserve.php', $this->buildReserveHandler($dbPath)) === false) {
+                throw new RuntimeException('Falha ao escrever reserve.php no destino.');
+            }
+            if (file_put_contents($targetPath . '/subscribe.php', $this->buildSubscribeHandler($dbPath)) === false) {
+                throw new RuntimeException('Falha ao escrever subscribe.php no destino.');
+            }
 
-        $logoSource = dirname(__DIR__, 2) . '/assets/branding/chorarderir-logo.svg';
-        if (is_file($logoSource)) {
-            copy($logoSource, $targetPath . '/chorarderir-logo.svg');
+            $logoSource = dirname(__DIR__, 2) . '/assets/branding/chorarderir-logo.svg';
+            if (is_file($logoSource)) {
+                copy($logoSource, $targetPath . '/chorarderir-logo.svg');
+            }
+        } catch (Throwable $e) {
+            flash('error', 'Não foi possível publicar o website: ' . $e->getMessage());
+            $this->redirect(BASE_URL . '?controller=publicsite&action=index');
         }
 
         flash('success', 'Site público publicado em: ' . $targetPath);
@@ -65,9 +79,9 @@ class PublicSiteController extends BaseController
 
     private function buildPublicIndex(array $events, array $pages, array $homeCopy, string $newsletterConsentText): string
     {
-        $eventsJson = json_encode($events, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $pagesJson = json_encode($pages, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $homeCopyJson = json_encode($homeCopy, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $eventsJson = json_encode($events, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $pagesJson = json_encode($pages, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $homeCopyJson = json_encode($homeCopy, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
         $template = <<<'PHP'
 <?php
@@ -128,6 +142,19 @@ function safe_content(?string $html): string {
       width: auto;
       display: block;
       filter: brightness(0) invert(1);
+    }
+    @media (max-width: 767.98px) {
+      .navbar-brand img { height: 16px; }
+      .navbar { padding-top: .45rem; padding-bottom: .45rem; }
+      .navbar .navbar-toggler { padding: .3rem .45rem; }
+      .navbar .navbar-collapse {
+        margin-top: .6rem;
+        background: rgba(7, 11, 17, 0.94);
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 10px;
+        padding: .45rem .6rem;
+      }
+      .nav-link { padding: .5rem .35rem; }
     }
     .nav-link { color: #e8edf7; }
     .nav-link.active, .nav-link:hover { color: var(--brand-accent) !important; }

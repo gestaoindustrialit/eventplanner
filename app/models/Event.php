@@ -47,7 +47,7 @@ class Event
 
     public function lineup(int $eventId): array
     {
-        $stmt = $this->db->prepare("SELECT ec.*, cm.name, cm.stage_name FROM event_comedians ec JOIN comedians cm ON cm.id = ec.comedian_id WHERE ec.event_id=:event_id ORDER BY CASE ec.role WHEN 'host' THEN 1 WHEN 'opener' THEN 2 WHEN 'headliner' THEN 3 ELSE 4 END, cm.name");
+        $stmt = $this->db->prepare("SELECT ec.*, cm.name, cm.stage_name, cm.email, cm.phone FROM event_comedians ec JOIN comedians cm ON cm.id = ec.comedian_id WHERE ec.event_id=:event_id ORDER BY CASE ec.role WHEN 'host' THEN 1 WHEN 'opener' THEN 2 WHEN 'headliner' THEN 3 ELSE 4 END, cm.name");
         $stmt->execute(['event_id' => $eventId]);
         return $stmt->fetchAll();
     }
@@ -87,7 +87,7 @@ class Event
 
     public function create(array $data, array $lineup): int
     {
-        $stmt = $this->db->prepare('INSERT INTO events (title, date, time, location, client_id, cachet_total, notes) VALUES (:title, :date, :time, :location, :client_id, :cachet_total, :notes)');
+        $stmt = $this->db->prepare('INSERT INTO events (title, date, time, location, client_id, cachet_total, artist_map_link, artist_details, notes) VALUES (:title, :date, :time, :location, :client_id, :cachet_total, :artist_map_link, :artist_details, :notes)');
         $stmt->execute($data);
         $eventId = (int)$this->db->lastInsertId();
 
@@ -99,7 +99,7 @@ class Event
     public function update(int $id, array $data, array $lineup): bool
     {
         $data['id'] = $id;
-        $stmt = $this->db->prepare('UPDATE events SET title=:title, date=:date, time=:time, location=:location, client_id=:client_id, cachet_total=:cachet_total, notes=:notes WHERE id=:id');
+        $stmt = $this->db->prepare('UPDATE events SET title=:title, date=:date, time=:time, location=:location, client_id=:client_id, cachet_total=:cachet_total, artist_map_link=:artist_map_link, artist_details=:artist_details, notes=:notes WHERE id=:id');
         $ok = $stmt->execute($data);
 
         $delete = $this->db->prepare('DELETE FROM event_comedians WHERE event_id=:event_id');
