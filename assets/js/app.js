@@ -31,8 +31,13 @@ if (duplicateModal && duplicateForm && duplicateDateInput && duplicateSummary) {
     const eventId = trigger.getAttribute('data-event-id');
     const eventTitle = trigger.getAttribute('data-event-title') || 'Evento';
     const eventDate = trigger.getAttribute('data-event-date') || '';
+    const duplicateUrl = trigger.getAttribute('data-duplicate-url') || '';
 
-    duplicateForm.setAttribute('action', `?controller=event&action=duplicate&id=${eventId}`);
+    if (!duplicateUrl || !eventId) {
+      return;
+    }
+
+    duplicateForm.setAttribute('action', duplicateUrl);
     duplicateDateInput.value = eventDate;
     duplicateDateInput.min = '';
     duplicateSummary.textContent = `${eventTitle} (${eventDate})`;

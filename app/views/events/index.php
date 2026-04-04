@@ -34,6 +34,7 @@
                         data-event-id="<?= $event['id'] ?>"
                         data-event-title="<?= htmlspecialchars($event['title']) ?>"
                         data-event-date="<?= htmlspecialchars($event['date']) ?>"
+                        data-duplicate-url="<?= BASE_URL ?>?controller=event&action=duplicate&id=<?= $event['id'] ?>"
                     >Duplicar</button>
                     <a class="btn btn-sm btn-outline-danger delete-btn" href="<?= BASE_URL ?>?controller=event&action=delete&id=<?= $event['id'] ?>">Eliminar</a>
                 </td>
