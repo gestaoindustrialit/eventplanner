@@ -33,7 +33,32 @@ class Database
         ]);
 
         $db->exec('PRAGMA foreign_keys = ON');
+        $this->ensureSchema($db);
 
         return $db;
+    }
+
+    private function ensureSchema(PDO $db): void
+    {
+        $columns = $db->query('PRAGMA table_info(comedians)')->fetchAll();
+        $comedianColumns = array_column($columns, 'name');
+
+        if (!in_array('bio', $comedianColumns, true)) {
+            $db->exec('ALTER TABLE comedians ADD COLUMN bio TEXT DEFAULT NULL');
+        }
+        if (!in_array('city', $comedianColumns, true)) {
+            $db->exec('ALTER TABLE comedians ADD COLUMN city TEXT DEFAULT NULL');
+        }
+        if (!in_array('attachment_path', $comedianColumns, true)) {
+            $db->exec('ALTER TABLE comedians ADD COLUMN attachment_path TEXT DEFAULT NULL');
+        }
+
+        $eventColumns = array_column($db->query('PRAGMA table_info(events)')->fetchAll(), 'name');
+        if (!in_array('artist_map_link', $eventColumns, true)) {
+            $db->exec('ALTER TABLE events ADD COLUMN artist_map_link TEXT DEFAULT NULL');
+        }
+        if (!in_array('artist_details', $eventColumns, true)) {
+            $db->exec('ALTER TABLE events ADD COLUMN artist_details TEXT DEFAULT NULL');
+        }
     }
 }

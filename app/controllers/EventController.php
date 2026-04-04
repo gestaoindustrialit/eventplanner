@@ -74,13 +74,14 @@ class EventController extends BaseController
         $eventModel = new Event($this->db);
         $event = $eventModel->find($id);
         $scheduleItems = $eventModel->scheduleItems($id);
+        $lineup = $eventModel->lineup($id);
 
         if (!$event) {
             flash('error', 'Evento não encontrado.');
             $this->redirect(BASE_URL . '?controller=event&action=openSchedule');
         }
 
-        $this->render('events/schedule', compact('event', 'scheduleItems'));
+        $this->render('events/schedule', compact('event', 'scheduleItems', 'lineup'));
     }
 
     public function saveSchedule(): void
@@ -134,6 +135,8 @@ class EventController extends BaseController
             'location' => trim($_POST['location'] ?? ''),
             'client_id' => (int)($_POST['client_id'] ?? 0),
             'cachet_total' => (float)($_POST['cachet_total'] ?? 0),
+            'artist_map_link' => trim($_POST['artist_map_link'] ?? ''),
+            'artist_details' => trim($_POST['artist_details'] ?? ''),
             'notes' => trim($_POST['notes'] ?? ''),
         ];
     }

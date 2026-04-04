@@ -14,6 +14,8 @@
                 <?php endforeach; ?>
             </select>
         </div>
+        <div class="col-md-6"><label class="form-label">Link Google Maps (para artistas)</label><input class="form-control" name="artist_map_link" value="<?= htmlspecialchars($event['artist_map_link'] ?? '') ?>" placeholder="https://maps.google.com/..."></div>
+        <div class="col-md-6"><label class="form-label">Detalhes para artistas</label><input class="form-control" name="artist_details" value="<?= htmlspecialchars($event['artist_details'] ?? '') ?>" placeholder="Chegada, estacionamento, contacto técnico..."></div>
         <div class="col-12"><label class="form-label">Notas</label><textarea class="form-control" name="notes"><?= htmlspecialchars($event['notes'] ?? '') ?></textarea></div>
     </div>
 

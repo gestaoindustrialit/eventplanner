@@ -27,9 +27,12 @@ CREATE TABLE comedians (
   stage_name TEXT DEFAULT NULL,
   email TEXT DEFAULT NULL,
   phone TEXT DEFAULT NULL,
+  city TEXT DEFAULT NULL,
   instagram TEXT DEFAULT NULL,
   price_bar NUMERIC DEFAULT 0,
   price_auditorium NUMERIC DEFAULT 0,
+  bio TEXT DEFAULT NULL,
+  attachment_path TEXT DEFAULT NULL,
   notes TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
@@ -54,6 +57,8 @@ CREATE TABLE events (
   location TEXT NOT NULL,
   client_id INTEGER NOT NULL,
   cachet_total NUMERIC DEFAULT 0,
+  artist_map_link TEXT DEFAULT NULL,
+  artist_details TEXT DEFAULT NULL,
   notes TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT
@@ -136,17 +141,17 @@ INSERT INTO users (name, email, password, role) VALUES
 ('Ana Ribeiro', 'ana@standup.local', '$2y$12$jKmXi3xg8.OTAFanG3O5R.6Ow6KWyoBS0oq/UxQ0sMA4fuPGXYTty', 'comedian'),
 ('Bruno Silva', 'bruno@standup.local', '$2y$12$jKmXi3xg8.OTAFanG3O5R.6Ow6KWyoBS0oq/UxQ0sMA4fuPGXYTty', 'comedian');
 
-INSERT INTO comedians (user_id, name, stage_name, email, phone, instagram, price_bar, price_auditorium, notes) VALUES
-(2, 'Ana Ribeiro', 'Ana Riso', 'ana@standup.local', '910000001', '@anariso', 300, 700, 'Especialista em crowd work.'),
-(3, 'Bruno Silva', 'Bruno Punch', 'bruno@standup.local', '910000002', '@brunopunch', 400, 900, 'Headliner frequente em Lisboa.');
+INSERT INTO comedians (user_id, name, stage_name, email, phone, city, instagram, price_bar, price_auditorium, bio, notes) VALUES
+(2, 'Ana Ribeiro', 'Ana Riso', 'ana@standup.local', '910000001', 'Lisboa', '@anariso', 300, 700, 'Comediante de observação com forte interação com público.', 'Especialista em crowd work.'),
+(3, 'Bruno Silva', 'Bruno Punch', 'bruno@standup.local', '910000002', 'Porto', '@brunopunch', 400, 900, 'Headliner com humor de storytelling e improviso.', 'Headliner frequente em Lisboa.');
 
 INSERT INTO clients (name, contact_person, phone, email, address, notes) VALUES
 ('Bar Gargalhada', 'Marta Costa', '210000001', 'marta@gargalhada.pt', 'Rua da Alegria 10, Lisboa', 'Eventos mensais'),
 ('Restaurante Comédia & Cia', 'João Pinto', '220000002', 'joao@comediaecia.pt', 'Av. Central 55, Porto', 'Palco equipado com som e luz.');
 
-INSERT INTO events (title, date, time, location, client_id, cachet_total, notes) VALUES
-('Noite de Stand-Up Lisboa', '2026-04-10', '21:30:00', 'Bar Gargalhada', 1, 550.00, 'Entrada livre até às 22h.'),
-('Comedy Dinner Porto', '2026-04-17', '22:00:00', 'Comédia & Cia', 2, 700.00, 'Evento com jantar incluído.');
+INSERT INTO events (title, date, time, location, client_id, cachet_total, artist_map_link, artist_details, notes) VALUES
+('Noite de Stand-Up Lisboa', '2026-04-10', '21:30:00', 'Bar Gargalhada', 1, 550.00, 'https://maps.google.com/?q=Rua+da+Alegria+10,+Lisboa', 'Chegada às 20:15 para soundcheck. Entrada técnica pela porta lateral.', 'Entrada livre até às 22h.'),
+('Comedy Dinner Porto', '2026-04-17', '22:00:00', 'Comédia & Cia', 2, 700.00, 'https://maps.google.com/?q=Av.+Central+55,+Porto', 'Parque disponível no piso -1. Contacto técnico no local: João.', 'Evento com jantar incluído.');
 
 INSERT INTO event_comedians (event_id, comedian_id, role, cachet, notes) VALUES
 (1, 1, 'host', 200.00, 'Aquecimento e interação.'),
