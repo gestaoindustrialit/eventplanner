@@ -11,6 +11,7 @@
             <tr>
                 <th>Título</th>
                 <th>Slug</th>
+                <th>Modo</th>
                 <th>Ordem</th>
                 <th>Estado</th>
                 <th>Ações</th>
@@ -21,6 +22,13 @@
                 <tr>
                     <td><?= htmlspecialchars($page['title']) ?></td>
                     <td><code><?= htmlspecialchars($page['slug']) ?></code></td>
+                    <td>
+                        <?php if (($page['display_mode'] ?? 'section') === 'page'): ?>
+                            <span class="badge text-bg-info">Página</span>
+                        <?php else: ?>
+                            <span class="badge text-bg-primary">Setor home</span>
+                        <?php endif; ?>
+                    </td>
                     <td><?= (int)$page['sort_order'] ?></td>
                     <td>
                         <?php if ((int)$page['is_published'] === 1): ?>
@@ -38,7 +46,7 @@
 
             <?php if (count($pages) === 0): ?>
                 <tr>
-                    <td colspan="5" class="text-muted">Ainda não existem páginas públicas.</td>
+                    <td colspan="6" class="text-muted">Ainda não existem páginas públicas.</td>
                 </tr>
             <?php endif; ?>
         </tbody>

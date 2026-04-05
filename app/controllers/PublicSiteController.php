@@ -83,6 +83,7 @@ $events = [];
 $pages = [];
 $homeCopy = json_decode('__HOME_COPY_JSON__', true) ?: [];
 $msg = $_GET['msg'] ?? '';
+$pageSlug = trim((string)($_GET['page'] ?? ''));
 
 try {
     $db = new PDO('sqlite:__DB_PATH__', null, null, [
@@ -146,6 +147,27 @@ $homeCopy = [
 function safe_content(?string $html): string {
     return strip_tags((string)$html, '<h1><h2><h3><h4><p><ul><ol><li><strong><em><a><blockquote><br><hr>');
 }
+
+function page_mode(array $page): string {
+    return (($page['display_mode'] ?? 'section') === 'page') ? 'page' : 'section';
+}
+
+$sectionPages = [];
+$standalonePages = [];
+$activeStandalonePage = null;
+
+foreach ($pages as $page) {
+    if (page_mode($page) === 'page') {
+        $standalonePages[] = $page;
+        if (($page['slug'] ?? '') === $pageSlug) {
+            $activeStandalonePage = $page;
+        }
+    } else {
+        $sectionPages[] = $page;
+    }
+}
+
+$isStandaloneView = $activeStandalonePage !== null;
 ?>
 <!doctype html>
 <html lang="pt">
@@ -270,7 +292,7 @@ function safe_content(?string $html): string {
 <body>
   <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container">
-      <a class="navbar-brand" href="#inicio">
+      <a class="navbar-brand" href="index.php#inicio">
         <img src="chorarderir-logo.svg" alt="Chorar de Rir">
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPublico">
@@ -278,13 +300,19 @@ function safe_content(?string $html): string {
       </button>
       <div class="collapse navbar-collapse" id="menuPublico">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link active" href="#inicio">Início</a></li>
-          <li class="nav-item"><a class="nav-link" href="#eventos">Eventos</a></li>
-          <li class="nav-item"><a class="nav-link" href="#newsletter">Newsletter</a></li>
-          <?php foreach ($pages as $menuPage): ?>
+          <li class="nav-item"><a class="nav-link <?php echo !$isStandaloneView ? 'active' : ''; ?>" href="index.php#inicio">Início</a></li>
+          <li class="nav-item"><a class="nav-link" href="index.php#eventos">Eventos</a></li>
+          <li class="nav-item"><a class="nav-link" href="index.php#newsletter">Newsletter</a></li>
+          <?php foreach ($sectionPages as $menuPage): ?>
             <?php $slug = trim((string)($menuPage['slug'] ?? '')); ?>
             <?php if ($slug !== ''): ?>
-              <li class="nav-item"><a class="nav-link" href="#<?php echo htmlspecialchars($slug); ?>"><?php echo htmlspecialchars((string)$menuPage['title']); ?></a></li>
+              <li class="nav-item"><a class="nav-link" href="index.php#<?php echo htmlspecialchars($slug); ?>"><?php echo htmlspecialchars((string)$menuPage['title']); ?></a></li>
+            <?php endif; ?>
+          <?php endforeach; ?>
+          <?php foreach ($standalonePages as $menuPage): ?>
+            <?php $slug = trim((string)($menuPage['slug'] ?? '')); ?>
+            <?php if ($slug !== ''): ?>
+              <li class="nav-item"><a class="nav-link <?php echo ($pageSlug === $slug && $isStandaloneView) ? 'active' : ''; ?>" href="index.php?page=<?php echo urlencode($slug); ?>"><?php echo htmlspecialchars((string)$menuPage['title']); ?></a></li>
             <?php endif; ?>
           <?php endforeach; ?>
         </ul>
@@ -293,118 +321,135 @@ function safe_content(?string $html): string {
   </nav>
 
   <main class="site-main">
-    <section id="inicio" class="hero">
-      <div class="container">
-        <div class="hero-panel p-4 p-lg-5 col-12 fade-in show">
-          <p class="text-uppercase small mb-2 fw-semibold text-info-emphasis"><?php echo htmlspecialchars((string)($homeCopy['tagline'] ?? '')); ?></p>
-          <h1 class="display-5 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
-          <p class="lead mb-0 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
-        </div>
-      </div>
-    </section>
-
-    <section id="eventos" class="section-block">
-      <div class="container">
-        <?php if ($msg === 'ok'): ?>
-          <div class="alert alert-success">Reserva enviada com sucesso! Vamos confirmar por email/telefone.</div>
-        <?php elseif ($msg === 'error'): ?>
-          <div class="alert alert-danger">Não foi possível registar a reserva. Tenta novamente.</div>
-        <?php elseif ($msg === 'subscribed'): ?>
-          <div class="alert alert-success">Subscrição da newsletter confirmada com sucesso.</div>
-        <?php elseif ($msg === 'duplicate'): ?>
-          <div class="alert alert-warning">Este email já está registado na newsletter.</div>
-        <?php elseif ($msg === 'consent'): ?>
-          <div class="alert alert-warning">Precisas de aceitar o consentimento RGPD para subscrever.</div>
-        <?php elseif ($msg === 'closed'): ?>
-          <div class="alert alert-warning">As reservas para esse evento estão fechadas.</div>
-        <?php elseif ($msg === 'soldout'): ?>
-          <div class="alert alert-warning">Não existem lugares suficientes disponíveis para essa reserva.</div>
-        <?php endif; ?>
-
-        <h2 class="section-heading">Próximos eventos</h2>
-        <div class="row g-4 mb-5">
-          <?php foreach ($events as $event): ?>
-            <div class="col-lg-6">
-              <div class="event-card surface-card fade-in">
-                <h4><?php echo htmlspecialchars($event['title']); ?></h4>
-                <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
-                <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
-                <?php
-                  $capacity = (int)($event['reservation_capacity'] ?? 0);
-                  $activeTickets = (int)($event['active_tickets'] ?? 0);
-                  $available = $capacity > 0 ? max(0, $capacity - $activeTickets) : null;
-                ?>
-                <?php if ($available !== null): ?>
-                  <p class="small text-secondary mb-3"><strong>Lugares disponíveis:</strong> <?php echo $available; ?> / <?php echo $capacity; ?></p>
-                <?php endif; ?>
-
-                <?php if ((int)($event['reservations_open'] ?? 0) !== 1): ?>
-                  <div class="alert alert-secondary py-2 mb-0">Reservas fechadas para este evento.</div>
-                <?php elseif ($available !== null && $available <= 0): ?>
-                  <div class="alert alert-warning py-2 mb-0">Esgotado. Não existem mais lugares disponíveis.</div>
-                <?php else: ?>
-                  <form method="post" action="reserve.php" class="row g-2">
-                    <input type="hidden" name="event_id" value="<?php echo (int)$event['id']; ?>">
-                    <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
-                    <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
-                    <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
-                    <div class="col-md-6"><input type="number" min="1" <?php echo $available !== null ? 'max="' . $available . '"' : ''; ?> value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
-                    <div class="col-md-6"><button class="btn btn-brand w-100">Reservar</button></div>
-                    <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
-                  </form>
-                <?php endif; ?>
-              </div>
-            </div>
-          <?php endforeach; ?>
-        </div>
-      </div>
-    </section>
-
-    <section id="newsletter" class="section-block pt-0">
-      <div class="container">
-        <div class="surface-card newsletter-panel p-4 p-lg-5 fade-in">
-          <h3 class="h5 mb-2">Newsletter</h3>
-          <form method="post" action="subscribe.php" class="row g-2 align-items-center newsletter-form">
-            <div class="col-lg-4"><input type="email" name="email" required class="form-control" placeholder="Email"></div>
-            <div class="col-lg-4"><input type="text" name="name" class="form-control" placeholder="Nome (opcional)"></div>
-            <div class="col-lg-2"><button class="btn btn-brand w-100">Subscrever</button></div>
-            <div class="col-lg-2">
-              <label class="form-check-label d-flex gap-2 align-items-start small text-secondary">
-                <input class="form-check-input mt-1" type="checkbox" name="gdpr_consent" value="1" required>
-                <span>RGPD</span>
-              </label>
-            </div>
-            <div class="col-12">
-              <p class="small text-secondary mb-0"><?php echo htmlspecialchars('__NEWSLETTER_CONSENT__'); ?></p>
-            </div>
-          </form>
-        </div>
-      </div>
-    </section>
-
-    <?php foreach ($pages as $page): ?>
-      <?php $sectionId = trim((string)($page['slug'] ?? '')); ?>
-      <?php if ($sectionId === '') { continue; } ?>
-      <section id="<?php echo htmlspecialchars($sectionId); ?>" class="section-block<?php echo !empty($page['hero_image_url']) ? ' pt-0' : ''; ?>">
+    <?php if (!$isStandaloneView): ?>
+      <section id="inicio" class="hero">
         <div class="container">
-          <div class="surface-card p-4 p-lg-5 fade-in">
-            <?php if (!empty($page['hero_image_url'])): ?>
-              <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars((string)$page['hero_image_url']); ?>');"></div>
-            <?php endif; ?>
-            <h2 class="section-heading mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
-            <?php if (!empty($page['excerpt'])): ?>
-              <p class="lead text-secondary"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p>
-            <?php endif; ?>
-            <div class="page-content"><?php echo safe_content($page['content'] ?? ''); ?></div>
+          <div class="hero-panel p-4 p-lg-5 col-12 fade-in show">
+            <p class="text-uppercase small mb-2 fw-semibold text-info-emphasis"><?php echo htmlspecialchars((string)($homeCopy['tagline'] ?? '')); ?></p>
+            <h1 class="display-5 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
+            <p class="lead mb-0 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
           </div>
         </div>
       </section>
-    <?php endforeach; ?>
 
-    <?php if (count($pages) === 0): ?>
-      <section class="section-block pt-0">
+      <section id="eventos" class="section-block">
         <div class="container">
-          <div class="alert alert-info">Cria páginas públicas para adicionar novos setores na home.</div>
+          <?php if ($msg === 'ok'): ?>
+            <div class="alert alert-success">Reserva enviada com sucesso! Vamos confirmar por email/telefone.</div>
+          <?php elseif ($msg === 'error'): ?>
+            <div class="alert alert-danger">Não foi possível registar a reserva. Tenta novamente.</div>
+          <?php elseif ($msg === 'subscribed'): ?>
+            <div class="alert alert-success">Subscrição da newsletter confirmada com sucesso.</div>
+          <?php elseif ($msg === 'duplicate'): ?>
+            <div class="alert alert-warning">Este email já está registado na newsletter.</div>
+          <?php elseif ($msg === 'consent'): ?>
+            <div class="alert alert-warning">Precisas de aceitar o consentimento RGPD para subscrever.</div>
+          <?php elseif ($msg === 'closed'): ?>
+            <div class="alert alert-warning">As reservas para esse evento estão fechadas.</div>
+          <?php elseif ($msg === 'soldout'): ?>
+            <div class="alert alert-warning">Não existem lugares suficientes disponíveis para essa reserva.</div>
+          <?php endif; ?>
+
+          <h2 class="section-heading">Próximos eventos</h2>
+          <div class="row g-4 mb-5">
+            <?php foreach ($events as $event): ?>
+              <div class="col-lg-6">
+                <div class="event-card surface-card fade-in">
+                  <h4><?php echo htmlspecialchars($event['title']); ?></h4>
+                  <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
+                  <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
+                  <?php
+                    $capacity = (int)($event['reservation_capacity'] ?? 0);
+                    $activeTickets = (int)($event['active_tickets'] ?? 0);
+                    $available = $capacity > 0 ? max(0, $capacity - $activeTickets) : null;
+                  ?>
+                  <?php if ($available !== null): ?>
+                    <p class="small text-secondary mb-3"><strong>Lugares disponíveis:</strong> <?php echo $available; ?> / <?php echo $capacity; ?></p>
+                  <?php endif; ?>
+
+                  <?php if ((int)($event['reservations_open'] ?? 0) !== 1): ?>
+                    <div class="alert alert-secondary py-2 mb-0">Reservas fechadas para este evento.</div>
+                  <?php elseif ($available !== null && $available <= 0): ?>
+                    <div class="alert alert-warning py-2 mb-0">Esgotado. Não existem mais lugares disponíveis.</div>
+                  <?php else: ?>
+                    <form method="post" action="reserve.php" class="row g-2">
+                      <input type="hidden" name="event_id" value="<?php echo (int)$event['id']; ?>">
+                      <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
+                      <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
+                      <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
+                      <div class="col-md-6"><input type="number" min="1" <?php echo $available !== null ? 'max="' . $available . '"' : ''; ?> value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
+                      <div class="col-md-6"><button class="btn btn-brand w-100">Reservar</button></div>
+                      <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
+                    </form>
+                  <?php endif; ?>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </section>
+
+      <section id="newsletter" class="section-block pt-0">
+        <div class="container">
+          <div class="surface-card newsletter-panel p-4 p-lg-5 fade-in">
+            <h3 class="h5 mb-2">Newsletter</h3>
+            <form method="post" action="subscribe.php" class="row g-2 align-items-center newsletter-form">
+              <div class="col-lg-4"><input type="email" name="email" required class="form-control" placeholder="Email"></div>
+              <div class="col-lg-4"><input type="text" name="name" class="form-control" placeholder="Nome (opcional)"></div>
+              <div class="col-lg-2"><button class="btn btn-brand w-100">Subscrever</button></div>
+              <div class="col-lg-2">
+                <label class="form-check-label d-flex gap-2 align-items-start small text-secondary">
+                  <input class="form-check-input mt-1" type="checkbox" name="gdpr_consent" value="1" required>
+                  <span>RGPD</span>
+                </label>
+              </div>
+              <div class="col-12">
+                <p class="small text-secondary mb-0"><?php echo htmlspecialchars('__NEWSLETTER_CONSENT__'); ?></p>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <?php foreach ($sectionPages as $page): ?>
+        <?php $sectionId = trim((string)($page['slug'] ?? '')); ?>
+        <?php if ($sectionId === '') { continue; } ?>
+        <section id="<?php echo htmlspecialchars($sectionId); ?>" class="section-block<?php echo !empty($page['hero_image_url']) ? ' pt-0' : ''; ?>">
+          <div class="container">
+            <div class="surface-card p-4 p-lg-5 fade-in">
+              <?php if (!empty($page['hero_image_url'])): ?>
+                <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars((string)$page['hero_image_url']); ?>');"></div>
+              <?php endif; ?>
+              <h2 class="section-heading mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
+              <?php if (!empty($page['excerpt'])): ?>
+                <p class="lead text-secondary"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p>
+              <?php endif; ?>
+              <div class="page-content"><?php echo safe_content($page['content'] ?? ''); ?></div>
+            </div>
+          </div>
+        </section>
+      <?php endforeach; ?>
+
+      <?php if (count($pages) === 0): ?>
+        <section class="section-block pt-0">
+          <div class="container">
+            <div class="alert alert-info">Cria páginas públicas para adicionar setores na home ou páginas dedicadas.</div>
+          </div>
+        </section>
+      <?php endif; ?>
+    <?php else: ?>
+      <section class="section-block">
+        <div class="container">
+          <div class="surface-card p-4 p-lg-5 fade-in show">
+            <?php if (!empty($activeStandalonePage['hero_image_url'])): ?>
+              <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars((string)$activeStandalonePage['hero_image_url']); ?>');"></div>
+            <?php endif; ?>
+            <h1 class="section-heading mb-3"><?php echo htmlspecialchars((string)$activeStandalonePage['title']); ?></h1>
+            <?php if (!empty($activeStandalonePage['excerpt'])): ?>
+              <p class="lead text-secondary"><?php echo htmlspecialchars((string)$activeStandalonePage['excerpt']); ?></p>
+            <?php endif; ?>
+            <div class="page-content"><?php echo safe_content($activeStandalonePage['content'] ?? ''); ?></div>
+          </div>
         </div>
       </section>
     <?php endif; ?>
@@ -421,15 +466,18 @@ function safe_content(?string $html): string {
   <script>
     const navbar = document.querySelector('.navbar');
     const fadeItems = document.querySelectorAll('.fade-in');
-    const navLinks = document.querySelectorAll('.navbar .nav-link');
+    const navLinks = document.querySelectorAll('.navbar .nav-link[href*="#"]');
     const menuCollapse = document.getElementById('menuPublico');
     const bsCollapse = menuCollapse ? bootstrap.Collapse.getOrCreateInstance(menuCollapse, {toggle: false}) : null;
+    const isStandaloneView = <?php echo $isStandaloneView ? 'true' : 'false'; ?>;
 
     window.addEventListener('scroll', () => {
       if (navbar) {
         navbar.classList.toggle('scrolled', window.scrollY > 10);
       }
-      document.documentElement.style.setProperty('--hero-offset', `${window.scrollY * 0.18}px`);
+      if (!isStandaloneView) {
+        document.documentElement.style.setProperty('--hero-offset', `${window.scrollY * 0.18}px`);
+      }
     });
 
     const observer = new IntersectionObserver((entries) => {
@@ -441,17 +489,20 @@ function safe_content(?string $html): string {
     }, { threshold: 0.16 });
     fadeItems.forEach((item) => observer.observe(item));
 
-    const sectionObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        const id = entry.target.getAttribute('id');
-        navLinks.forEach((link) => {
-          link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+    if (!isStandaloneView) {
+      const sectionObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const id = entry.target.getAttribute('id');
+          navLinks.forEach((link) => {
+            const href = link.getAttribute('href') || '';
+            link.classList.toggle('active', href.endsWith(`#${id}`));
+          });
         });
-      });
-    }, { rootMargin: '-45% 0px -48% 0px', threshold: 0.01 });
+      }, { rootMargin: '-45% 0px -48% 0px', threshold: 0.01 });
 
-    document.querySelectorAll('section[id]').forEach((section) => sectionObserver.observe(section));
+      document.querySelectorAll('section[id]').forEach((section) => sectionObserver.observe(section));
+    }
 
     navLinks.forEach((link) => {
       link.addEventListener('click', () => {

@@ -114,6 +114,7 @@ CREATE TABLE public_pages (
   excerpt TEXT DEFAULT NULL,
   content TEXT DEFAULT NULL,
   hero_image_url TEXT DEFAULT NULL,
+  display_mode TEXT NOT NULL DEFAULT 'section' CHECK (display_mode IN ('section', 'page')),
   is_published INTEGER NOT NULL DEFAULT 1,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -169,10 +170,10 @@ INSERT INTO event_schedule_items (event_id, starts_at, duration_minutes, item_ty
 (1, '22:05', 20, 'artist', 'Encerramento e fotos', 'Ana Riso', 'Agradecimentos e conteúdo para redes.', 5);
 
 
-INSERT INTO public_pages (title, slug, excerpt, content, hero_image_url, is_published, sort_order) VALUES
-('Sobre nós', 'sobre-nos', 'Conhece a nossa missão e equipa de produção.', '<p>Somos uma produtora artística focada em experiências ao vivo, booking de talentos e curadoria de eventos de comédia.</p><p>Trabalhamos com marcas, espaços culturais e artistas para criar noites memoráveis.</p>', 'https://images.unsplash.com/photo-1497032628192-86f99bcd76bc?auto=format&fit=crop&w=1400&q=80', 1, 10),
-('Serviços', 'servicos', 'Produção, agenciamento e consultoria para espetáculos.', '<h3>O que fazemos</h3><ul><li>Produção executiva de eventos.</li><li>Booking e gestão de artistas.</li><li>Criação de conteúdos e ativações de marca.</li></ul>', 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1400&q=80', 1, 20),
-('Contactos', 'contactos', 'Fala connosco para reservas e propostas comerciais.', '<p><strong>Email:</strong> booking@casadeartistas.pt</p><p><strong>Telefone:</strong> +351 210 000 000</p><p>Estamos disponíveis para parcerias em todo o país.</p>', 'https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=1400&q=80', 1, 30);
+INSERT INTO public_pages (title, slug, excerpt, content, hero_image_url, display_mode, is_published, sort_order) VALUES
+('Sobre nós', 'sobre-nos', 'Conhece a nossa missão e equipa de produção.', '<p>Somos uma produtora artística focada em experiências ao vivo, booking de talentos e curadoria de eventos de comédia.</p><p>Trabalhamos com marcas, espaços culturais e artistas para criar noites memoráveis.</p>', 'https://images.unsplash.com/photo-1497032628192-86f99bcd76bc?auto=format&fit=crop&w=1400&q=80', 'section', 1, 10),
+('Serviços', 'servicos', 'Produção, agenciamento e consultoria para espetáculos.', '<h3>O que fazemos</h3><ul><li>Produção executiva de eventos.</li><li>Booking e gestão de artistas.</li><li>Criação de conteúdos e ativações de marca.</li></ul>', 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1400&q=80', 'section', 1, 20),
+('Contactos', 'contactos', 'Fala connosco para reservas e propostas comerciais.', '<p><strong>Email:</strong> booking@casadeartistas.pt</p><p><strong>Telefone:</strong> +351 210 000 000</p><p>Estamos disponíveis para parcerias em todo o país.</p>', 'https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=1400&q=80', 'page', 1, 30);
 
 INSERT INTO site_settings (setting_key, setting_value) VALUES
 ('home_tagline', 'Produção • Booking • Experiências'),
