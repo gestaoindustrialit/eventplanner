@@ -93,31 +93,41 @@ class Database
             )'
         );
 
-        $columns = $db->query('PRAGMA table_info(comedians)')->fetchAll();
-        $comedianColumns = array_column($columns, 'name');
+        if ($this->tableExists($db, 'comedians')) {
+            $columns = $db->query('PRAGMA table_info(comedians)')->fetchAll();
+            $comedianColumns = array_column($columns, 'name');
 
-        if (!in_array('bio', $comedianColumns, true)) {
-            $db->exec('ALTER TABLE comedians ADD COLUMN bio TEXT DEFAULT NULL');
-        }
-        if (!in_array('city', $comedianColumns, true)) {
-            $db->exec('ALTER TABLE comedians ADD COLUMN city TEXT DEFAULT NULL');
-        }
-        if (!in_array('attachment_path', $comedianColumns, true)) {
-            $db->exec('ALTER TABLE comedians ADD COLUMN attachment_path TEXT DEFAULT NULL');
-        }
-        if (!in_array('price_bar', $comedianColumns, true)) {
-            $db->exec('ALTER TABLE comedians ADD COLUMN price_bar NUMERIC DEFAULT 0');
-        }
-        if (!in_array('price_auditorium', $comedianColumns, true)) {
-            $db->exec('ALTER TABLE comedians ADD COLUMN price_auditorium NUMERIC DEFAULT 0');
+            if (!in_array('bio', $comedianColumns, true)) {
+                $db->exec('ALTER TABLE comedians ADD COLUMN bio TEXT DEFAULT NULL');
+            }
+            if (!in_array('city', $comedianColumns, true)) {
+                $db->exec('ALTER TABLE comedians ADD COLUMN city TEXT DEFAULT NULL');
+            }
+            if (!in_array('attachment_path', $comedianColumns, true)) {
+                $db->exec('ALTER TABLE comedians ADD COLUMN attachment_path TEXT DEFAULT NULL');
+            }
+            if (!in_array('price_bar', $comedianColumns, true)) {
+                $db->exec('ALTER TABLE comedians ADD COLUMN price_bar NUMERIC DEFAULT 0');
+            }
+            if (!in_array('price_auditorium', $comedianColumns, true)) {
+                $db->exec('ALTER TABLE comedians ADD COLUMN price_auditorium NUMERIC DEFAULT 0');
+            }
         }
 
-        $eventColumns = array_column($db->query('PRAGMA table_info(events)')->fetchAll(), 'name');
-        if (!in_array('artist_map_link', $eventColumns, true)) {
-            $db->exec('ALTER TABLE events ADD COLUMN artist_map_link TEXT DEFAULT NULL');
-        }
-        if (!in_array('artist_details', $eventColumns, true)) {
-            $db->exec('ALTER TABLE events ADD COLUMN artist_details TEXT DEFAULT NULL');
+        if ($this->tableExists($db, 'events')) {
+            $eventColumns = array_column($db->query('PRAGMA table_info(events)')->fetchAll(), 'name');
+            if (!in_array('artist_map_link', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN artist_map_link TEXT DEFAULT NULL');
+            }
+            if (!in_array('artist_details', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN artist_details TEXT DEFAULT NULL');
+            }
+            if (!in_array('reservations_open', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN reservations_open INTEGER NOT NULL DEFAULT 1');
+            }
+            if (!in_array('reservation_capacity', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN reservation_capacity INTEGER NOT NULL DEFAULT 0');
+            }
         }
         if (!in_array('reservations_open', $eventColumns, true)) {
             $db->exec('ALTER TABLE events ADD COLUMN reservations_open INTEGER NOT NULL DEFAULT 1');
@@ -125,5 +135,12 @@ class Database
         if (!in_array('reservation_capacity', $eventColumns, true)) {
             $db->exec('ALTER TABLE events ADD COLUMN reservation_capacity INTEGER NOT NULL DEFAULT 0');
         }
+    }
+
+    private function tableExists(PDO $db, string $table): bool
+    {
+        $stmt = $db->prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = :table LIMIT 1");
+        $stmt->execute(['table' => $table]);
+        return (bool)$stmt->fetchColumn();
     }
 }

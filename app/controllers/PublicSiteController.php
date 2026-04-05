@@ -339,8 +339,6 @@ function safe_content(?string $html): string {
               </div>
             <?php endforeach; ?>
           </div>
-        <?php endif; ?>
-
         <div class="glass-card newsletter-card">
           <h3 class="h5 mb-2">Newsletter</h3>
           <form method="post" action="subscribe.php" class="row g-2 align-items-center newsletter-form">
