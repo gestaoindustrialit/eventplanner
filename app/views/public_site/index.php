@@ -45,6 +45,7 @@
                     <strong><?= htmlspecialchars($page['title']) ?></strong>
                     (<code><?= htmlspecialchars($page['slug']) ?></code>)
                     - <?= (($page['display_mode'] ?? 'section') === 'page') ? 'Página própria' : 'Setor da home' ?>
+                    - tipo <?= htmlspecialchars((string)($page['section_type'] ?? 'default')) ?>/<?= htmlspecialchars((string)($page['section_style'] ?? 'card')) ?>
                     - <?= (int)$page['is_published'] === 1 ? 'Publicado' : 'Rascunho' ?>
                 </li>
             <?php endforeach; ?>

@@ -48,11 +48,29 @@ class Database
                 excerpt TEXT DEFAULT NULL,
                 content TEXT DEFAULT NULL,
                 hero_image_url TEXT DEFAULT NULL,
+                display_mode TEXT NOT NULL DEFAULT \'section\' CHECK (display_mode IN (\'section\', \'page\')),
+                section_type TEXT NOT NULL DEFAULT \'default\' CHECK (section_type IN (\'default\', \'about\', \'services\', \'contact_form\')),
+                section_style TEXT NOT NULL DEFAULT \'card\' CHECK (section_style IN (\'card\', \'split\', \'icons\', \'highlight\')),
+                section_config_json TEXT DEFAULT NULL,
                 is_published INTEGER NOT NULL DEFAULT 1,
                 sort_order INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )'
         );
+
+        $publicPageColumns = array_column($db->query('PRAGMA table_info(public_pages)')->fetchAll(), 'name');
+        if (!in_array('display_mode', $publicPageColumns, true)) {
+            $db->exec('ALTER TABLE public_pages ADD COLUMN display_mode TEXT NOT NULL DEFAULT \'section\'');
+        }
+        if (!in_array('section_type', $publicPageColumns, true)) {
+            $db->exec('ALTER TABLE public_pages ADD COLUMN section_type TEXT NOT NULL DEFAULT \'default\'');
+        }
+        if (!in_array('section_style', $publicPageColumns, true)) {
+            $db->exec('ALTER TABLE public_pages ADD COLUMN section_style TEXT NOT NULL DEFAULT \'card\'');
+        }
+        if (!in_array('section_config_json', $publicPageColumns, true)) {
+            $db->exec('ALTER TABLE public_pages ADD COLUMN section_config_json TEXT DEFAULT NULL');
+        }
 
         $db->exec(
             'CREATE TABLE IF NOT EXISTS newsletter_subscriptions (
