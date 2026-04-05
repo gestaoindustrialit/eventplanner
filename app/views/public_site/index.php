@@ -38,7 +38,7 @@
 <div class="card shadow-sm">
     <div class="card-body">
         <h5>Páginas prontas para publicação</h5>
-        <p class="text-muted mb-3">As páginas marcadas como <strong>Publicado</strong> serão incluídas no menu público.</p>
+        <p class="text-muted mb-3">As páginas criadas serão incluídas no menu público após voltares a publicar o website.</p>
         <ul class="mb-0">
             <?php foreach ($pages as $page): ?>
                 <li>
