@@ -179,6 +179,20 @@ INSERT INTO site_settings (setting_key, setting_value) VALUES
 ('home_tagline', 'Produção • Booking • Experiências'),
 ('home_title', 'Humor e espetáculos com um palco inesquecível.'),
 ('home_description', 'Layout inspirado no visual Big Picture com imagem de fundo marcante e conteúdo em cartões translúcidos.'),
-('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.');
+('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.'),
+('reservation_email_template_a', 'Olá {customer_name},
+
+Recebemos a tua reserva para "{event_title}" no dia {event_date} às {event_time}.
+Bilhetes reservados: {tickets}.
+
+Obrigado!'),
+('reservation_email_template_b', 'Olá {customer_name},
+
+A tua reserva para "{event_title}" foi submetida com sucesso.
+Data: {event_date} às {event_time}
+Nº de bilhetes: {tickets}
+
+Entraremos em contacto em breve para confirmação final.'),
+('reservation_email_template_selected', 'a');
 
 PRAGMA foreign_keys = ON;

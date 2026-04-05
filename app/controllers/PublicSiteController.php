@@ -543,7 +543,7 @@ try {
     $eventId = (int)($_POST['event_id'] ?? 0);
     $tickets = max(1, (int)($_POST['tickets'] ?? 1));
 
-    $eventStmt = $db->prepare("SELECT e.id, e.reservations_open, e.reservation_capacity, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets FROM events e LEFT JOIN event_reservations r ON r.event_id = e.id WHERE e.id = :event_id GROUP BY e.id");
+    $eventStmt = $db->prepare("SELECT e.id, e.title, e.date, e.time, e.reservations_open, e.reservation_capacity, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets FROM events e LEFT JOIN event_reservations r ON r.event_id = e.id WHERE e.id = :event_id GROUP BY e.id");
     $eventStmt->execute(['event_id' => $eventId]);
     $event = $eventStmt->fetch();
 
@@ -570,6 +570,57 @@ try {
         'notes' => trim((string)($_POST['notes'] ?? '')) ?: null,
         'status' => 'new',
     ]);
+
+    $db->exec(
+        'CREATE TABLE IF NOT EXISTS site_settings (
+            setting_key TEXT PRIMARY KEY,
+            setting_value TEXT NOT NULL,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )'
+    );
+
+    $settingStmt = $db->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (:template_a, :template_b, :template_selected)');
+    $settingStmt->execute([
+        'template_a' => 'reservation_email_template_a',
+        'template_b' => 'reservation_email_template_b',
+        'template_selected' => 'reservation_email_template_selected',
+    ]);
+    $rows = $settingStmt->fetchAll() ?: [];
+    $settings = [];
+    foreach ($rows as $row) {
+        $settings[(string)$row['setting_key']] = (string)$row['setting_value'];
+    }
+
+    $defaultTemplateA = "Olá {customer_name},\n\nRecebemos a tua reserva para \"{event_title}\" no dia {event_date} às {event_time}.\nBilhetes reservados: {tickets}.\n\nObrigado!";
+    $defaultTemplateB = "Olá {customer_name},\n\nA tua reserva para \"{event_title}\" foi submetida com sucesso.\nData: {event_date} às {event_time}\nNº de bilhetes: {tickets}\n\nEntraremos em contacto em breve para confirmação final.";
+    $templateA = trim((string)($settings['reservation_email_template_a'] ?? '')) !== '' ? (string)$settings['reservation_email_template_a'] : $defaultTemplateA;
+    $templateB = trim((string)($settings['reservation_email_template_b'] ?? '')) !== '' ? (string)$settings['reservation_email_template_b'] : $defaultTemplateB;
+    $selectedTemplate = (string)($settings['reservation_email_template_selected'] ?? 'a');
+    $bodyTemplate = $selectedTemplate === 'b' ? $templateB : $templateA;
+
+    $customerName = trim((string)($_POST['customer_name'] ?? ''));
+    $customerEmail = trim((string)($_POST['customer_email'] ?? ''));
+    $customerPhone = trim((string)($_POST['customer_phone'] ?? ''));
+    $messageBody = strtr($bodyTemplate, [
+        '{customer_name}' => $customerName,
+        '{event_title}' => (string)($event['title'] ?? ''),
+        '{event_date}' => (string)($event['date'] ?? ''),
+        '{event_time}' => substr((string)($event['time'] ?? ''), 0, 5),
+        '{tickets}' => (string)$tickets,
+        '{customer_email}' => $customerEmail,
+        '{customer_phone}' => $customerPhone,
+    ]);
+
+    if ($customerEmail !== '') {
+        $subject = 'Confirmação de reserva - ' . (string)($event['title'] ?? 'Evento');
+        $headers = [
+            'MIME-Version: 1.0',
+            'Content-type: text/plain; charset=UTF-8',
+            'From: noreply@chorarderir.com',
+            'Reply-To: noreply@chorarderir.com',
+        ];
+        @mail($customerEmail, $subject, $messageBody, implode("\r\n", $headers));
+    }
 
     header('Location: index.php?msg=ok#eventos');
     exit;
