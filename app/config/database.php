@@ -40,6 +40,59 @@ class Database
 
     private function ensureSchema(PDO $db): void
     {
+        $db->exec(
+            'CREATE TABLE IF NOT EXISTS public_pages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                slug TEXT NOT NULL UNIQUE,
+                excerpt TEXT DEFAULT NULL,
+                content TEXT DEFAULT NULL,
+                hero_image_url TEXT DEFAULT NULL,
+                is_published INTEGER NOT NULL DEFAULT 1,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
+
+        $db->exec(
+            'CREATE TABLE IF NOT EXISTS newsletter_subscriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL UNIQUE,
+                name TEXT DEFAULT NULL,
+                gdpr_consent INTEGER NOT NULL DEFAULT 0,
+                consent_text TEXT NOT NULL DEFAULT \'\',
+                source TEXT DEFAULT NULL,
+                status TEXT NOT NULL DEFAULT \'active\' CHECK (status IN (\'active\', \'unsubscribed\')),
+                subscribed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                unsubscribed_at TEXT DEFAULT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
+
+        $db->exec(
+            'CREATE TABLE IF NOT EXISTS site_settings (
+                setting_key TEXT PRIMARY KEY,
+                setting_value TEXT NOT NULL,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
+
+        $db->exec(
+            'CREATE TABLE IF NOT EXISTS event_schedule_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                starts_at TEXT NOT NULL,
+                duration_minutes INTEGER NOT NULL DEFAULT 15,
+                item_type TEXT NOT NULL DEFAULT \'artist\' CHECK (item_type IN (\'artist\', \'break\', \'technical\', \'doors\', \'other\')),
+                title TEXT NOT NULL,
+                responsible TEXT DEFAULT NULL,
+                notes TEXT DEFAULT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+            )'
+        );
+
         $columns = $db->query('PRAGMA table_info(comedians)')->fetchAll();
         $comedianColumns = array_column($columns, 'name');
 
@@ -65,6 +118,12 @@ class Database
         }
         if (!in_array('artist_details', $eventColumns, true)) {
             $db->exec('ALTER TABLE events ADD COLUMN artist_details TEXT DEFAULT NULL');
+        }
+        if (!in_array('reservations_open', $eventColumns, true)) {
+            $db->exec('ALTER TABLE events ADD COLUMN reservations_open INTEGER NOT NULL DEFAULT 1');
+        }
+        if (!in_array('reservation_capacity', $eventColumns, true)) {
+            $db->exec('ALTER TABLE events ADD COLUMN reservation_capacity INTEGER NOT NULL DEFAULT 0');
         }
     }
 }
