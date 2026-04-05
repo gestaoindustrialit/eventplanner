@@ -42,11 +42,6 @@ class PublicSiteController extends BaseController
             $settings->set('home_description', trim((string)($_POST['home_description'] ?? '')));
             $settings->set('newsletter_consent_text', trim((string)($_POST['newsletter_consent_text'] ?? '')));
 
-            $eventModel = new Event($this->db);
-            $events = $eventModel->openEvents();
-            $pageModel = new PublicPage($this->db);
-            $pages = $pageModel->all();
-
             $dbPath = (new Database())->getSqlitePath();
             $homeCopy = [
                 'tagline' => $settings->get('home_tagline', ''),
@@ -55,7 +50,7 @@ class PublicSiteController extends BaseController
             ];
             $newsletterConsentText = $settings->get('newsletter_consent_text', '');
 
-            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($events, $pages, $homeCopy, $newsletterConsentText)) === false) {
+            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($dbPath, $homeCopy, $newsletterConsentText)) === false) {
                 throw new RuntimeException('Falha ao escrever index.php no destino.');
             }
             if (file_put_contents($targetPath . '/reserve.php', $this->buildReserveHandler($dbPath)) === false) {
@@ -78,20 +73,65 @@ class PublicSiteController extends BaseController
         $this->redirect(BASE_URL . '?controller=publicsite&action=index');
     }
 
-    private function buildPublicIndex(array $events, array $pages, array $homeCopy, string $newsletterConsentText): string
+    private function buildPublicIndex(string $dbPath, array $homeCopy, string $newsletterConsentText): string
     {
-        $eventsJson = json_encode($events, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-        $pagesJson = json_encode($pages, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $homeCopyJson = json_encode($homeCopy, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
         $template = <<<'PHP'
 <?php
-$events = json_decode('__EVENTS_JSON__', true) ?: [];
-$pages = json_decode('__PAGES_JSON__', true) ?: [];
+$events = [];
+$pages = [];
 $homeCopy = json_decode('__HOME_COPY_JSON__', true) ?: [];
 $msg = $_GET['msg'] ?? '';
 $pageSlug = trim((string)($_GET['page'] ?? 'home'));
 $activePage = null;
+
+try {
+    $db = new PDO('sqlite:__DB_PATH__', null, null, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+
+    $eventColumns = array_column($db->query('PRAGMA table_info(events)')->fetchAll(), 'name');
+    $hasReservationsOpen = in_array('reservations_open', $eventColumns, true);
+    $hasReservationCapacity = in_array('reservation_capacity', $eventColumns, true);
+
+    $eventSql = "SELECT e.*, c.name as client_name, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets
+                 FROM events e
+                 LEFT JOIN clients c ON c.id = e.client_id
+                 LEFT JOIN event_reservations r ON r.event_id = e.id
+                 WHERE e.date >= date('now')";
+    if ($hasReservationsOpen) {
+        $eventSql .= " AND e.reservations_open = 1";
+    }
+    $eventSql .= " GROUP BY e.id ORDER BY e.date ASC, e.time ASC";
+    $events = $db->query($eventSql)->fetchAll() ?: [];
+
+    $pageSql = 'SELECT * FROM public_pages';
+    $pageColumns = array_column($db->query('PRAGMA table_info(public_pages)')->fetchAll(), 'name');
+    if (in_array('is_published', $pageColumns, true)) {
+        $pageSql .= ' WHERE is_published = 1';
+    }
+    if (in_array('sort_order', $pageColumns, true)) {
+        $pageSql .= ' ORDER BY sort_order ASC, title ASC';
+    } else {
+        $pageSql .= ' ORDER BY title ASC';
+    }
+    $pages = $db->query($pageSql)->fetchAll() ?: [];
+
+    if (!$hasReservationsOpen) {
+        foreach ($events as &$legacyEvent) {
+            $legacyEvent['reservations_open'] = 1;
+            if (!$hasReservationCapacity) {
+                $legacyEvent['reservation_capacity'] = 0;
+            }
+        }
+        unset($legacyEvent);
+    }
+} catch (Throwable $e) {
+    $events = [];
+    $pages = [];
+}
 
 foreach ($pages as $item) {
     if (($item['slug'] ?? '') === $pageSlug) {
@@ -299,8 +339,6 @@ function safe_content(?string $html): string {
               </div>
             <?php endforeach; ?>
           </div>
-        <?php endif; ?>
-
         <div class="glass-card newsletter-card">
           <h3 class="h5 mb-2">Newsletter</h3>
           <form method="post" action="subscribe.php" class="row g-2 align-items-center newsletter-form">
@@ -354,8 +392,7 @@ function safe_content(?string $html): string {
 </html>
 PHP;
 
-        $template = str_replace('__EVENTS_JSON__', addslashes((string)$eventsJson), $template);
-        $template = str_replace('__PAGES_JSON__', addslashes((string)$pagesJson), $template);
+        $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
         $template = str_replace('__HOME_COPY_JSON__', addslashes((string)$homeCopyJson), $template);
         return str_replace('__NEWSLETTER_CONSENT__', addslashes($newsletterConsentText), $template);
     }
