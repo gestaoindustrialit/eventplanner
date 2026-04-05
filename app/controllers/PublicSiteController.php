@@ -12,9 +12,10 @@ class PublicSiteController extends BaseController
         $homeTagline = $settings->get('home_tagline', 'Produção • Booking • Experiências');
         $homeTitle = $settings->get('home_title', 'Humor e espetáculos com um palco inesquecível.');
         $homeDescription = $settings->get('home_description', 'Layout inspirado no visual "Big Picture": imagem de fundo marcante, tipografia forte e conteúdo em cartões translúcidos para foco total no evento.');
+        $homeBackgroundUrl = $settings->get('home_background_url', 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80');
         $newsletterConsentText = $settings->get('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.');
 
-        $this->render('public_site/index', compact('defaultPath', 'pages', 'homeTagline', 'homeTitle', 'homeDescription', 'newsletterConsentText'));
+        $this->render('public_site/index', compact('defaultPath', 'pages', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText'));
     }
 
     public function publish(): void
@@ -40,6 +41,7 @@ class PublicSiteController extends BaseController
             $settings->set('home_tagline', trim((string)($_POST['home_tagline'] ?? '')));
             $settings->set('home_title', trim((string)($_POST['home_title'] ?? '')));
             $settings->set('home_description', trim((string)($_POST['home_description'] ?? '')));
+            $settings->set('home_background_url', trim((string)($_POST['home_background_url'] ?? '')));
             $settings->set('newsletter_consent_text', trim((string)($_POST['newsletter_consent_text'] ?? '')));
 
             $dbPath = (new Database())->getSqlitePath();
@@ -47,6 +49,7 @@ class PublicSiteController extends BaseController
                 'tagline' => $settings->get('home_tagline', ''),
                 'title' => $settings->get('home_title', ''),
                 'description' => $settings->get('home_description', ''),
+                'background_url' => $settings->get('home_background_url', ''),
             ];
             $newsletterConsentText = $settings->get('newsletter_consent_text', '');
 
@@ -58,6 +61,9 @@ class PublicSiteController extends BaseController
             }
             if (file_put_contents($targetPath . '/subscribe.php', $this->buildSubscribeHandler($dbPath)) === false) {
                 throw new RuntimeException('Falha ao escrever subscribe.php no destino.');
+            }
+            if (file_put_contents($targetPath . '/contact.php', $this->buildContactHandler($dbPath)) === false) {
+                throw new RuntimeException('Falha ao escrever contact.php no destino.');
             }
 
             $logoSource = dirname(__DIR__, 2) . '/assets/branding/chorarderir-logo.svg';
@@ -137,11 +143,13 @@ $defaultHomeCopy = [
     'tagline' => 'Produção • Booking • Experiências',
     'title' => 'Humor e espetáculos com um palco inesquecível.',
     'description' => 'Eventos únicos, noites memoráveis e talento nacional num ambiente vibrante.',
+    'background_url' => 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80',
 ];
 $homeCopy = [
     'tagline' => trim((string)($homeCopy['tagline'] ?? '')) !== '' ? (string)$homeCopy['tagline'] : $defaultHomeCopy['tagline'],
     'title' => trim((string)($homeCopy['title'] ?? '')) !== '' ? (string)$homeCopy['title'] : $defaultHomeCopy['title'],
     'description' => trim((string)($homeCopy['description'] ?? '')) !== '' ? (string)$homeCopy['description'] : $defaultHomeCopy['description'],
+    'background_url' => trim((string)($homeCopy['background_url'] ?? '')) !== '' ? (string)$homeCopy['background_url'] : $defaultHomeCopy['background_url'],
 ];
 
 function safe_content(?string $html): string {
@@ -150,6 +158,40 @@ function safe_content(?string $html): string {
 
 function page_mode(array $page): string {
     return (($page['display_mode'] ?? 'section') === 'page') ? 'page' : 'section';
+}
+
+function section_type(array $page): string {
+    $type = (string)($page['section_type'] ?? 'default');
+    if (in_array($type, ['default', 'about', 'services', 'contact_form'], true) && $type !== 'default') {
+        return $type;
+    }
+    $config = section_config($page);
+    if (!empty($config['services']) && is_array($config['services'])) {
+        return 'services';
+    }
+    if (!empty($config['contact_email_to']) || !empty($config['contact_fields'])) {
+        return 'contact_form';
+    }
+    return 'default';
+}
+
+function section_style(array $page): string {
+    $style = (string)($page['section_style'] ?? 'card');
+    return in_array($style, ['card', 'split', 'icons', 'highlight'], true) ? $style : 'card';
+}
+
+function section_config(array $page): array {
+    $decoded = json_decode((string)($page['section_config_json'] ?? ''), true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function bootstrap_icon_class(string $name): string {
+    $clean = strtolower(trim($name));
+    $clean = str_replace(['bi ', 'bi-', '_'], ['', '', '-'], $clean);
+    if (!preg_match('/^[a-z0-9-]+$/', $clean)) {
+        return 'bi-stars';
+    }
+    return 'bi-' . $clean;
 }
 
 $sectionPages = [];
@@ -176,14 +218,16 @@ $isStandaloneView = $activeStandalonePage !== null;
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?php echo htmlspecialchars($siteTitle); ?></title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
     :root {
-      --brand-dark: #0f172a;
+      --brand-dark: #000000;
       --brand-base: #ffffff;
       --brand-surface: #f8fafc;
       --brand-border: #dbe4f0;
       --brand-text: #0f172a;
       --brand-muted: #5b6472;
+      --brand-accent: #CD1C18;
       --nav-height: 74px;
     }
     body {
@@ -199,11 +243,11 @@ $isStandaloneView = $activeStandalonePage !== null;
     .navbar {
       min-height: var(--nav-height);
       backdrop-filter: blur(10px);
-      background: rgba(15, 23, 42, 0.88);
-      border-bottom: 1px solid rgba(255,255,255,.18);
+      background: rgba(0, 0, 0, 0.94);
+      border-bottom: 1px solid rgba(205, 28, 24, .45);
       transition: box-shadow .35s ease;
     }
-    .navbar.scrolled { box-shadow: 0 14px 40px rgba(2, 6, 23, .22); }
+    .navbar.scrolled { box-shadow: 0 14px 40px rgba(0, 0, 0, .35); }
     .navbar-brand { display: inline-flex; align-items: center; line-height: 1; padding-top: .2rem; padding-bottom: .2rem; }
     .navbar-brand img { height: 16px; max-height: 16px; width: auto; display: block; filter: brightness(0) invert(1); }
     .nav-link { color: #e8edf7; position: relative; transition: color .25s ease; }
@@ -215,7 +259,7 @@ $isStandaloneView = $activeStandalonePage !== null;
       bottom: .2rem;
       height: 2px;
       border-radius: 999px;
-      background: #93c5fd;
+      background: var(--brand-accent);
       transform: scaleX(0);
       transition: transform .25s ease;
     }
@@ -235,8 +279,8 @@ $isStandaloneView = $activeStandalonePage !== null;
       position: absolute;
       inset: 0;
       background:
-        linear-gradient(120deg, rgba(15, 23, 42, 0.84) 15%, rgba(15, 23, 42, 0.55) 55%, rgba(29, 78, 216, 0.25) 100%),
-        url('https://images.unsplash.com/photo-1470229538611-16ba8c7ffbd7?auto=format&fit=crop&w=1800&q=80') center / cover fixed;
+        linear-gradient(120deg, rgba(0, 0, 0, 0.78) 15%, rgba(0, 0, 0, 0.42) 55%, rgba(205, 28, 24, 0.28) 100%),
+        var(--hero-background, url('https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80')) center / cover fixed;
       transform: translateY(var(--hero-offset, 0px));
       will-change: transform;
     }
@@ -271,6 +315,41 @@ $isStandaloneView = $activeStandalonePage !== null;
     .page-cover { min-height: 220px; border-radius: .95rem; background-size: cover; background-position: center; margin-bottom: 1.2rem; }
     .page-content { line-height: 1.7; color: #334155; }
     .newsletter-panel { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #bfdbfe; }
+    .about-split-image {
+      min-height: 320px;
+      border-radius: 1rem;
+      background-size: cover;
+      background-position: center;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
+    }
+    .services-grid .service-item { text-align: center; padding: 1rem; }
+    .services-grid .service-icon {
+      width: 78px;
+      height: 78px;
+      margin: 0 auto 1rem;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: #b7791f;
+      border: 2px solid #d4a24f;
+      background: rgba(212, 162, 79, .08);
+    }
+    .contact-special {
+      position: relative;
+      color: #fff;
+      border: none;
+      background: linear-gradient(120deg, rgba(0, 0, 0, .84), rgba(0, 0, 0, .62), rgba(205, 28, 24, .28)), var(--section-bg, #0f172a);
+      background-size: cover;
+      background-position: center;
+    }
+    .contact-special .form-control { background: rgba(255,255,255,.94); border: none; }
+    .full-bleed {
+      width: 100vw;
+      margin-left: calc(50% - 50vw);
+      margin-right: calc(50% - 50vw);
+    }
     .fade-in { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s ease; }
     .fade-in.show { opacity: 1; transform: translateY(0); }
     footer { flex-shrink: 0; border-top: 1px solid var(--brand-border); background: #fff; color: var(--brand-muted); }
@@ -280,8 +359,8 @@ $isStandaloneView = $activeStandalonePage !== null;
       .navbar .navbar-toggler { padding: .3rem .45rem; }
       .navbar .navbar-collapse {
         margin-top: .6rem;
-        background: rgba(7, 11, 17, 0.94);
-        border: 1px solid rgba(255,255,255,.14);
+        background: rgba(0, 0, 0, 0.95);
+        border: 1px solid rgba(205, 28, 24, .35);
         border-radius: 10px;
         padding: .45rem .6rem;
       }
@@ -289,7 +368,7 @@ $isStandaloneView = $activeStandalonePage !== null;
     }
   </style>
 </head>
-<body>
+  <body style="--hero-background: url('<?php echo htmlspecialchars((string)$homeCopy['background_url']); ?>');">
   <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container">
       <a class="navbar-brand" href="index.php#inicio">
@@ -302,7 +381,6 @@ $isStandaloneView = $activeStandalonePage !== null;
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link <?php echo !$isStandaloneView ? 'active' : ''; ?>" href="index.php#inicio">Início</a></li>
           <li class="nav-item"><a class="nav-link" href="index.php#eventos">Eventos</a></li>
-          <li class="nav-item"><a class="nav-link" href="index.php#newsletter">Newsletter</a></li>
           <?php foreach ($sectionPages as $menuPage): ?>
             <?php $slug = trim((string)($menuPage['slug'] ?? '')); ?>
             <?php if ($slug !== ''): ?>
@@ -327,7 +405,11 @@ $isStandaloneView = $activeStandalonePage !== null;
           <div class="hero-panel p-4 p-lg-5 col-12 fade-in show">
             <p class="text-uppercase small mb-2 fw-semibold text-info-emphasis"><?php echo htmlspecialchars((string)($homeCopy['tagline'] ?? '')); ?></p>
             <h1 class="display-5 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
-            <p class="lead mb-0 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
+            <p class="lead mb-4 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
+            <div class="d-flex flex-wrap gap-2">
+              <a href="#eventos" class="btn btn-light px-4 fw-semibold">Ver agenda</a>
+              <a href="#contactos" class="btn btn-outline-light px-4 fw-semibold">Reservar espetáculo</a>
+            </div>
           </div>
         </div>
       </section>
@@ -348,6 +430,10 @@ $isStandaloneView = $activeStandalonePage !== null;
             <div class="alert alert-warning">As reservas para esse evento estão fechadas.</div>
           <?php elseif ($msg === 'soldout'): ?>
             <div class="alert alert-warning">Não existem lugares suficientes disponíveis para essa reserva.</div>
+          <?php elseif ($msg === 'contact_ok'): ?>
+            <div class="alert alert-success">Mensagem enviada com sucesso. Obrigado pelo contacto!</div>
+          <?php elseif ($msg === 'contact_error'): ?>
+            <div class="alert alert-danger">Não foi possível enviar o contacto. Tenta novamente.</div>
           <?php endif; ?>
 
           <h2 class="section-heading">Próximos eventos</h2>
@@ -414,18 +500,77 @@ $isStandaloneView = $activeStandalonePage !== null;
       <?php foreach ($sectionPages as $page): ?>
         <?php $sectionId = trim((string)($page['slug'] ?? '')); ?>
         <?php if ($sectionId === '') { continue; } ?>
-        <section id="<?php echo htmlspecialchars($sectionId); ?>" class="section-block<?php echo !empty($page['hero_image_url']) ? ' pt-0' : ''; ?>">
+        <?php $sectionType = section_type($page); ?>
+        <?php $sectionConfig = section_config($page); ?>
+        <section id="<?php echo htmlspecialchars($sectionId); ?>" class="section-block<?php echo (!empty($page['hero_image_url']) && $sectionType === 'default') ? ' pt-0' : ''; ?>">
           <div class="container">
-            <div class="surface-card p-4 p-lg-5 fade-in">
-              <?php if (!empty($page['hero_image_url'])): ?>
-                <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars((string)$page['hero_image_url']); ?>');"></div>
-              <?php endif; ?>
-              <h2 class="section-heading mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
-              <?php if (!empty($page['excerpt'])): ?>
-                <p class="lead text-secondary"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p>
-              <?php endif; ?>
-              <div class="page-content"><?php echo safe_content($page['content'] ?? ''); ?></div>
-            </div>
+            <?php if ($sectionType === 'about'): ?>
+              <div class="surface-card p-4 p-lg-5 fade-in">
+                <div class="row g-4 align-items-center">
+                  <div class="col-lg-6">
+                    <h2 class="section-heading mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
+                    <?php if (!empty($page['excerpt'])): ?><p class="lead text-secondary"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p><?php endif; ?>
+                    <div class="page-content mb-3"><?php echo safe_content($page['content'] ?? ''); ?></div>
+                    <?php if (!empty($sectionConfig['cta_text'])): ?><p class="mb-0 fw-semibold"><?php echo htmlspecialchars((string)$sectionConfig['cta_text']); ?></p><?php endif; ?>
+                  </div>
+                  <div class="col-lg-6">
+                    <div class="about-split-image" style="background-image:url('<?php echo htmlspecialchars((string)($page['hero_image_url'] ?: 'https://images.unsplash.com/photo-1509824227185-9c5a01ceba0d?auto=format&fit=crop&w=1400&q=80')); ?>');"></div>
+                  </div>
+                </div>
+              </div>
+            <?php elseif ($sectionType === 'services'): ?>
+              <div class="surface-card p-4 p-lg-5 fade-in services-grid">
+                <h2 class="section-heading mb-3 text-center"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
+                <?php if (!empty($page['excerpt'])): ?><p class="lead text-secondary text-center"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p><?php endif; ?>
+                <div class="row g-3 mt-1">
+                  <?php $services = $sectionConfig['services'] ?? []; ?>
+                  <?php if (is_array($services) && count($services) > 0): ?>
+                    <?php foreach ($services as $service): ?>
+                      <div class="col-12 col-md-6 col-lg-3">
+                        <div class="service-item">
+                          <span class="service-icon"><i class="<?php echo htmlspecialchars(bootstrap_icon_class((string)($service['icon'] ?? 'stars'))); ?>"></i></span>
+                          <h5 class="mb-2"><?php echo htmlspecialchars((string)($service['name'] ?? 'Serviço')); ?></h5>
+                          <p class="text-secondary mb-0"><?php echo htmlspecialchars((string)($service['description'] ?? '')); ?></p>
+                        </div>
+                      </div>
+                    <?php endforeach; ?>
+                  <?php else: ?>
+                    <div class="col-12"><div class="alert alert-light mb-0">Configura os serviços no backoffice para apresentar nome, ícone e descrição.</div></div>
+                  <?php endif; ?>
+                </div>
+              </div>
+            <?php elseif ($sectionType === 'contact_form'): ?>
+              <?php $contactFields = $sectionConfig['contact_fields'] ?? ['name', 'email', 'message']; ?>
+              <?php if (!is_array($contactFields)) { $contactFields = ['name', 'email', 'message']; } ?>
+              <div class="contact-special full-bleed py-5 py-lg-6 fade-in" style="--section-bg: url('<?php echo htmlspecialchars((string)($page['hero_image_url'] ?: '')); ?>');">
+                <div class="container">
+                  <h2 class="text-center mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
+                  <?php if (!empty($sectionConfig['cta_text'])): ?><p class="text-center mb-4"><?php echo htmlspecialchars((string)$sectionConfig['cta_text']); ?></p><?php endif; ?>
+                  <form method="post" action="contact.php" class="row g-3 justify-content-center">
+                    <input type="hidden" name="page_slug" value="<?php echo htmlspecialchars($sectionId); ?>">
+                    <?php if (in_array('name', $contactFields, true)): ?><div class="col-md-8"><input class="form-control form-control-lg" name="name" placeholder="*Nome" required></div><?php endif; ?>
+                    <?php if (in_array('email', $contactFields, true)): ?><div class="col-md-8"><input type="email" class="form-control form-control-lg" name="email" placeholder="*Email" required></div><?php endif; ?>
+                    <?php if (in_array('phone', $contactFields, true)): ?><div class="col-md-8"><input class="form-control form-control-lg" name="phone" placeholder="Telefone"></div><?php endif; ?>
+                    <?php if (in_array('subject', $contactFields, true)): ?><div class="col-md-8"><input class="form-control form-control-lg" name="subject" placeholder="Assunto"></div><?php endif; ?>
+                    <?php if (in_array('message', $contactFields, true)): ?><div class="col-md-8"><textarea class="form-control form-control-lg" name="message" rows="4" placeholder="Mensagem" required></textarea></div><?php endif; ?>
+                    <div class="col-md-8 text-center">
+                      <button class="btn btn-warning px-5 py-2 fw-semibold"><?php echo htmlspecialchars((string)($sectionConfig['cta_button_text'] ?? 'Enviar mensagem')); ?></button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            <?php else: ?>
+              <div class="surface-card p-4 p-lg-5 fade-in">
+                <?php if (!empty($page['hero_image_url'])): ?>
+                  <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars((string)$page['hero_image_url']); ?>');"></div>
+                <?php endif; ?>
+                <h2 class="section-heading mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
+                <?php if (!empty($page['excerpt'])): ?>
+                  <p class="lead text-secondary"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p>
+                <?php endif; ?>
+                <div class="page-content"><?php echo safe_content($page['content'] ?? ''); ?></div>
+              </div>
+            <?php endif; ?>
           </div>
         </section>
       <?php endforeach; ?>
@@ -698,5 +843,77 @@ PHP;
 
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
         return str_replace('__NEWSLETTER_CONSENT__', addslashes(trim((string)($_POST['newsletter_consent_text'] ?? ''))), $template);
+    }
+
+    private function buildContactHandler(string $dbPath): string
+    {
+        $template = <<<'PHP'
+<?php
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: index.php');
+    exit;
+}
+
+$pageSlug = trim((string)($_POST['page_slug'] ?? 'contactos'));
+$anchor = $pageSlug !== '' ? $pageSlug : 'contactos';
+$name = trim((string)($_POST['name'] ?? ''));
+$email = trim((string)($_POST['email'] ?? ''));
+$phone = trim((string)($_POST['phone'] ?? ''));
+$subject = trim((string)($_POST['subject'] ?? ''));
+$message = trim((string)($_POST['message'] ?? ''));
+
+if ($email === '' || $message === '') {
+    header('Location: index.php?msg=contact_error#' . rawurlencode($anchor));
+    exit;
+}
+
+try {
+    $db = new PDO('sqlite:__DB_PATH__', null, null, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+
+    $stmt = $db->prepare('SELECT section_config_json FROM public_pages WHERE slug = :slug LIMIT 1');
+    $stmt->execute(['slug' => $pageSlug]);
+    $page = $stmt->fetch();
+    $config = [];
+    if ($page && !empty($page['section_config_json'])) {
+        $decoded = json_decode((string)$page['section_config_json'], true);
+        if (is_array($decoded)) {
+            $config = $decoded;
+        }
+    }
+
+    $emailTo = trim((string)($config['contact_email_to'] ?? ''));
+    if ($emailTo === '') {
+        $emailTo = 'booking@chorarderir.com';
+    }
+
+    $mailSubject = $subject !== '' ? 'Novo contacto: ' . $subject : 'Novo contacto do website';
+    $mailBody = "Novo contacto recebido no website.\n\n"
+        . "Nome: " . ($name !== '' ? $name : '-') . "\n"
+        . "Email: " . $email . "\n"
+        . "Telefone: " . ($phone !== '' ? $phone : '-') . "\n"
+        . "Assunto: " . ($subject !== '' ? $subject : '-') . "\n\n"
+        . "Mensagem:\n" . $message . "\n";
+
+    $headers = [
+        'MIME-Version: 1.0',
+        'Content-type: text/plain; charset=UTF-8',
+        'From: noreply@chorarderir.com',
+        'Reply-To: ' . $email,
+    ];
+
+    @mail($emailTo, $mailSubject, $mailBody, implode("\r\n", $headers));
+
+    header('Location: index.php?msg=contact_ok#' . rawurlencode($anchor));
+    exit;
+} catch (Throwable $e) {
+    header('Location: index.php?msg=contact_error#' . rawurlencode($anchor));
+    exit;
+}
+PHP;
+
+        return str_replace('__DB_PATH__', addslashes($dbPath), $template);
     }
 }
