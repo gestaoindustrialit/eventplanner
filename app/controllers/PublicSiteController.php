@@ -45,10 +45,7 @@ class PublicSiteController extends BaseController
             $eventModel = new Event($this->db);
             $events = $eventModel->openEvents();
             $pageModel = new PublicPage($this->db);
-            $pages = $pageModel->allPublished();
-            if (count($pages) === 0) {
-                $pages = $pageModel->all();
-            }
+            $pages = $pageModel->all();
 
             $dbPath = (new Database())->getSqlitePath();
             $homeCopy = [
@@ -160,14 +157,14 @@ function safe_content(?string $html): string {
       padding-bottom: .2rem;
     }
     .navbar-brand img {
-      height: 36px;
-      max-height: 36px;
+      height: 16px;
+      max-height: 16px;
       width: auto;
       display: block;
       filter: brightness(0) invert(1);
     }
     @media (max-width: 767.98px) {
-      .navbar-brand img { height: 22px; max-height: 22px; }
+      .navbar-brand img { height: 14px; max-height: 14px; }
       .navbar { padding-top: .45rem; padding-bottom: .45rem; }
       .navbar .navbar-toggler { padding: .3rem .45rem; }
       .navbar .navbar-collapse {
@@ -251,7 +248,6 @@ function safe_content(?string $html): string {
 
     <section class="py-5">
       <div class="container">
-        <h2 class="section-title mb-4">Próximos eventos</h2>
 
         <?php if ($msg === 'ok'): ?>
           <div class="alert alert-success">Reserva enviada com sucesso! Vamos confirmar por email/telefone.</div>
@@ -265,31 +261,30 @@ function safe_content(?string $html): string {
           <div class="alert alert-warning">Precisas de aceitar o consentimento RGPD para subscrever.</div>
         <?php endif; ?>
 
-        <div class="row g-4 mb-5">
-          <?php foreach ($events as $event): ?>
-            <div class="col-lg-6">
-              <div class="event-card glass-card p-4 h-100">
-                <h4><?php echo htmlspecialchars($event['title']); ?></h4>
-                <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
-                <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
+        <?php if (count($events) > 0): ?>
+          <h2 class="section-title mb-4">Próximos eventos</h2>
+          <div class="row g-4 mb-5">
+            <?php foreach ($events as $event): ?>
+              <div class="col-lg-6">
+                <div class="event-card glass-card p-4 h-100">
+                  <h4><?php echo htmlspecialchars($event['title']); ?></h4>
+                  <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
+                  <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
 
-                <form method="post" action="reserve.php" class="row g-2">
-                  <input type="hidden" name="event_id" value="<?php echo (int)$event['id']; ?>">
-                  <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
-                  <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
-                  <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
-                  <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
-                  <div class="col-md-6"><button class="btn btn-brand w-100">Reservar</button></div>
-                  <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
-                </form>
+                  <form method="post" action="reserve.php" class="row g-2">
+                    <input type="hidden" name="event_id" value="<?php echo (int)$event['id']; ?>">
+                    <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
+                    <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
+                    <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
+                    <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
+                    <div class="col-md-6"><button class="btn btn-brand w-100">Reservar</button></div>
+                    <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
+                  </form>
+                </div>
               </div>
-            </div>
-          <?php endforeach; ?>
-
-          <?php if (count($events) === 0): ?>
-            <p class="text-light-emphasis">Ainda não existem eventos abertos para reserva.</p>
-          <?php endif; ?>
-        </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
 
         <div class="glass-card newsletter-card">
           <h3 class="h5 mb-2">Newsletter</h3>
