@@ -33,13 +33,14 @@ class PublicPage
 
     public function create(array $data): void
     {
-        $stmt = $this->db->prepare('INSERT INTO public_pages (title, slug, excerpt, content, hero_image_url, is_published, sort_order) VALUES (:title, :slug, :excerpt, :content, :hero_image_url, :is_published, :sort_order)');
+        $stmt = $this->db->prepare('INSERT INTO public_pages (title, slug, excerpt, content, hero_image_url, display_mode, is_published, sort_order) VALUES (:title, :slug, :excerpt, :content, :hero_image_url, :display_mode, :is_published, :sort_order)');
         $stmt->execute([
             'title' => $data['title'],
             'slug' => $data['slug'],
             'excerpt' => $data['excerpt'] ?: null,
             'content' => $data['content'] ?: null,
             'hero_image_url' => $data['hero_image_url'] ?: null,
+            'display_mode' => $data['display_mode'],
             'is_published' => $data['is_published'],
             'sort_order' => $data['sort_order'],
         ]);
@@ -47,7 +48,7 @@ class PublicPage
 
     public function update(int $id, array $data): void
     {
-        $stmt = $this->db->prepare('UPDATE public_pages SET title = :title, slug = :slug, excerpt = :excerpt, content = :content, hero_image_url = :hero_image_url, is_published = :is_published, sort_order = :sort_order WHERE id = :id');
+        $stmt = $this->db->prepare('UPDATE public_pages SET title = :title, slug = :slug, excerpt = :excerpt, content = :content, hero_image_url = :hero_image_url, display_mode = :display_mode, is_published = :is_published, sort_order = :sort_order WHERE id = :id');
         $stmt->execute([
             'id' => $id,
             'title' => $data['title'],
@@ -55,6 +56,7 @@ class PublicPage
             'excerpt' => $data['excerpt'] ?: null,
             'content' => $data['content'] ?: null,
             'hero_image_url' => $data['hero_image_url'] ?: null,
+            'display_mode' => $data['display_mode'],
             'is_published' => $data['is_published'],
             'sort_order' => $data['sort_order'],
         ]);
@@ -76,10 +78,16 @@ class PublicPage
                 excerpt TEXT DEFAULT NULL,
                 content TEXT DEFAULT NULL,
                 hero_image_url TEXT DEFAULT NULL,
+                display_mode TEXT NOT NULL DEFAULT "section" CHECK (display_mode IN ("section", "page")),
                 is_published INTEGER NOT NULL DEFAULT 1,
                 sort_order INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )'
         );
+
+        $columns = array_column($this->db->query('PRAGMA table_info(public_pages)')->fetchAll(), 'name');
+        if (!in_array('display_mode', $columns, true)) {
+            $this->db->exec('ALTER TABLE public_pages ADD COLUMN display_mode TEXT NOT NULL DEFAULT "section" CHECK (display_mode IN ("section", "page"))');
+        }
     }
 }

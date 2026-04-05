@@ -23,10 +23,18 @@
             <input class="form-control" name="hero_image_url" value="<?= htmlspecialchars($page['hero_image_url'] ?? '') ?>" placeholder="https://...">
         </div>
         <div class="col-md-3">
+            <label class="form-label">Modo de apresentação</label>
+            <?php $displayMode = ($page['display_mode'] ?? 'section') === 'page' ? 'page' : 'section'; ?>
+            <select class="form-select" name="display_mode">
+                <option value="section" <?= $displayMode === 'section' ? 'selected' : '' ?>>Setor da home</option>
+                <option value="page" <?= $displayMode === 'page' ? 'selected' : '' ?>>Página própria</option>
+            </select>
+        </div>
+        <div class="col-md-3">
             <label class="form-label">Ordem</label>
             <input type="number" class="form-control" name="sort_order" value="<?= (int)($page['sort_order'] ?? 0) ?>">
         </div>
-        <div class="col-md-3 d-flex align-items-end">
+        <div class="col-md-12 d-flex align-items-end">
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="is_published" id="is_published" <?= (!$page || (int)($page['is_published'] ?? 0) === 1) ? 'checked' : '' ?>>
                 <label class="form-check-label" for="is_published">Publicado</label>

@@ -83,8 +83,7 @@ $events = [];
 $pages = [];
 $homeCopy = json_decode('__HOME_COPY_JSON__', true) ?: [];
 $msg = $_GET['msg'] ?? '';
-$pageSlug = trim((string)($_GET['page'] ?? 'home'));
-$activePage = null;
+$pageSlug = trim((string)($_GET['page'] ?? ''));
 
 try {
     $db = new PDO('sqlite:__DB_PATH__', null, null, [
@@ -133,17 +132,6 @@ try {
     $pages = [];
 }
 
-foreach ($pages as $item) {
-    if (($item['slug'] ?? '') === $pageSlug) {
-        $activePage = $item;
-        break;
-    }
-}
-
-if ($activePage === null && count($pages) > 0 && $pageSlug !== 'home') {
-    $activePage = $pages[0];
-}
-
 $siteTitle = 'Chorar de Rir';
 $defaultHomeCopy = [
     'tagline' => 'Produção • Booking • Experiências',
@@ -159,6 +147,27 @@ $homeCopy = [
 function safe_content(?string $html): string {
     return strip_tags((string)$html, '<h1><h2><h3><h4><p><ul><ol><li><strong><em><a><blockquote><br><hr>');
 }
+
+function page_mode(array $page): string {
+    return (($page['display_mode'] ?? 'section') === 'page') ? 'page' : 'section';
+}
+
+$sectionPages = [];
+$standalonePages = [];
+$activeStandalonePage = null;
+
+foreach ($pages as $page) {
+    if (page_mode($page) === 'page') {
+        $standalonePages[] = $page;
+        if (($page['slug'] ?? '') === $pageSlug) {
+            $activeStandalonePage = $page;
+        }
+    } else {
+        $sectionPages[] = $page;
+    }
+}
+
+$isStandaloneView = $activeStandalonePage !== null;
 ?>
 <!doctype html>
 <html lang="pt">
@@ -169,40 +178,102 @@ function safe_content(?string $html): string {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     :root {
-      --brand-bg: #080b10;
-      --brand-card: rgba(10, 14, 22, 0.72);
-      --brand-border: rgba(255, 255, 255, 0.16);
-      --brand-text: #f7f8fb;
-      --brand-muted: #cdd4e1;
-      --brand-accent: #f6c451;
+      --brand-dark: #0f172a;
+      --brand-base: #ffffff;
+      --brand-surface: #f8fafc;
+      --brand-border: #dbe4f0;
+      --brand-text: #0f172a;
+      --brand-muted: #5b6472;
+      --nav-height: 74px;
     }
     body {
       color: var(--brand-text);
-      background:
-        linear-gradient(130deg, rgba(8,11,16,.78), rgba(8,11,16,.58) 45%, rgba(8,11,16,.86)),
-        url('https://images.unsplash.com/photo-1470229538611-16ba8c7ffbd7?auto=format&fit=crop&w=1800&q=80') center/cover fixed;
-      min-height: 100dvh;
+      background: var(--brand-surface);
+      min-height: 100vh;
       margin: 0;
+      display: flex;
+      flex-direction: column;
+      scroll-behavior: smooth;
     }
+    .site-main { flex: 1 0 auto; }
     .navbar {
-      backdrop-filter: blur(8px);
-      background: rgba(7, 11, 17, 0.7);
-      border-bottom: 1px solid rgba(255,255,255,.1);
+      min-height: var(--nav-height);
+      backdrop-filter: blur(10px);
+      background: rgba(15, 23, 42, 0.88);
+      border-bottom: 1px solid rgba(255,255,255,.18);
+      transition: box-shadow .35s ease;
     }
-    .navbar-brand {
-      display: inline-flex;
+    .navbar.scrolled { box-shadow: 0 14px 40px rgba(2, 6, 23, .22); }
+    .navbar-brand { display: inline-flex; align-items: center; line-height: 1; padding-top: .2rem; padding-bottom: .2rem; }
+    .navbar-brand img { height: 16px; max-height: 16px; width: auto; display: block; filter: brightness(0) invert(1); }
+    .nav-link { color: #e8edf7; position: relative; transition: color .25s ease; }
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      left: .5rem;
+      right: .5rem;
+      bottom: .2rem;
+      height: 2px;
+      border-radius: 999px;
+      background: #93c5fd;
+      transform: scaleX(0);
+      transition: transform .25s ease;
+    }
+    .nav-link.active, .nav-link:hover { color: #fff !important; }
+    .nav-link.active::after, .nav-link:hover::after { transform: scaleX(1); }
+    .hero {
+      min-height: min(84vh, 760px);
+      display: flex;
       align-items: center;
-      line-height: 1;
-      padding-top: .2rem;
-      padding-bottom: .2rem;
+      position: relative;
+      overflow: hidden;
+      padding: calc(var(--nav-height) + 2rem) 0 4rem;
+      color: #fff;
     }
-    .navbar-brand img {
-      height: 16px;
-      max-height: 16px;
-      width: auto;
-      display: block;
-      filter: brightness(0) invert(1);
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(120deg, rgba(15, 23, 42, 0.84) 15%, rgba(15, 23, 42, 0.55) 55%, rgba(29, 78, 216, 0.25) 100%),
+        url('https://images.unsplash.com/photo-1470229538611-16ba8c7ffbd7?auto=format&fit=crop&w=1800&q=80') center / cover fixed;
+      transform: translateY(var(--hero-offset, 0px));
+      will-change: transform;
     }
+    .hero > .container { position: relative; z-index: 2; }
+    .hero-panel {
+      max-width: 780px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 1rem;
+      box-shadow: 0 24px 64px rgba(2, 6, 23, .38);
+      backdrop-filter: blur(8px);
+    }
+    .section-block { padding: clamp(3rem, 8vw, 5rem) 0; scroll-margin-top: calc(var(--nav-height) + 1rem); }
+    .section-heading { font-weight: 700; margin-bottom: 1.5rem; color: #0f172a; }
+    .surface-card {
+      border-radius: 1rem;
+      border: 1px solid var(--brand-border);
+      background: var(--brand-base);
+      box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+    }
+    .event-card { padding: 1.25rem; height: 100%; }
+    .event-card input, .event-card textarea { border-color: #ccd8e8; }
+    .event-card input:focus, .event-card textarea:focus { border-color: #93c5fd; box-shadow: 0 0 0 .2rem rgba(59,130,246,.18); }
+    .btn-brand {
+      background: linear-gradient(135deg, #2563eb, #1e40af);
+      color: #fff;
+      border: none;
+      font-weight: 600;
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .btn-brand:hover { color: #fff; transform: translateY(-1px); box-shadow: 0 10px 18px rgba(37,99,235,.28); }
+    .page-cover { min-height: 220px; border-radius: .95rem; background-size: cover; background-position: center; margin-bottom: 1.2rem; }
+    .page-content { line-height: 1.7; color: #334155; }
+    .newsletter-panel { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #bfdbfe; }
+    .fade-in { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s ease; }
+    .fade-in.show { opacity: 1; transform: translateY(0); }
+    footer { flex-shrink: 0; border-top: 1px solid var(--brand-border); background: #fff; color: var(--brand-muted); }
     @media (max-width: 767.98px) {
       .navbar-brand img { height: 14px; max-height: 14px; }
       .navbar { padding-top: .45rem; padding-bottom: .45rem; }
@@ -216,49 +287,12 @@ function safe_content(?string $html): string {
       }
       .nav-link { padding: .5rem .35rem; }
     }
-    .nav-link { color: #e8edf7; }
-    .nav-link.active, .nav-link:hover { color: var(--brand-accent) !important; }
-    .hero {
-      min-height: clamp(300px, 52vh, 560px);
-      display: flex;
-      align-items: center;
-      padding: 48px 0 32px;
-    }
-    .glass-card {
-      background: var(--brand-card);
-      border: 1px solid var(--brand-border);
-      border-radius: 20px;
-      box-shadow: 0 20px 48px rgba(0,0,0,.36);
-      backdrop-filter: blur(8px);
-    }
-    .section-title { font-weight: 700; letter-spacing: .2px; }
-    .event-card input, .event-card textarea {
-      background: rgba(8, 11, 16, .6);
-      border-color: rgba(255,255,255,.2);
-      color: var(--brand-text);
-    }
-    .event-card input::placeholder, .event-card textarea::placeholder { color: #aab4c4; }
-    .btn-brand {
-      background: var(--brand-accent);
-      color: #1d1405;
-      border: none;
-      font-weight: 700;
-    }
-    .btn-brand:hover { background: #ffd97a; color: #1d1405; }
-    .content-card { background: rgba(11, 16, 25, 0.78); border: 1px solid rgba(255,255,255,.15); border-radius: 18px; }
-    .content-card .lead, .text-light-emphasis, .muted { color: var(--brand-muted) !important; }
-    .newsletter-card { padding: 1.25rem 1.25rem; border-radius: 16px; }
-    .newsletter-form .form-control { height: 42px; }
-    .newsletter-form .btn { height: 42px; }
-    .newsletter-note { font-size: .9rem; color: var(--brand-muted); }
-    .page-cover { min-height: 320px; border-radius: 14px; background-size: cover; background-position: center; }
-    footer { border-top: 1px solid rgba(255,255,255,.15); color: var(--brand-muted); background: rgba(7,11,17,.68); }
   </style>
 </head>
 <body>
   <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container">
-      <a class="navbar-brand" href="index.php">
+      <a class="navbar-brand" href="index.php#inicio">
         <img src="chorarderir-logo.svg" alt="Chorar de Rir">
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPublico">
@@ -266,128 +300,222 @@ function safe_content(?string $html): string {
       </button>
       <div class="collapse navbar-collapse" id="menuPublico">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link <?php echo $pageSlug === 'home' ? 'active' : ''; ?>" href="index.php">Início</a></li>
-          <?php foreach ($pages as $menuPage): ?>
-            <li class="nav-item"><a class="nav-link <?php echo $pageSlug === ($menuPage['slug'] ?? '') ? 'active' : ''; ?>" href="index.php?page=<?php echo urlencode((string)$menuPage['slug']); ?>"><?php echo htmlspecialchars((string)$menuPage['title']); ?></a></li>
+          <li class="nav-item"><a class="nav-link <?php echo !$isStandaloneView ? 'active' : ''; ?>" href="index.php#inicio">Início</a></li>
+          <li class="nav-item"><a class="nav-link" href="index.php#eventos">Eventos</a></li>
+          <li class="nav-item"><a class="nav-link" href="index.php#newsletter">Newsletter</a></li>
+          <?php foreach ($sectionPages as $menuPage): ?>
+            <?php $slug = trim((string)($menuPage['slug'] ?? '')); ?>
+            <?php if ($slug !== ''): ?>
+              <li class="nav-item"><a class="nav-link" href="index.php#<?php echo htmlspecialchars($slug); ?>"><?php echo htmlspecialchars((string)$menuPage['title']); ?></a></li>
+            <?php endif; ?>
+          <?php endforeach; ?>
+          <?php foreach ($standalonePages as $menuPage): ?>
+            <?php $slug = trim((string)($menuPage['slug'] ?? '')); ?>
+            <?php if ($slug !== ''): ?>
+              <li class="nav-item"><a class="nav-link <?php echo ($pageSlug === $slug && $isStandaloneView) ? 'active' : ''; ?>" href="index.php?page=<?php echo urlencode($slug); ?>"><?php echo htmlspecialchars((string)$menuPage['title']); ?></a></li>
+            <?php endif; ?>
           <?php endforeach; ?>
         </ul>
       </div>
     </div>
   </nav>
 
-  <?php if ($pageSlug === 'home'): ?>
-    <section class="hero">
-      <div class="container">
-        <div class="glass-card p-4 p-lg-5 col-12 col-xl-9">
-          <p class="text-uppercase small mb-2 fw-semibold text-warning"><?php echo htmlspecialchars((string)($homeCopy['tagline'] ?? '')); ?></p>
-          <h1 class="display-5 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
-          <p class="lead muted mb-0"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
+  <main class="site-main">
+    <?php if (!$isStandaloneView): ?>
+      <section id="inicio" class="hero">
+        <div class="container">
+          <div class="hero-panel p-4 p-lg-5 col-12 fade-in show">
+            <p class="text-uppercase small mb-2 fw-semibold text-info-emphasis"><?php echo htmlspecialchars((string)($homeCopy['tagline'] ?? '')); ?></p>
+            <h1 class="display-5 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
+            <p class="lead mb-0 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="py-5">
-      <div class="container">
+      <section id="eventos" class="section-block">
+        <div class="container">
+          <?php if ($msg === 'ok'): ?>
+            <div class="alert alert-success">Reserva enviada com sucesso! Vamos confirmar por email/telefone.</div>
+          <?php elseif ($msg === 'error'): ?>
+            <div class="alert alert-danger">Não foi possível registar a reserva. Tenta novamente.</div>
+          <?php elseif ($msg === 'subscribed'): ?>
+            <div class="alert alert-success">Subscrição da newsletter confirmada com sucesso.</div>
+          <?php elseif ($msg === 'duplicate'): ?>
+            <div class="alert alert-warning">Este email já está registado na newsletter.</div>
+          <?php elseif ($msg === 'consent'): ?>
+            <div class="alert alert-warning">Precisas de aceitar o consentimento RGPD para subscrever.</div>
+          <?php elseif ($msg === 'closed'): ?>
+            <div class="alert alert-warning">As reservas para esse evento estão fechadas.</div>
+          <?php elseif ($msg === 'soldout'): ?>
+            <div class="alert alert-warning">Não existem lugares suficientes disponíveis para essa reserva.</div>
+          <?php endif; ?>
 
-        <?php if ($msg === 'ok'): ?>
-          <div class="alert alert-success">Reserva enviada com sucesso! Vamos confirmar por email/telefone.</div>
-        <?php elseif ($msg === 'error'): ?>
-          <div class="alert alert-danger">Não foi possível registar a reserva. Tenta novamente.</div>
-        <?php elseif ($msg === 'subscribed'): ?>
-          <div class="alert alert-success">Subscrição da newsletter confirmada com sucesso.</div>
-        <?php elseif ($msg === 'duplicate'): ?>
-          <div class="alert alert-warning">Este email já está registado na newsletter.</div>
-        <?php elseif ($msg === 'consent'): ?>
-          <div class="alert alert-warning">Precisas de aceitar o consentimento RGPD para subscrever.</div>
-        <?php elseif ($msg === 'closed'): ?>
-          <div class="alert alert-warning">As reservas para esse evento estão fechadas.</div>
-        <?php elseif ($msg === 'soldout'): ?>
-          <div class="alert alert-warning">Não existem lugares suficientes disponíveis para essa reserva.</div>
-        <?php endif; ?>
+          <h2 class="section-heading">Próximos eventos</h2>
+          <div class="row g-4 mb-5">
+            <?php foreach ($events as $event): ?>
+              <div class="col-lg-6">
+                <div class="event-card surface-card fade-in">
+                  <h4><?php echo htmlspecialchars($event['title']); ?></h4>
+                  <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
+                  <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
+                  <?php
+                    $capacity = (int)($event['reservation_capacity'] ?? 0);
+                    $activeTickets = (int)($event['active_tickets'] ?? 0);
+                    $available = $capacity > 0 ? max(0, $capacity - $activeTickets) : null;
+                  ?>
+                  <?php if ($available !== null): ?>
+                    <p class="small text-secondary mb-3"><strong>Lugares disponíveis:</strong> <?php echo $available; ?> / <?php echo $capacity; ?></p>
+                  <?php endif; ?>
 
-        <div class="row g-4 mb-5">
-          <?php foreach ($events as $event): ?>
-            <div class="col-lg-6">
-              <div class="event-card glass-card p-4 h-100">
-                <h4><?php echo htmlspecialchars($event['title']); ?></h4>
-                <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
-                <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
-                <?php
-                  $capacity = (int)($event['reservation_capacity'] ?? 0);
-                  $activeTickets = (int)($event['active_tickets'] ?? 0);
-                  $available = $capacity > 0 ? max(0, $capacity - $activeTickets) : null;
-                ?>
-                <?php if ($available !== null): ?>
-                  <p class="small muted mb-3"><strong>Lugares disponíveis:</strong> <?php echo $available; ?> / <?php echo $capacity; ?></p>
-                <?php endif; ?>
-
-                <?php if ((int)($event['reservations_open'] ?? 0) !== 1): ?>
-                  <div class="alert alert-secondary py-2 mb-0">Reservas fechadas para este evento.</div>
-                <?php elseif ($available !== null && $available <= 0): ?>
-                  <div class="alert alert-warning py-2 mb-0">Esgotado. Não existem mais lugares disponíveis.</div>
-                <?php else: ?>
-                  <form method="post" action="reserve.php" class="row g-2">
-                    <input type="hidden" name="event_id" value="<?php echo (int)$event['id']; ?>">
-                    <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
-                    <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
-                    <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
-                    <div class="col-md-6"><input type="number" min="1" <?php echo $available !== null ? 'max="' . $available . '"' : ''; ?> value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
-                    <div class="col-md-6"><button class="btn btn-brand w-100">Reservar</button></div>
-                    <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
-                  </form>
-                <?php endif; ?>
+                  <?php if ((int)($event['reservations_open'] ?? 0) !== 1): ?>
+                    <div class="alert alert-secondary py-2 mb-0">Reservas fechadas para este evento.</div>
+                  <?php elseif ($available !== null && $available <= 0): ?>
+                    <div class="alert alert-warning py-2 mb-0">Esgotado. Não existem mais lugares disponíveis.</div>
+                  <?php else: ?>
+                    <form method="post" action="reserve.php" class="row g-2">
+                      <input type="hidden" name="event_id" value="<?php echo (int)$event['id']; ?>">
+                      <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
+                      <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
+                      <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
+                      <div class="col-md-6"><input type="number" min="1" <?php echo $available !== null ? 'max="' . $available . '"' : ''; ?> value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
+                      <div class="col-md-6"><button class="btn btn-brand w-100">Reservar</button></div>
+                      <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
+                    </form>
+                  <?php endif; ?>
+                </div>
               </div>
             <?php endforeach; ?>
           </div>
-        <div class="glass-card newsletter-card">
-          <h3 class="h5 mb-2">Newsletter</h3>
-          <form method="post" action="subscribe.php" class="row g-2 align-items-center newsletter-form">
-            <div class="col-lg-4"><input type="email" name="email" required class="form-control" placeholder="Email"></div>
-            <div class="col-lg-4"><input type="text" name="name" class="form-control" placeholder="Nome (opcional)"></div>
-            <div class="col-lg-2"><button class="btn btn-brand w-100">Subscrever</button></div>
-            <div class="col-lg-2">
-              <label class="form-check-label d-flex gap-2 align-items-start newsletter-note">
-                <input class="form-check-input mt-1" type="checkbox" name="gdpr_consent" value="1" required>
-                <span>RGPD</span>
-              </label>
-            </div>
-            <div class="col-12">
-              <p class="newsletter-note mb-0"><?php echo htmlspecialchars('__NEWSLETTER_CONSENT__'); ?></p>
-            </div>
-          </form>
         </div>
-      </div>
-    </section>
-  <?php else: ?>
-    <section class="py-5">
-      <div class="container">
-        <?php if ($activePage): ?>
-          <?php if (!empty($activePage['hero_image_url'])): ?>
-            <div class="page-cover mb-4" style="background-image:url('<?php echo htmlspecialchars((string)$activePage['hero_image_url']); ?>');"></div>
-          <?php endif; ?>
+      </section>
 
-          <div class="content-card p-4 p-lg-5">
-            <h1 class="mb-3"><?php echo htmlspecialchars((string)$activePage['title']); ?></h1>
-            <?php if (!empty($activePage['excerpt'])): ?>
-              <p class="lead text-light-emphasis"><?php echo htmlspecialchars((string)$activePage['excerpt']); ?></p>
-            <?php endif; ?>
-            <div><?php echo safe_content($activePage['content'] ?? ''); ?></div>
+      <section id="newsletter" class="section-block pt-0">
+        <div class="container">
+          <div class="surface-card newsletter-panel p-4 p-lg-5 fade-in">
+            <h3 class="h5 mb-2">Newsletter</h3>
+            <form method="post" action="subscribe.php" class="row g-2 align-items-center newsletter-form">
+              <div class="col-lg-4"><input type="email" name="email" required class="form-control" placeholder="Email"></div>
+              <div class="col-lg-4"><input type="text" name="name" class="form-control" placeholder="Nome (opcional)"></div>
+              <div class="col-lg-2"><button class="btn btn-brand w-100">Subscrever</button></div>
+              <div class="col-lg-2">
+                <label class="form-check-label d-flex gap-2 align-items-start small text-secondary">
+                  <input class="form-check-input mt-1" type="checkbox" name="gdpr_consent" value="1" required>
+                  <span>RGPD</span>
+                </label>
+              </div>
+              <div class="col-12">
+                <p class="small text-secondary mb-0"><?php echo htmlspecialchars('__NEWSLETTER_CONSENT__'); ?></p>
+              </div>
+            </form>
           </div>
-        <?php else: ?>
-          <div class="alert alert-warning">Página não encontrada.</div>
-        <?php endif; ?>
-      </div>
-    </section>
-  <?php endif; ?>
+        </div>
+      </section>
 
-  <footer class="py-4 mt-5">
-    <div class="container d-flex justify-content-between">
+      <?php foreach ($sectionPages as $page): ?>
+        <?php $sectionId = trim((string)($page['slug'] ?? '')); ?>
+        <?php if ($sectionId === '') { continue; } ?>
+        <section id="<?php echo htmlspecialchars($sectionId); ?>" class="section-block<?php echo !empty($page['hero_image_url']) ? ' pt-0' : ''; ?>">
+          <div class="container">
+            <div class="surface-card p-4 p-lg-5 fade-in">
+              <?php if (!empty($page['hero_image_url'])): ?>
+                <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars((string)$page['hero_image_url']); ?>');"></div>
+              <?php endif; ?>
+              <h2 class="section-heading mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
+              <?php if (!empty($page['excerpt'])): ?>
+                <p class="lead text-secondary"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p>
+              <?php endif; ?>
+              <div class="page-content"><?php echo safe_content($page['content'] ?? ''); ?></div>
+            </div>
+          </div>
+        </section>
+      <?php endforeach; ?>
+
+      <?php if (count($pages) === 0): ?>
+        <section class="section-block pt-0">
+          <div class="container">
+            <div class="alert alert-info">Cria páginas públicas para adicionar setores na home ou páginas dedicadas.</div>
+          </div>
+        </section>
+      <?php endif; ?>
+    <?php else: ?>
+      <section class="section-block">
+        <div class="container">
+          <div class="surface-card p-4 p-lg-5 fade-in show">
+            <?php if (!empty($activeStandalonePage['hero_image_url'])): ?>
+              <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars((string)$activeStandalonePage['hero_image_url']); ?>');"></div>
+            <?php endif; ?>
+            <h1 class="section-heading mb-3"><?php echo htmlspecialchars((string)$activeStandalonePage['title']); ?></h1>
+            <?php if (!empty($activeStandalonePage['excerpt'])): ?>
+              <p class="lead text-secondary"><?php echo htmlspecialchars((string)$activeStandalonePage['excerpt']); ?></p>
+            <?php endif; ?>
+            <div class="page-content"><?php echo safe_content($activeStandalonePage['content'] ?? ''); ?></div>
+          </div>
+        </div>
+      </section>
+    <?php endif; ?>
+  </main>
+
+  <footer class="py-4">
+    <div class="container d-flex flex-column flex-md-row gap-2 justify-content-between">
       <span>© <?php echo date('Y'); ?> Chorar de Rir</span>
       <span>Produção & Booking</span>
     </div>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const navbar = document.querySelector('.navbar');
+    const fadeItems = document.querySelectorAll('.fade-in');
+    const navLinks = document.querySelectorAll('.navbar .nav-link[href*="#"]');
+    const menuCollapse = document.getElementById('menuPublico');
+    const bsCollapse = menuCollapse ? bootstrap.Collapse.getOrCreateInstance(menuCollapse, {toggle: false}) : null;
+    const isStandaloneView = <?php echo $isStandaloneView ? 'true' : 'false'; ?>;
+
+    window.addEventListener('scroll', () => {
+      if (navbar) {
+        navbar.classList.toggle('scrolled', window.scrollY > 10);
+      }
+      if (!isStandaloneView) {
+        document.documentElement.style.setProperty('--hero-offset', `${window.scrollY * 0.18}px`);
+      }
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('show');
+        }
+      });
+    }, { threshold: 0.16 });
+    fadeItems.forEach((item) => observer.observe(item));
+
+    if (!isStandaloneView) {
+      const sectionObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const id = entry.target.getAttribute('id');
+          navLinks.forEach((link) => {
+            const href = link.getAttribute('href') || '';
+            link.classList.toggle('active', href.endsWith(`#${id}`));
+          });
+        });
+      }, { rootMargin: '-45% 0px -48% 0px', threshold: 0.01 });
+
+      document.querySelectorAll('section[id]').forEach((section) => sectionObserver.observe(section));
+    }
+
+    navLinks.forEach((link) => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth < 992 && bsCollapse && menuCollapse.classList.contains('show')) {
+          bsCollapse.hide();
+        }
+      });
+    });
+
+    if (window.location.search.includes('msg=')) {
+      history.replaceState(null, '', window.location.pathname + window.location.hash);
+    }
+  </script>
 </body>
 </html>
 PHP;
@@ -420,14 +548,14 @@ try {
     $event = $eventStmt->fetch();
 
     if (!$event || (int)$event['reservations_open'] !== 1) {
-        header('Location: index.php?msg=closed');
+        header('Location: index.php?msg=closed#eventos');
         exit;
     }
 
     $capacity = (int)($event['reservation_capacity'] ?? 0);
     $activeTickets = (int)($event['active_tickets'] ?? 0);
     if ($capacity > 0 && ($activeTickets + $tickets) > $capacity) {
-        header('Location: index.php?msg=soldout');
+        header('Location: index.php?msg=soldout#eventos');
         exit;
     }
 
@@ -443,10 +571,10 @@ try {
         'status' => 'new',
     ]);
 
-    header('Location: index.php?msg=ok');
+    header('Location: index.php?msg=ok#eventos');
     exit;
 } catch (Throwable $e) {
-    header('Location: index.php?msg=error');
+    header('Location: index.php?msg=error#eventos');
     exit;
 }
 PHP;
@@ -468,7 +596,7 @@ $name = trim((string)($_POST['name'] ?? ''));
 $consent = (int)($_POST['gdpr_consent'] ?? 0);
 
 if ($email === '' || $consent !== 1) {
-    header('Location: index.php?msg=consent');
+    header('Location: index.php?msg=consent#newsletter');
     exit;
 }
 
@@ -503,16 +631,16 @@ try {
         'status' => 'active',
     ]);
 
-    header('Location: index.php?msg=subscribed');
+    header('Location: index.php?msg=subscribed#newsletter');
     exit;
 } catch (Throwable $e) {
     $code = (string)$e->getCode();
     if ($code === '23000') {
-        header('Location: index.php?msg=duplicate');
+        header('Location: index.php?msg=duplicate#newsletter');
         exit;
     }
 
-    header('Location: index.php?msg=error');
+    header('Location: index.php?msg=error#newsletter');
     exit;
 }
 PHP;

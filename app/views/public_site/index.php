@@ -44,6 +44,7 @@
                 <li>
                     <strong><?= htmlspecialchars($page['title']) ?></strong>
                     (<code><?= htmlspecialchars($page['slug']) ?></code>)
+                    - <?= (($page['display_mode'] ?? 'section') === 'page') ? 'Página própria' : 'Setor da home' ?>
                     - <?= (int)$page['is_published'] === 1 ? 'Publicado' : 'Rascunho' ?>
                 </li>
             <?php endforeach; ?>

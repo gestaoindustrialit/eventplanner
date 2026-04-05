@@ -72,6 +72,7 @@ class PublicPageController extends BaseController
             'excerpt' => trim((string)($_POST['excerpt'] ?? '')),
             'content' => trim((string)($_POST['content'] ?? '')),
             'hero_image_url' => trim((string)($_POST['hero_image_url'] ?? '')),
+            'display_mode' => (($_POST['display_mode'] ?? 'section') === 'page') ? 'page' : 'section',
             'is_published' => isset($_POST['is_published']) ? 1 : 0,
             'sort_order' => (int)($_POST['sort_order'] ?? 0),
         ];
