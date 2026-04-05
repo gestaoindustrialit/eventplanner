@@ -259,28 +259,43 @@ function safe_content(?string $html): string {
           <div class="alert alert-warning">Este email já está registado na newsletter.</div>
         <?php elseif ($msg === 'consent'): ?>
           <div class="alert alert-warning">Precisas de aceitar o consentimento RGPD para subscrever.</div>
+        <?php elseif ($msg === 'closed'): ?>
+          <div class="alert alert-warning">As reservas para esse evento estão fechadas.</div>
+        <?php elseif ($msg === 'soldout'): ?>
+          <div class="alert alert-warning">Não existem lugares suficientes disponíveis para essa reserva.</div>
         <?php endif; ?>
 
-        <?php if (count($events) > 0): ?>
-          <h2 class="section-title mb-4">Próximos eventos</h2>
-          <div class="row g-4 mb-5">
-            <?php foreach ($events as $event): ?>
-              <div class="col-lg-6">
-                <div class="event-card glass-card p-4 h-100">
-                  <h4><?php echo htmlspecialchars($event['title']); ?></h4>
-                  <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
-                  <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
+        <div class="row g-4 mb-5">
+          <?php foreach ($events as $event): ?>
+            <div class="col-lg-6">
+              <div class="event-card glass-card p-4 h-100">
+                <h4><?php echo htmlspecialchars($event['title']); ?></h4>
+                <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
+                <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
+                <?php
+                  $capacity = (int)($event['reservation_capacity'] ?? 0);
+                  $activeTickets = (int)($event['active_tickets'] ?? 0);
+                  $available = $capacity > 0 ? max(0, $capacity - $activeTickets) : null;
+                ?>
+                <?php if ($available !== null): ?>
+                  <p class="small muted mb-3"><strong>Lugares disponíveis:</strong> <?php echo $available; ?> / <?php echo $capacity; ?></p>
+                <?php endif; ?>
 
+                <?php if ((int)($event['reservations_open'] ?? 0) !== 1): ?>
+                  <div class="alert alert-secondary py-2 mb-0">Reservas fechadas para este evento.</div>
+                <?php elseif ($available !== null && $available <= 0): ?>
+                  <div class="alert alert-warning py-2 mb-0">Esgotado. Não existem mais lugares disponíveis.</div>
+                <?php else: ?>
                   <form method="post" action="reserve.php" class="row g-2">
                     <input type="hidden" name="event_id" value="<?php echo (int)$event['id']; ?>">
                     <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
                     <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
                     <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
-                    <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
+                    <div class="col-md-6"><input type="number" min="1" <?php echo $available !== null ? 'max="' . $available . '"' : ''; ?> value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
                     <div class="col-md-6"><button class="btn btn-brand w-100">Reservar</button></div>
                     <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
                   </form>
-                </div>
+                <?php endif; ?>
               </div>
             <?php endforeach; ?>
           </div>
@@ -360,14 +375,33 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
 
+    $eventId = (int)($_POST['event_id'] ?? 0);
+    $tickets = max(1, (int)($_POST['tickets'] ?? 1));
+
+    $eventStmt = $db->prepare("SELECT e.id, e.reservations_open, e.reservation_capacity, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets FROM events e LEFT JOIN event_reservations r ON r.event_id = e.id WHERE e.id = :event_id GROUP BY e.id");
+    $eventStmt->execute(['event_id' => $eventId]);
+    $event = $eventStmt->fetch();
+
+    if (!$event || (int)$event['reservations_open'] !== 1) {
+        header('Location: index.php?msg=closed');
+        exit;
+    }
+
+    $capacity = (int)($event['reservation_capacity'] ?? 0);
+    $activeTickets = (int)($event['active_tickets'] ?? 0);
+    if ($capacity > 0 && ($activeTickets + $tickets) > $capacity) {
+        header('Location: index.php?msg=soldout');
+        exit;
+    }
+
     $stmt = $db->prepare('INSERT INTO event_reservations (event_id, customer_name, customer_email, customer_phone, tickets, notes, status) VALUES (:event_id, :customer_name, :customer_email, :customer_phone, :tickets, :notes, :status)');
 
     $stmt->execute([
-        'event_id' => (int)($_POST['event_id'] ?? 0),
+        'event_id' => $eventId,
         'customer_name' => trim((string)($_POST['customer_name'] ?? '')),
         'customer_email' => trim((string)($_POST['customer_email'] ?? '')),
         'customer_phone' => trim((string)($_POST['customer_phone'] ?? '')),
-        'tickets' => max(1, (int)($_POST['tickets'] ?? 1)),
+        'tickets' => $tickets,
         'notes' => trim((string)($_POST['notes'] ?? '')) ?: null,
         'status' => 'new',
     ]);

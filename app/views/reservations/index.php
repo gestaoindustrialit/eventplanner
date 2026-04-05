@@ -1,5 +1,62 @@
 <h2 class="mb-4">Reservas dos Eventos</h2>
 
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="mb-3">Configuração por evento</h5>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Evento</th>
+                        <th>Estado reservas</th>
+                        <th>Lotação</th>
+                        <th>Reservas ativas</th>
+                        <th>Lugares disponíveis</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($eventOverview as $event): ?>
+                        <?php
+                            $capacity = (int)($event['reservation_capacity'] ?? 0);
+                            $activeTickets = (int)($event['active_tickets'] ?? 0);
+                            $available = $capacity > 0 ? max(0, $capacity - $activeTickets) : null;
+                        ?>
+                        <tr>
+                            <td>
+                                <strong><?= htmlspecialchars($event['title']) ?></strong><br>
+                                <small class="text-muted"><?= htmlspecialchars($event['date']) ?> às <?= htmlspecialchars(substr((string)$event['time'], 0, 5)) ?></small>
+                            </td>
+                            <td>
+                                <span class="badge <?= (int)$event['reservations_open'] === 1 ? 'bg-success' : 'bg-secondary' ?>">
+                                    <?= (int)$event['reservations_open'] === 1 ? 'Abertas' : 'Fechadas' ?>
+                                </span>
+                            </td>
+                            <td><?= $capacity > 0 ? $capacity : 'Ilimitada' ?></td>
+                            <td>
+                                <?= $activeTickets ?>
+                                <small class="text-muted d-block">Confirmadas: <?= (int)$event['confirmed_tickets'] ?> · Novas: <?= (int)$event['new_tickets'] ?></small>
+                            </td>
+                            <td><?= $available === null ? 'Sem limite' : $available ?></td>
+                            <td>
+                                <form method="post" action="<?= BASE_URL ?>?controller=reservation&action=updateEventAvailability" class="d-flex flex-wrap gap-2 justify-content-end">
+                                    <input type="hidden" name="event_id" value="<?= (int)$event['id'] ?>">
+                                    <div class="form-check form-switch mt-1">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="reservations_open" value="1" <?= (int)$event['reservations_open'] === 1 ? 'checked' : '' ?>>
+                                        <label class="form-check-label small">Abrir no site</label>
+                                    </div>
+                                    <input type="number" min="0" name="reservation_capacity" class="form-control form-control-sm" style="max-width: 130px;" value="<?= $capacity ?>" title="0 = ilimitado">
+                                    <button class="btn btn-sm btn-outline-dark">Guardar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <div class="table-responsive">
     <table class="table table-striped align-middle searchable-table">
         <thead>

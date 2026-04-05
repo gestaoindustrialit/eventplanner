@@ -158,6 +158,8 @@ class EventController extends BaseController
             'time' => $_POST['time'] ?? '20:00',
             'location' => trim($_POST['location'] ?? ''),
             'client_id' => (int)($_POST['client_id'] ?? 0),
+            'reservations_open' => isset($_POST['reservations_open']) ? 1 : 0,
+            'reservation_capacity' => max(0, (int)($_POST['reservation_capacity'] ?? 0)),
             'cachet_total' => (float)($_POST['cachet_total'] ?? 0),
             'artist_map_link' => trim($_POST['artist_map_link'] ?? ''),
             'artist_details' => trim($_POST['artist_details'] ?? ''),

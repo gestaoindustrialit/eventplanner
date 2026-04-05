@@ -16,6 +16,17 @@
         </div>
         <div class="col-md-6"><label class="form-label">Link Google Maps (para artistas)</label><input class="form-control" name="artist_map_link" value="<?= htmlspecialchars($event['artist_map_link'] ?? '') ?>" placeholder="https://maps.google.com/..."></div>
         <div class="col-md-6"><label class="form-label">Detalhes para artistas</label><input class="form-control" name="artist_details" value="<?= htmlspecialchars($event['artist_details'] ?? '') ?>" placeholder="Chegada, estacionamento, contacto técnico..."></div>
+        <div class="col-md-4">
+            <label class="form-label">Capacidade para reservas</label>
+            <input type="number" min="0" class="form-control" name="reservation_capacity" value="<?= htmlspecialchars((string)($event['reservation_capacity'] ?? '0')) ?>">
+            <small class="text-muted">0 = sem limite de lugares.</small>
+        </div>
+        <div class="col-md-8 d-flex align-items-end">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="reservations_open" name="reservations_open" value="1" <?= (!isset($event['reservations_open']) || (int)$event['reservations_open'] === 1) ? 'checked' : '' ?>>
+                <label class="form-check-label" for="reservations_open">Permitir reservas no site público para este evento</label>
+            </div>
+        </div>
         <div class="col-12"><label class="form-label">Notas</label><textarea class="form-control" name="notes"><?= htmlspecialchars($event['notes'] ?? '') ?></textarea></div>
     </div>
 
