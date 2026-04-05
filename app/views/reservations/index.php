@@ -23,6 +23,11 @@
                     <div class="form-text">Variáveis disponíveis: {customer_name}, {event_title}, {event_date}, {event_time}, {tickets}, {customer_email}, {customer_phone}.</div>
                 </div>
                 <div class="col-12">
+                    <label class="form-label">URL base para validação do QR</label>
+                    <input type="text" class="form-control" name="reservation_validation_base_url" value="<?= htmlspecialchars($validationBaseUrl ?? '') ?>" placeholder="https://admin.exemplo.com/index.php?controller=reservation&action=validateTicket&token=">
+                    <div class="form-text">O token será anexado no final desta URL para gerar cada QR code.</div>
+                </div>
+                <div class="col-12">
                     <button class="btn btn-dark">Guardar modelos</button>
                 </div>
             </div>
@@ -87,6 +92,44 @@
     </div>
 </div>
 
+<div class="card shadow-sm mb-4" id="validacao-qr">
+    <div class="card-body">
+        <h5 class="mb-3">Validação de QR code</h5>
+        <form method="post" action="<?= BASE_URL ?>?controller=reservation&action=validateTicket" class="row g-2 align-items-end">
+            <div class="col-md-9">
+                <label class="form-label">Token do bilhete / conteúdo do QR</label>
+                <input type="text" name="token" class="form-control" required placeholder="Cole aqui o token lido no scanner">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary w-100">Validar agora</button>
+            </div>
+        </form>
+        <?php if (!empty($validationResult)): ?>
+            <?php if (!empty($validationResult['ok'])): ?>
+                <?php $ticket = $validationResult['ticket']; ?>
+                <div class="alert alert-success mt-3 mb-0">
+                    Bilhete válido ✅ | Evento: <strong><?= htmlspecialchars($ticket['event_title']) ?></strong> (<?= htmlspecialchars($ticket['event_date']) ?> <?= htmlspecialchars(substr((string)$ticket['event_time'], 0, 5)) ?>) |
+                    Cliente: <?= htmlspecialchars($ticket['customer_name']) ?> |
+                    Bilhete #<?= (int)$ticket['ticket_no'] ?> marcado como utilizado em <?= htmlspecialchars((string)$ticket['used_at']) ?>.
+                </div>
+            <?php else: ?>
+                <?php $ticket = $validationResult['ticket'] ?? null; ?>
+                <div class="alert alert-danger mt-3 mb-0">
+                    <?php if (($validationResult['reason'] ?? '') === 'already_used' && $ticket): ?>
+                        Este bilhete já foi utilizado em <?= htmlspecialchars((string)$ticket['used_at']) ?>.
+                    <?php elseif (($validationResult['reason'] ?? '') === 'cancelled' && $ticket): ?>
+                        Este bilhete pertence a uma reserva cancelada.
+                    <?php elseif (($validationResult['reason'] ?? '') === 'empty'): ?>
+                        Introduz um token de bilhete.
+                    <?php else: ?>
+                        Bilhete não encontrado.
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
+</div>
+
 <div class="table-responsive">
     <table class="table table-striped align-middle searchable-table">
         <thead>
@@ -96,6 +139,7 @@
                 <th>Contacto</th>
                 <th>Bilhetes</th>
                 <th>Estado</th>
+                <th>Ações</th>
                 <th>Criada em</th>
             </tr>
         </thead>
@@ -107,24 +151,36 @@
                         <small class="text-muted"><?= htmlspecialchars($reservation['event_date']) ?> às <?= htmlspecialchars(substr($reservation['event_time'], 0, 5)) ?></small>
                     </td>
                     <td>
-                        <?= htmlspecialchars($reservation['customer_name']) ?><br>
+                        <input type="text" name="customer_name" class="form-control form-control-sm mb-1" value="<?= htmlspecialchars($reservation['customer_name']) ?>" form="reservation-<?= (int)$reservation['id'] ?>">
                         <small class="text-muted"><?= htmlspecialchars($reservation['notes'] ?? '') ?></small>
                     </td>
                     <td>
-                        <?= htmlspecialchars($reservation['customer_email']) ?><br>
-                        <small class="text-muted"><?= htmlspecialchars($reservation['customer_phone'] ?? '-') ?></small>
+                        <input type="email" name="customer_email" class="form-control form-control-sm mb-1" value="<?= htmlspecialchars($reservation['customer_email']) ?>" form="reservation-<?= (int)$reservation['id'] ?>">
+                        <input type="text" name="customer_phone" class="form-control form-control-sm" value="<?= htmlspecialchars($reservation['customer_phone'] ?? '') ?>" form="reservation-<?= (int)$reservation['id'] ?>" placeholder="Telefone">
                     </td>
-                    <td><?= (int)$reservation['tickets'] ?></td>
                     <td>
-                        <form method="post" action="<?= BASE_URL ?>?controller=reservation&action=updateStatus" class="d-flex gap-2">
+                        <input type="number" min="1" class="form-control form-control-sm mb-1" name="tickets" value="<?= (int)$reservation['tickets'] ?>" form="reservation-<?= (int)$reservation['id'] ?>">
+                        <small class="text-muted">Gerados: <?= (int)$reservation['generated_tickets'] ?> · Validados: <?= (int)$reservation['used_tickets'] ?></small>
+                    </td>
+                    <td>
+                        <form id="reservation-<?= (int)$reservation['id'] ?>" method="post" action="<?= BASE_URL ?>?controller=reservation&action=update" class="d-flex gap-2">
                             <input type="hidden" name="id" value="<?= (int)$reservation['id'] ?>">
                             <select class="form-select form-select-sm" name="status">
                                 <option value="new" <?= $reservation['status'] === 'new' ? 'selected' : '' ?>>Nova</option>
                                 <option value="confirmed" <?= $reservation['status'] === 'confirmed' ? 'selected' : '' ?>>Confirmada</option>
                                 <option value="cancelled" <?= $reservation['status'] === 'cancelled' ? 'selected' : '' ?>>Cancelada</option>
                             </select>
-                            <button class="btn btn-sm btn-outline-dark">Guardar</button>
                         </form>
+                    </td>
+                    <td>
+                        <textarea class="form-control form-control-sm mb-2" name="notes" rows="2" form="reservation-<?= (int)$reservation['id'] ?>" placeholder="Notas internas"><?= htmlspecialchars($reservation['notes'] ?? '') ?></textarea>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-dark" form="reservation-<?= (int)$reservation['id'] ?>">Guardar</button>
+                            <form method="post" action="<?= BASE_URL ?>?controller=reservation&action=delete" onsubmit="return confirm('Eliminar esta reserva e os bilhetes associados?');">
+                                <input type="hidden" name="id" value="<?= (int)$reservation['id'] ?>">
+                                <button class="btn btn-sm btn-outline-danger">Eliminar</button>
+                            </form>
+                        </div>
                     </td>
                     <td><?= htmlspecialchars($reservation['created_at']) ?></td>
                 </tr>
