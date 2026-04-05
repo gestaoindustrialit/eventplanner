@@ -56,6 +56,8 @@ CREATE TABLE events (
   time TEXT NOT NULL,
   location TEXT NOT NULL,
   client_id INTEGER NOT NULL,
+  reservations_open INTEGER NOT NULL DEFAULT 1,
+  reservation_capacity INTEGER NOT NULL DEFAULT 0,
   cachet_total NUMERIC DEFAULT 0,
   artist_map_link TEXT DEFAULT NULL,
   artist_details TEXT DEFAULT NULL,

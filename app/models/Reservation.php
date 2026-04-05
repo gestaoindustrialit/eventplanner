@@ -32,6 +32,37 @@ class Reservation
         return $stmt->fetchAll();
     }
 
+    public function eventOverview(): array
+    {
+        $sql = "SELECT
+                    e.id,
+                    e.title,
+                    e.date,
+                    e.time,
+                    e.reservations_open,
+                    e.reservation_capacity,
+                    COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets,
+                    COALESCE(SUM(CASE WHEN r.status = 'confirmed' THEN r.tickets ELSE 0 END), 0) AS confirmed_tickets,
+                    COALESCE(SUM(CASE WHEN r.status = 'new' THEN r.tickets ELSE 0 END), 0) AS new_tickets
+                FROM events e
+                LEFT JOIN event_reservations r ON r.event_id = e.id
+                GROUP BY e.id
+                ORDER BY e.date ASC, e.time ASC";
+
+        $stmt = $this->db->query($sql);
+        return $stmt->fetchAll();
+    }
+
+    public function updateEventAvailability(int $eventId, bool $open, int $capacity): void
+    {
+        $stmt = $this->db->prepare('UPDATE events SET reservations_open = :reservations_open, reservation_capacity = :reservation_capacity WHERE id = :id');
+        $stmt->execute([
+            'reservations_open' => $open ? 1 : 0,
+            'reservation_capacity' => max(0, $capacity),
+            'id' => $eventId,
+        ]);
+    }
+
     public function updateStatus(int $id, string $status): void
     {
         $allowed = ['new', 'confirmed', 'cancelled'];
