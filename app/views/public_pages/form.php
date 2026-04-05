@@ -69,20 +69,21 @@
             <div class="card mt-2">
                 <div class="card-body">
                     <h5 class="mb-3">Configuração especial do setor</h5>
+                    <p class="text-muted small mb-3">Mostramos apenas os campos relevantes para o tipo de setor selecionado.</p>
                     <div class="row g-3">
-                        <div class="col-md-8">
+                        <div class="col-md-8 js-config-block" data-types="about,contact_form,services,default">
                             <label class="form-label">Texto call to action</label>
                             <textarea class="form-control" name="cta_text" rows="2" placeholder="Ex.: Fala connosco para levar humor ao teu evento."><?= htmlspecialchars($sectionConfig['cta_text'] ?? '') ?></textarea>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-4 js-config-block" data-types="about,contact_form,services,default">
                             <label class="form-label">Texto do botão CTA</label>
                             <input class="form-control" name="cta_button_text" value="<?= htmlspecialchars($sectionConfig['cta_button_text'] ?? 'Enviar mensagem') ?>">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6 js-config-block" data-types="contact_form">
                             <label class="form-label">Email de destino (contactos)</label>
                             <input type="email" class="form-control" name="contact_email_to" value="<?= htmlspecialchars($sectionConfig['contact_email_to'] ?? '') ?>" placeholder="booking@...">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6 js-config-block" data-types="contact_form">
                             <label class="form-label">Campos do formulário de contacto</label>
                             <div class="d-flex flex-wrap gap-3 small">
                                 <?php
@@ -93,8 +94,13 @@
                                 <?php endforeach; ?>
                             </div>
                         </div>
-                        <div class="col-12">
+                        <div class="col-12 js-config-block" data-types="services">
                             <label class="form-label">Serviços (nome, ícone Bootstrap e descrição breve)</label>
+                            <div class="row small text-muted fw-semibold mb-1 d-none d-md-flex">
+                                <div class="col-md-3">Nome</div>
+                                <div class="col-md-3">Ícone Bootstrap</div>
+                                <div class="col-md-6">Descrição</div>
+                            </div>
                             <?php for ($i = 0; $i < 6; $i++): ?>
                                 <?php $row = $serviceRows[$i] ?? []; ?>
                                 <div class="row g-2 mb-2">
@@ -119,3 +125,23 @@
 
     <button class="btn btn-dark mt-3">Guardar página</button>
 </form>
+
+<script>
+(() => {
+  const typeSelect = document.querySelector('select[name="section_type"]');
+  const blocks = document.querySelectorAll('.js-config-block');
+  if (!typeSelect || !blocks.length) return;
+
+  const syncBlocks = () => {
+    const selected = typeSelect.value;
+    blocks.forEach((block) => {
+      const allowed = (block.dataset.types || '').split(',').map((v) => v.trim()).filter(Boolean);
+      const show = allowed.includes(selected);
+      block.style.display = show ? '' : 'none';
+    });
+  };
+
+  typeSelect.addEventListener('change', syncBlocks);
+  syncBlocks();
+})();
+</script>

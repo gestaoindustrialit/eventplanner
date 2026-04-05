@@ -199,6 +199,7 @@ INSERT INTO site_settings (setting_key, setting_value) VALUES
 ('home_tagline', 'Produção • Booking • Experiências'),
 ('home_title', 'Humor e espetáculos com um palco inesquecível.'),
 ('home_description', 'Layout inspirado no visual Big Picture com imagem de fundo marcante e conteúdo em cartões translúcidos.'),
+('home_background_url', 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80'),
 ('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.'),
 ('reservation_email_template_a', 'Olá {customer_name},
 
