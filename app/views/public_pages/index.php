@@ -12,6 +12,7 @@
                 <th>Título</th>
                 <th>Slug</th>
                 <th>Modo</th>
+                <th>Tipo/Design</th>
                 <th>Ordem</th>
                 <th>Estado</th>
                 <th>Ações</th>
@@ -28,6 +29,10 @@
                         <?php else: ?>
                             <span class="badge text-bg-primary">Setor home</span>
                         <?php endif; ?>
+                    </td>
+                    <td>
+                        <span class="badge text-bg-light border"><?= htmlspecialchars((string)($page['section_type'] ?? 'default')) ?></span>
+                        <span class="badge text-bg-light border"><?= htmlspecialchars((string)($page['section_style'] ?? 'card')) ?></span>
                     </td>
                     <td><?= (int)$page['sort_order'] ?></td>
                     <td>
@@ -46,7 +51,7 @@
 
             <?php if (count($pages) === 0): ?>
                 <tr>
-                    <td colspan="6" class="text-muted">Ainda não existem páginas públicas.</td>
+                    <td colspan="7" class="text-muted">Ainda não existem páginas públicas.</td>
                 </tr>
             <?php endif; ?>
         </tbody>
