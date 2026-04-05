@@ -3,7 +3,7 @@
     <a class="btn btn-dark" href="<?= BASE_URL ?>?controller=publicpage&action=create">Nova página</a>
 </div>
 
-<p class="text-muted">Cria e gere conteúdos do website público (menu, secções institucionais, landing pages). Apenas páginas com estado <strong>Publicado</strong> aparecem no site externo depois de voltares a publicar.</p>
+<p class="text-muted">Cria e gere conteúdos do website público (menu, secções institucionais, landing pages). As páginas criadas aparecem no menu do site externo depois de voltares a publicar.</p>
 
 <div class="table-responsive">
     <table class="table table-hover">

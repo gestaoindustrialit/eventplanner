@@ -45,10 +45,7 @@ class PublicSiteController extends BaseController
             $eventModel = new Event($this->db);
             $events = $eventModel->openEvents();
             $pageModel = new PublicPage($this->db);
-            $pages = $pageModel->allPublished();
-            if (count($pages) === 0) {
-                $pages = $pageModel->all();
-            }
+            $pages = $pageModel->all();
 
             $dbPath = (new Database())->getSqlitePath();
             $homeCopy = [
@@ -160,14 +157,14 @@ function safe_content(?string $html): string {
       padding-bottom: .2rem;
     }
     .navbar-brand img {
-      height: 36px;
-      max-height: 36px;
+      height: 16px;
+      max-height: 16px;
       width: auto;
       display: block;
       filter: brightness(0) invert(1);
     }
     @media (max-width: 767.98px) {
-      .navbar-brand img { height: 22px; max-height: 22px; }
+      .navbar-brand img { height: 14px; max-height: 14px; }
       .navbar { padding-top: .45rem; padding-bottom: .45rem; }
       .navbar .navbar-toggler { padding: .3rem .45rem; }
       .navbar .navbar-collapse {
@@ -251,7 +248,6 @@ function safe_content(?string $html): string {
 
     <section class="py-5">
       <div class="container">
-        <h2 class="section-title mb-4">Próximos eventos</h2>
 
         <?php if ($msg === 'ok'): ?>
           <div class="alert alert-success">Reserva enviada com sucesso! Vamos confirmar por email/telefone.</div>
@@ -301,13 +297,9 @@ function safe_content(?string $html): string {
                   </form>
                 <?php endif; ?>
               </div>
-            </div>
-          <?php endforeach; ?>
-
-          <?php if (count($events) === 0): ?>
-            <p class="text-light-emphasis">Ainda não existem eventos abertos para reserva.</p>
-          <?php endif; ?>
-        </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
 
         <div class="glass-card newsletter-card">
           <h3 class="h5 mb-2">Newsletter</h3>
