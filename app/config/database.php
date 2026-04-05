@@ -129,6 +129,12 @@ class Database
                 $db->exec('ALTER TABLE events ADD COLUMN reservation_capacity INTEGER NOT NULL DEFAULT 0');
             }
         }
+        if (!in_array('reservations_open', $eventColumns, true)) {
+            $db->exec('ALTER TABLE events ADD COLUMN reservations_open INTEGER NOT NULL DEFAULT 1');
+        }
+        if (!in_array('reservation_capacity', $eventColumns, true)) {
+            $db->exec('ALTER TABLE events ADD COLUMN reservation_capacity INTEGER NOT NULL DEFAULT 0');
+        }
     }
 
     private function tableExists(PDO $db, string $table): bool
