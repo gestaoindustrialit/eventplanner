@@ -115,6 +115,9 @@ CREATE TABLE public_pages (
   content TEXT DEFAULT NULL,
   hero_image_url TEXT DEFAULT NULL,
   display_mode TEXT NOT NULL DEFAULT 'section' CHECK (display_mode IN ('section', 'page')),
+  section_type TEXT NOT NULL DEFAULT 'default' CHECK (section_type IN ('default', 'about', 'services', 'contact_form')),
+  section_style TEXT NOT NULL DEFAULT 'card' CHECK (section_style IN ('card', 'split', 'icons', 'highlight')),
+  section_config_json TEXT DEFAULT NULL,
   is_published INTEGER NOT NULL DEFAULT 1,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -170,15 +173,16 @@ INSERT INTO event_schedule_items (event_id, starts_at, duration_minutes, item_ty
 (1, '22:05', 20, 'artist', 'Encerramento e fotos', 'Ana Riso', 'Agradecimentos e conteúdo para redes.', 5);
 
 
-INSERT INTO public_pages (title, slug, excerpt, content, hero_image_url, display_mode, is_published, sort_order) VALUES
-('Sobre nós', 'sobre-nos', 'Conhece a nossa missão e equipa de produção.', '<p>Somos uma produtora artística focada em experiências ao vivo, booking de talentos e curadoria de eventos de comédia.</p><p>Trabalhamos com marcas, espaços culturais e artistas para criar noites memoráveis.</p>', 'https://images.unsplash.com/photo-1497032628192-86f99bcd76bc?auto=format&fit=crop&w=1400&q=80', 'section', 1, 10),
-('Serviços', 'servicos', 'Produção, agenciamento e consultoria para espetáculos.', '<h3>O que fazemos</h3><ul><li>Produção executiva de eventos.</li><li>Booking e gestão de artistas.</li><li>Criação de conteúdos e ativações de marca.</li></ul>', 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1400&q=80', 'section', 1, 20),
-('Contactos', 'contactos', 'Fala connosco para reservas e propostas comerciais.', '<p><strong>Email:</strong> booking@casadeartistas.pt</p><p><strong>Telefone:</strong> +351 210 000 000</p><p>Estamos disponíveis para parcerias em todo o país.</p>', 'https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=1400&q=80', 'page', 1, 30);
+INSERT INTO public_pages (title, slug, excerpt, content, hero_image_url, display_mode, section_type, section_style, section_config_json, is_published, sort_order) VALUES
+('Sobre nós', 'sobre-nos', 'Conhece a nossa missão e equipa de produção.', '<p>Somos uma produtora artística focada em experiências ao vivo, booking de talentos e curadoria de eventos de comédia.</p><p>Trabalhamos com marcas, espaços culturais e artistas para criar noites memoráveis.</p>', 'https://images.unsplash.com/photo-1497032628192-86f99bcd76bc?auto=format&fit=crop&w=1400&q=80', 'section', 'about', 'split', '{"cta_text":"Levamos comédia para marcas, teatros e eventos privados em todo o país.","cta_button_text":"Falar com equipa","contact_email_to":"","contact_fields":["name","email","message"],"services":[]}', 1, 10),
+('Serviços', 'servicos', 'Produção, agenciamento e consultoria para espetáculos.', '<p>Do conceito à execução, desenhamos noites com público esgotado e impacto real.</p>', 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1400&q=80', 'section', 'services', 'icons', '{"cta_text":"Escolhe um serviço e pede proposta personalizada.","cta_button_text":"Pedir proposta","contact_email_to":"","contact_fields":["name","email","message"],"services":[{"name":"Produção de Evento","icon":"calendar-event","description":"Planeamento, operação e direção de palco."},{"name":"Booking de Comediantes","icon":"mic-fill","description":"Seleção de artistas para cada tipo de público."},{"name":"Consultoria Criativa","icon":"lightbulb","description":"Formatos de conteúdo e ativações de marca."},{"name":"Apresentação / Host","icon":"emoji-laughing","description":"Mestre de cerimónias com energia de stand-up."}]}', 1, 20),
+('Contactos', 'contactos', 'Fala connosco para reservas e propostas comerciais.', '<p>Estamos disponíveis para parcerias em todo o país.</p>', 'https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=1400&q=80', 'section', 'contact_form', 'highlight', '{"cta_text":"Conta-nos o teu objetivo e criamos uma proposta com timing, elenco e produção.","cta_button_text":"Enviar mensagem","contact_email_to":"booking@casadeartistas.pt","contact_fields":["name","email","phone","subject","message"],"services":[]}', 1, 30);
 
 INSERT INTO site_settings (setting_key, setting_value) VALUES
 ('home_tagline', 'Produção • Booking • Experiências'),
 ('home_title', 'Humor e espetáculos com um palco inesquecível.'),
 ('home_description', 'Layout inspirado no visual Big Picture com imagem de fundo marcante e conteúdo em cartões translúcidos.'),
+('home_background_url', 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80'),
 ('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.'),
 ('reservation_email_template_a', 'Olá {customer_name},
 
