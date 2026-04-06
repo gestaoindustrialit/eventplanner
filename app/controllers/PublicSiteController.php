@@ -217,40 +217,58 @@ $isStandaloneView = $activeStandalonePage !== null;
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?php echo htmlspecialchars($siteTitle); ?></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
     :root {
-      --brand-dark: #000000;
-      --brand-base: #ffffff;
-      --brand-surface: #f8fafc;
-      --brand-border: #dbe4f0;
-      --brand-text: #0f172a;
-      --brand-muted: #5b6472;
-      --brand-accent: #CD1C18;
+      --primary: #E10600;
+      --primary-hover: #FF2A1F;
+      --background-main: #0B0B0D;
+      --background-secondary: #1A1A1D;
+      --text-primary: #FFFFFF;
+      --text-secondary: #B3B3B3;
+      --accent: #FFC300;
+      --accent-secondary: #2A0F2E;
       --nav-height: 74px;
     }
     body {
-      color: var(--brand-text);
-      background: var(--brand-surface);
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: var(--text-primary);
+      background: var(--background-main);
       min-height: 100vh;
       margin: 0;
       display: flex;
       flex-direction: column;
       scroll-behavior: smooth;
     }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 8% 18%, rgba(225,6,0,.22), transparent 33%),
+        radial-gradient(circle at 86% 2%, rgba(255,195,0,.1), transparent 28%),
+        radial-gradient(circle at 52% 112%, rgba(42,15,46,.45), transparent 40%);
+      z-index: 0;
+    }
     .site-main { flex: 1 0 auto; }
     .navbar {
       min-height: var(--nav-height);
       backdrop-filter: blur(10px);
-      background: rgba(0, 0, 0, 0.94);
-      border-bottom: 1px solid rgba(205, 28, 24, .45);
+      background: rgba(11, 11, 13, 0.9);
+      border-bottom: 1px solid rgba(225, 6, 0, .35);
       transition: box-shadow .35s ease;
+      position: relative;
+      z-index: 30;
     }
-    .navbar.scrolled { box-shadow: 0 14px 40px rgba(0, 0, 0, .35); }
+    .navbar.scrolled { box-shadow: 0 16px 44px rgba(0, 0, 0, .48); }
     .navbar-brand { display: inline-flex; align-items: center; line-height: 1; padding-top: .2rem; padding-bottom: .2rem; }
     .navbar-brand img { height: 16px; max-height: 16px; width: auto; display: block; filter: brightness(0) invert(1); }
-    .nav-link { color: #e8edf7; position: relative; transition: color .25s ease; }
+    .nav-link { color: var(--text-secondary); position: relative; transition: color .25s ease; font-weight: 600; letter-spacing: .01em; }
     .nav-link::after {
       content: '';
       position: absolute;
@@ -259,11 +277,11 @@ $isStandaloneView = $activeStandalonePage !== null;
       bottom: .2rem;
       height: 2px;
       border-radius: 999px;
-      background: var(--brand-accent);
+      background: linear-gradient(90deg, var(--primary), var(--primary-hover));
       transform: scaleX(0);
       transition: transform .25s ease;
     }
-    .nav-link.active, .nav-link:hover { color: #fff !important; }
+    .nav-link.active, .nav-link:hover { color: #fff !important; text-shadow: 0 0 16px rgba(225, 6, 0, .3); }
     .nav-link.active::after, .nav-link:hover::after { transform: scaleX(1); }
     .hero {
       min-height: min(84vh, 760px);
@@ -272,70 +290,125 @@ $isStandaloneView = $activeStandalonePage !== null;
       position: relative;
       overflow: hidden;
       padding: calc(var(--nav-height) + 2rem) 0 4rem;
-      color: #fff;
+      color: var(--text-primary);
     }
     .hero::before {
       content: '';
       position: absolute;
       inset: 0;
       background:
-        linear-gradient(120deg, rgba(0, 0, 0, 0.78) 15%, rgba(0, 0, 0, 0.42) 55%, rgba(205, 28, 24, 0.28) 100%),
+        linear-gradient(135deg, #0B0B0D 0%, #1A1A1D 40%, #E10600 100%),
         var(--hero-background, url('https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80')) center / cover fixed;
       transform: translateY(var(--hero-offset, 0px));
       will-change: transform;
+      opacity: .92;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 24% 40%, rgba(255,255,255,.08), transparent 34%),
+                  radial-gradient(circle at 68% 62%, rgba(225,6,0,.25), transparent 45%);
+      pointer-events: none;
     }
     .hero > .container { position: relative; z-index: 2; }
     .hero-panel {
       max-width: 780px;
-      background: rgba(15, 23, 42, 0.7);
-      border: 1px solid rgba(255,255,255,.22);
-      border-radius: 1rem;
-      box-shadow: 0 24px 64px rgba(2, 6, 23, .38);
-      backdrop-filter: blur(8px);
+      background: rgba(11, 11, 13, 0.58);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 1.15rem;
+      box-shadow: 0 28px 72px rgba(0, 0, 0, .55);
+      backdrop-filter: blur(10px);
     }
-    .section-block { padding: clamp(3rem, 8vw, 5rem) 0; scroll-margin-top: calc(var(--nav-height) + 1rem); }
-    .section-heading { font-weight: 700; margin-bottom: 1.5rem; color: #0f172a; }
+    .hero .btn-brand { padding: .8rem 1.5rem; }
+    .section-block {
+      padding: clamp(3rem, 7vw, 5rem) 0;
+      scroll-margin-top: calc(var(--nav-height) + 1rem);
+      position: relative;
+      z-index: 1;
+      background: var(--background-main);
+    }
+    .section-block:nth-of-type(even) { background: var(--background-secondary); }
+    .section-heading { font-weight: 800; margin-bottom: 1.2rem; color: var(--text-primary); letter-spacing: -.01em; }
+    .text-secondary { color: var(--text-secondary) !important; }
     .surface-card {
       border-radius: 1rem;
-      border: 1px solid var(--brand-border);
-      background: var(--brand-base);
-      box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.02);
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
     }
     .event-card { padding: 1.25rem; height: 100%; }
-    .event-card input, .event-card textarea { border-color: #ccd8e8; }
-    .event-card input:focus, .event-card textarea:focus { border-color: #93c5fd; box-shadow: 0 0 0 .2rem rgba(59,130,246,.18); }
+    .event-card h4 { font-weight: 800; }
+    .event-card p, .event-card .small { color: var(--text-secondary) !important; }
+    .event-card input, .event-card textarea {
+      border-color: rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: #fff;
+    }
+    .event-card input::placeholder, .event-card textarea::placeholder { color: rgba(255,255,255,.58); }
+    .event-card input:focus, .event-card textarea:focus { border-color: var(--primary-hover); box-shadow: 0 0 0 .2rem rgba(225,6,0,.2); }
     .btn-brand {
-      background: linear-gradient(135deg, #2563eb, #1e40af);
+      background: linear-gradient(90deg, #E10600, #FF2A1F);
       color: #fff;
       border: none;
-      font-weight: 600;
-      transition: transform .2s ease, box-shadow .2s ease;
+      font-weight: 700;
+      border-radius: .75rem;
+      transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
     }
-    .btn-brand:hover { color: #fff; transform: translateY(-1px); box-shadow: 0 10px 18px rgba(37,99,235,.28); }
-    .page-cover { min-height: 220px; border-radius: .95rem; background-size: cover; background-position: center; margin-bottom: 1.2rem; }
-    .page-content { line-height: 1.7; color: #334155; }
-    .newsletter-panel { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #bfdbfe; }
+    .btn-brand:hover { color: #fff; transform: translateY(-2px) scale(1.01); box-shadow: 0 12px 26px rgba(225,6,0,.42); filter: brightness(1.03); }
+    .btn-outline-brand {
+      border: 1px solid rgba(255,255,255,.35);
+      color: #fff;
+      border-radius: .75rem;
+      font-weight: 600;
+    }
+    .btn-outline-brand:hover { border-color: var(--primary-hover); color: #fff; box-shadow: 0 0 18px rgba(225,6,0,.38); }
+    .page-cover { min-height: 240px; border-radius: .95rem; background-size: cover; background-position: center; margin-bottom: 1.2rem; }
+    .page-content { line-height: 1.8; color: var(--text-secondary); }
+    .newsletter-panel {
+      background: linear-gradient(145deg, rgba(42,15,46,.45), rgba(26,26,29,.92));
+      border: 1px solid rgba(255,255,255,.09);
+    }
+    .newsletter-panel h3 { color: #fff; }
+    .newsletter-panel input { background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.12); }
+    .newsletter-panel input::placeholder { color: rgba(255,255,255,.62); }
     .about-split-image {
       min-height: 320px;
       border-radius: 1rem;
       background-size: cover;
       background-position: center;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.2), 0 18px 34px rgba(0, 0, 0, .35);
     }
-    .services-grid .service-item { text-align: center; padding: 1rem; }
+    .services-grid .service-item {
+      text-align: center;
+      padding: 1.25rem;
+      border-radius: .95rem;
+      background: rgba(255,255,255,.02);
+      border: 1px solid rgba(255,255,255,.08);
+      height: 100%;
+      transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+    }
+    .services-grid .service-item:hover {
+      transform: translateY(-4px);
+      border-color: rgba(225,6,0,.45);
+      box-shadow: 0 14px 28px rgba(0,0,0,.35), 0 0 24px rgba(225,6,0,.18);
+    }
     .services-grid .service-icon {
-      width: 78px;
-      height: 78px;
+      width: 82px;
+      height: 82px;
       margin: 0 auto 1rem;
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
-      color: #b7791f;
-      border: 2px solid #d4a24f;
-      background: rgba(212, 162, 79, .08);
+      font-size: 2.1rem;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.18);
+      background: radial-gradient(circle at 30% 30%, rgba(255,42,31,.8), rgba(225,6,0,.65) 45%, rgba(42,15,46,.95) 100%);
+      box-shadow: 0 0 0 4px rgba(225,6,0,.12), 0 10px 26px rgba(225,6,0,.35);
     }
+    .services-grid h5 { color: #fff; font-weight: 700; }
+    .services-grid p { color: var(--text-secondary) !important; }
     .contact-special {
       position: relative;
       color: #fff;
@@ -350,17 +423,30 @@ $isStandaloneView = $activeStandalonePage !== null;
       margin-left: calc(50% - 50vw);
       margin-right: calc(50% - 50vw);
     }
+    .final-cta {
+      background: linear-gradient(120deg, rgba(225,6,0,.22), rgba(42,15,46,.72));
+      border-top: 1px solid rgba(225,6,0,.38);
+      border-bottom: 1px solid rgba(225,6,0,.2);
+    }
+    .final-cta h2 { font-weight: 900; letter-spacing: -.02em; }
+    footer {
+      flex-shrink: 0;
+      border-top: 1px solid rgba(255,255,255,.08);
+      background: #09090b;
+      color: var(--text-secondary);
+    }
+    footer a { color: var(--text-secondary); text-decoration: none; }
+    footer a:hover { color: #fff; }
     .fade-in { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s ease; }
     .fade-in.show { opacity: 1; transform: translateY(0); }
-    footer { flex-shrink: 0; border-top: 1px solid var(--brand-border); background: #fff; color: var(--brand-muted); }
     @media (max-width: 767.98px) {
       .navbar-brand img { height: 14px; max-height: 14px; }
       .navbar { padding-top: .45rem; padding-bottom: .45rem; }
       .navbar .navbar-toggler { padding: .3rem .45rem; }
       .navbar .navbar-collapse {
         margin-top: .6rem;
-        background: rgba(0, 0, 0, 0.95);
-        border: 1px solid rgba(205, 28, 24, .35);
+        background: rgba(11, 11, 13, 0.97);
+        border: 1px solid rgba(225, 6, 0, .35);
         border-radius: 10px;
         padding: .45rem .6rem;
       }
@@ -381,18 +467,9 @@ $isStandaloneView = $activeStandalonePage !== null;
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link <?php echo !$isStandaloneView ? 'active' : ''; ?>" href="index.php#inicio">Início</a></li>
           <li class="nav-item"><a class="nav-link" href="index.php#eventos">Eventos</a></li>
-          <?php foreach ($sectionPages as $menuPage): ?>
-            <?php $slug = trim((string)($menuPage['slug'] ?? '')); ?>
-            <?php if ($slug !== ''): ?>
-              <li class="nav-item"><a class="nav-link" href="index.php#<?php echo htmlspecialchars($slug); ?>"><?php echo htmlspecialchars((string)$menuPage['title']); ?></a></li>
-            <?php endif; ?>
-          <?php endforeach; ?>
-          <?php foreach ($standalonePages as $menuPage): ?>
-            <?php $slug = trim((string)($menuPage['slug'] ?? '')); ?>
-            <?php if ($slug !== ''): ?>
-              <li class="nav-item"><a class="nav-link <?php echo ($pageSlug === $slug && $isStandaloneView) ? 'active' : ''; ?>" href="index.php?page=<?php echo urlencode($slug); ?>"><?php echo htmlspecialchars((string)$menuPage['title']); ?></a></li>
-            <?php endif; ?>
-          <?php endforeach; ?>
+          <li class="nav-item"><a class="nav-link" href="index.php#servicos">Serviços</a></li>
+          <li class="nav-item"><a class="nav-link" href="index.php#sobre-nos">Sobre</a></li>
+          <li class="nav-item"><a class="nav-link" href="index.php#contactos">Contactos</a></li>
         </ul>
       </div>
     </div>
@@ -405,11 +482,11 @@ $isStandaloneView = $activeStandalonePage !== null;
           <div class="hero-panel p-4 p-lg-5 col-12 fade-in show">
             <span class="hero-comedy-icon"><i class="bi bi-mic-fill"></i></span>
             <p class="text-uppercase small mb-2 fw-semibold text-info-emphasis"><?php echo htmlspecialchars((string)($homeCopy['tagline'] ?? '')); ?></p>
-            <h1 class="display-5 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
+            <h1 class="display-4 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
             <p class="lead mb-4 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
             <div class="d-flex flex-wrap gap-2">
-              <a href="#eventos" class="btn btn-light px-4 fw-semibold">Ver agenda</a>
-              <a href="#contactos" class="btn btn-outline-light px-4 fw-semibold">Reservar espetáculo</a>
+              <a href="#eventos" class="btn btn-brand px-4 fw-semibold">Ver eventos</a>
+              <a href="#contactos" class="btn btn-outline-brand px-4 fw-semibold">Reservar</a>
             </div>
           </div>
         </div>
@@ -506,7 +583,7 @@ $isStandaloneView = $activeStandalonePage !== null;
         <section id="<?php echo htmlspecialchars($sectionId); ?>" class="section-block<?php echo (!empty($page['hero_image_url']) && $sectionType === 'default') ? ' pt-0' : ''; ?>">
           <div class="container">
             <?php if ($sectionType === 'about'): ?>
-              <div class="surface-card p-4 p-lg-5 fade-in">
+              <div class="p-4 p-lg-5 fade-in">
                 <div class="row g-4 align-items-center">
                   <div class="col-lg-6">
                     <h2 class="section-heading mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
@@ -520,7 +597,7 @@ $isStandaloneView = $activeStandalonePage !== null;
                 </div>
               </div>
             <?php elseif ($sectionType === 'services'): ?>
-              <div class="surface-card p-4 p-lg-5 fade-in services-grid">
+              <div class="p-4 p-lg-5 fade-in services-grid">
                 <h2 class="section-heading mb-3 text-center"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
                 <?php if (!empty($page['excerpt'])): ?><p class="lead text-secondary text-center"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p><?php endif; ?>
                 <div class="row g-3 mt-1">
@@ -561,7 +638,7 @@ $isStandaloneView = $activeStandalonePage !== null;
                 </div>
               </div>
             <?php else: ?>
-              <div class="surface-card p-4 p-lg-5 fade-in">
+              <div class="p-4 p-lg-5 fade-in">
                 <?php if (!empty($page['hero_image_url'])): ?>
                   <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars((string)$page['hero_image_url']); ?>');"></div>
                 <?php endif; ?>
@@ -599,12 +676,33 @@ $isStandaloneView = $activeStandalonePage !== null;
         </div>
       </section>
     <?php endif; ?>
+
+    <section class="section-block final-cta">
+      <div class="container py-2">
+        <div class="row align-items-center g-3">
+          <div class="col-lg-8">
+            <h2 class="mb-2">Pronto para uma noite memorável de stand-up?</h2>
+            <p class="mb-0 text-light-emphasis">Leva um line-up premium ao teu bar, auditório ou evento corporativo.</p>
+          </div>
+          <div class="col-lg-4 text-lg-end">
+            <a href="#contactos" class="btn btn-brand btn-lg px-4">Pedir proposta agora</a>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="py-4">
-    <div class="container d-flex flex-column flex-md-row gap-2 justify-content-between">
-      <span>© <?php echo date('Y'); ?> Chorar de Rir</span>
-      <span>Produção & Booking</span>
+    <div class="container d-flex flex-column flex-md-row gap-2 justify-content-between align-items-md-center">
+      <div>
+        <strong class="text-white">© <?php echo date('Y'); ?> Chorar de Rir</strong>
+        <div class="small">Stand-up comedy • Produção • Booking • Experiência ao vivo</div>
+      </div>
+      <div class="small d-flex gap-3">
+        <a href="#eventos">Eventos</a>
+        <a href="#servicos">Serviços</a>
+        <a href="#contactos">Contactos</a>
+      </div>
     </div>
   </footer>
 
