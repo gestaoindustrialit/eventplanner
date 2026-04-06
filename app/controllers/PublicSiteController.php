@@ -476,7 +476,7 @@ foreach ($events as $event) {
     }
   </style>
 </head>
-  <body style="--hero-background: url('<?php echo htmlspecialchars((string)$homeCopy['background_url']); ?>');">
+  <body style="--hero-background: url(&quot;<?php echo htmlspecialchars((string)$homeCopy['background_url']); ?>&quot;);">
   <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container">
       <a class="navbar-brand" href="index.php#inicio">
