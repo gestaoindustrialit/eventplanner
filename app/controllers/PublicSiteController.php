@@ -210,6 +210,19 @@ foreach ($pages as $page) {
 }
 
 $isStandaloneView = $activeStandalonePage !== null;
+$hasReservableEvents = false;
+foreach ($events as $event) {
+    if ((int)($event['reservations_open'] ?? 0) !== 1) {
+        continue;
+    }
+    $capacity = (int)($event['reservation_capacity'] ?? 0);
+    $activeTickets = (int)($event['active_tickets'] ?? 0);
+    $hasAvailability = $capacity <= 0 || ($capacity - $activeTickets) > 0;
+    if ($hasAvailability) {
+        $hasReservableEvents = true;
+        break;
+    }
+}
 ?>
 <!doctype html>
 <html lang="pt">
@@ -268,7 +281,15 @@ $isStandaloneView = $activeStandalonePage !== null;
     .navbar.scrolled { box-shadow: 0 16px 44px rgba(0, 0, 0, .48); }
     .navbar-brand { display: inline-flex; align-items: center; line-height: 1; padding-top: .2rem; padding-bottom: .2rem; }
     .navbar-brand img { height: 16px; max-height: 16px; width: auto; display: block; filter: brightness(0) invert(1); }
-    .nav-link { color: var(--text-secondary); position: relative; transition: color .25s ease; font-weight: 600; letter-spacing: .01em; }
+    .nav-link {
+      color: var(--text-secondary);
+      position: relative;
+      transition: color .25s ease;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      font-size: .86rem;
+    }
     .nav-link::after {
       content: '';
       position: absolute;
@@ -296,12 +317,15 @@ $isStandaloneView = $activeStandalonePage !== null;
       content: '';
       position: absolute;
       inset: 0;
-      background:
-        linear-gradient(135deg, #0B0B0D 0%, #1A1A1D 40%, #E10600 100%),
-        var(--hero-background, url('https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80')) center / cover fixed;
+      background-image:
+        linear-gradient(115deg, rgba(11,11,13,.84) 0%, rgba(26,26,29,.62) 42%, rgba(225,6,0,.45) 100%),
+        var(--hero-background, url('https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80'));
+      background-position: center, center;
+      background-size: cover, cover;
+      background-repeat: no-repeat, no-repeat;
       transform: translateY(var(--hero-offset, 0px));
       will-change: transform;
-      opacity: .92;
+      opacity: .98;
     }
     .hero::after {
       content: '';
@@ -321,6 +345,7 @@ $isStandaloneView = $activeStandalonePage !== null;
       backdrop-filter: blur(10px);
     }
     .hero .btn-brand { padding: .8rem 1.5rem; }
+    .hero-tagline { color: #fff !important; }
     .section-block {
       padding: clamp(3rem, 7vw, 5rem) 0;
       scroll-margin-top: calc(var(--nav-height) + 1rem);
@@ -419,9 +444,9 @@ $isStandaloneView = $activeStandalonePage !== null;
     }
     .contact-special .form-control { background: rgba(255,255,255,.94); border: none; }
     .full-bleed {
-      width: 100vw;
-      margin-left: calc(50% - 50vw);
-      margin-right: calc(50% - 50vw);
+      width: 100%;
+      margin-left: 0;
+      margin-right: 0;
     }
     .final-cta {
       background: linear-gradient(120deg, rgba(225,6,0,.22), rgba(42,15,46,.72));
@@ -481,12 +506,14 @@ $isStandaloneView = $activeStandalonePage !== null;
         <div class="container">
           <div class="hero-panel p-4 p-lg-5 col-12 fade-in show">
             <span class="hero-comedy-icon"><i class="bi bi-mic-fill"></i></span>
-            <p class="text-uppercase small mb-2 fw-semibold text-info-emphasis"><?php echo htmlspecialchars((string)($homeCopy['tagline'] ?? '')); ?></p>
+            <p class="hero-tagline text-uppercase small mb-2 fw-semibold"><?php echo htmlspecialchars((string)($homeCopy['tagline'] ?? '')); ?></p>
             <h1 class="display-4 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
             <p class="lead mb-4 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
             <div class="d-flex flex-wrap gap-2">
-              <a href="#eventos" class="btn btn-brand px-4 fw-semibold">Ver eventos</a>
-              <a href="#contactos" class="btn btn-outline-brand px-4 fw-semibold">Reservar</a>
+              <a href="#eventos" class="btn btn-brand px-4 fw-semibold">Agenda</a>
+              <?php if ($hasReservableEvents): ?>
+                <a href="#contactos" class="btn btn-outline-brand px-4 fw-semibold">Reservar</a>
+              <?php endif; ?>
             </div>
           </div>
         </div>
