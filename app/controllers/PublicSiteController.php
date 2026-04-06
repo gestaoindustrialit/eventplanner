@@ -397,10 +397,13 @@ foreach ($events as $event) {
     .newsletter-panel input { background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.12); }
     .newsletter-panel input::placeholder { color: rgba(255,255,255,.62); }
     .about-split-image {
+      aspect-ratio: 3 / 4;
+      width: min(100%, 460px);
       min-height: 320px;
       border-radius: 1rem;
       background-size: cover;
       background-position: center;
+      margin-inline: auto;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.2), 0 18px 34px rgba(0, 0, 0, .35);
     }
     .services-grid .service-item {
@@ -593,13 +596,13 @@ foreach ($events as $event) {
             <?php if ($sectionType === 'about'): ?>
               <div class="p-4 p-lg-5 fade-in">
                 <div class="row g-4 align-items-center">
-                  <div class="col-lg-6">
+                  <div class="col-lg-7">
                     <h2 class="section-heading mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
                     <?php if (!empty($page['excerpt'])): ?><p class="lead text-secondary"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p><?php endif; ?>
                     <div class="page-content mb-3"><?php echo safe_content($page['content'] ?? ''); ?></div>
                     <?php if (!empty($sectionConfig['cta_text'])): ?><p class="mb-0 fw-semibold"><?php echo htmlspecialchars((string)$sectionConfig['cta_text']); ?></p><?php endif; ?>
                   </div>
-                  <div class="col-lg-6">
+                  <div class="col-lg-5">
                     <div class="about-split-image" style="background-image:url('<?php echo htmlspecialchars((string)($page['hero_image_url'] ?: 'https://images.unsplash.com/photo-1509824227185-9c5a01ceba0d?auto=format&fit=crop&w=1400&q=80')); ?>');"></div>
                   </div>
                 </div>
