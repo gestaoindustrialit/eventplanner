@@ -514,7 +514,7 @@ $isStandaloneView = $activeStandalonePage !== null;
             <div class="alert alert-danger">Não foi possível enviar o contacto. Tenta novamente.</div>
           <?php endif; ?>
 
-          <h2 class="section-heading">Próximos eventos</h2>
+          <h2 class="section-heading">Agenda</h2>
           <div class="row g-4 mb-5">
             <?php foreach ($events as $event): ?>
               <div class="col-lg-6">
@@ -536,41 +536,47 @@ $isStandaloneView = $activeStandalonePage !== null;
                   <?php elseif ($available !== null && $available <= 0): ?>
                     <div class="alert alert-warning py-2 mb-0">Esgotado. Não existem mais lugares disponíveis.</div>
                   <?php else: ?>
-                    <form method="post" action="reserve.php" class="row g-2">
-                      <input type="hidden" name="event_id" value="<?php echo (int)$event['id']; ?>">
-                      <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
-                      <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
-                      <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
-                      <div class="col-md-6"><input type="number" min="1" <?php echo $available !== null ? 'max="' . $available . '"' : ''; ?> value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
-                      <div class="col-md-6"><button class="btn btn-brand w-100">Reservar</button></div>
-                      <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
-                    </form>
+                    <button
+                      type="button"
+                      class="btn btn-brand"
+                      data-bs-toggle="modal"
+                      data-bs-target="#reserveModal"
+                      data-event-id="<?php echo (int)$event['id']; ?>"
+                      data-event-title="<?php echo htmlspecialchars((string)$event['title'], ENT_QUOTES); ?>"
+                      data-event-date="<?php echo htmlspecialchars((string)$event['date'], ENT_QUOTES); ?>"
+                      data-event-time="<?php echo htmlspecialchars(substr((string)$event['time'], 0, 5), ENT_QUOTES); ?>"
+                      data-event-location="<?php echo htmlspecialchars((string)$event['location'], ENT_QUOTES); ?>"
+                      data-max-tickets="<?php echo $available !== null ? (int)$available : 0; ?>"
+                    >
+                      Reservar lugar
+                    </button>
                   <?php endif; ?>
                 </div>
               </div>
             <?php endforeach; ?>
           </div>
-        </div>
-      </section>
 
-      <section id="newsletter" class="section-block pt-0">
-        <div class="container">
-          <div class="surface-card newsletter-panel p-4 p-lg-5 fade-in">
-            <h3 class="h5 mb-2">Newsletter</h3>
-            <form method="post" action="subscribe.php" class="row g-2 align-items-center newsletter-form">
-              <div class="col-lg-4"><input type="email" name="email" required class="form-control" placeholder="Email"></div>
-              <div class="col-lg-4"><input type="text" name="name" class="form-control" placeholder="Nome (opcional)"></div>
-              <div class="col-lg-2"><button class="btn btn-brand w-100">Subscrever</button></div>
-              <div class="col-lg-2">
-                <label class="form-check-label d-flex gap-2 align-items-start small text-secondary">
-                  <input class="form-check-input mt-1" type="checkbox" name="gdpr_consent" value="1" required>
-                  <span>RGPD</span>
-                </label>
+          <div class="modal fade" id="reserveModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+              <div class="modal-content bg-dark text-white border border-light border-opacity-10">
+                <div class="modal-header border-secondary border-opacity-25">
+                  <h5 class="modal-title">Reservar evento</h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  <p class="small text-secondary mb-3" id="reserveEventInfo">Preenche os dados para concluir a tua reserva.</p>
+                  <form method="post" action="reserve.php" class="row g-2" id="reserveModalForm">
+                    <input type="hidden" name="event_id" id="reserveEventId">
+                    <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
+                    <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
+                    <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
+                    <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" id="reserveTickets" class="form-control" placeholder="Nº bilhetes"></div>
+                    <div class="col-md-6"><button class="btn btn-brand w-100">Confirmar reserva</button></div>
+                    <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
+                  </form>
+                </div>
               </div>
-              <div class="col-12">
-                <p class="small text-secondary mb-0"><?php echo htmlspecialchars('__NEWSLETTER_CONSENT__'); ?></p>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       </section>
@@ -690,6 +696,28 @@ $isStandaloneView = $activeStandalonePage !== null;
         </div>
       </div>
     </section>
+
+    <section id="newsletter" class="section-block py-4">
+      <div class="container">
+        <div class="surface-card newsletter-panel p-4 p-lg-4 fade-in mb-0">
+          <h3 class="h5 mb-2">Newsletter</h3>
+          <form method="post" action="subscribe.php" class="row g-2 align-items-center newsletter-form">
+            <div class="col-lg-4"><input type="email" name="email" required class="form-control" placeholder="Email"></div>
+            <div class="col-lg-4"><input type="text" name="name" class="form-control" placeholder="Nome (opcional)"></div>
+            <div class="col-lg-2"><button class="btn btn-brand w-100">Subscrever</button></div>
+            <div class="col-lg-2">
+              <label class="form-check-label d-flex gap-2 align-items-start small text-secondary">
+                <input class="form-check-input mt-1" type="checkbox" name="gdpr_consent" value="1" required>
+                <span>RGPD</span>
+              </label>
+            </div>
+            <div class="col-12">
+              <p class="small text-secondary mb-0"><?php echo htmlspecialchars('__NEWSLETTER_CONSENT__'); ?></p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="py-4">
@@ -755,6 +783,38 @@ $isStandaloneView = $activeStandalonePage !== null;
         }
       });
     });
+
+    const reserveModal = document.getElementById('reserveModal');
+    if (reserveModal) {
+      reserveModal.addEventListener('show.bs.modal', (event) => {
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
+
+        const eventId = trigger.getAttribute('data-event-id') || '';
+        const title = trigger.getAttribute('data-event-title') || '';
+        const date = trigger.getAttribute('data-event-date') || '';
+        const time = trigger.getAttribute('data-event-time') || '';
+        const location = trigger.getAttribute('data-event-location') || '';
+        const maxTickets = parseInt(trigger.getAttribute('data-max-tickets') || '0', 10);
+
+        const reserveEventId = document.getElementById('reserveEventId');
+        const reserveTickets = document.getElementById('reserveTickets');
+        const reserveEventInfo = document.getElementById('reserveEventInfo');
+
+        if (reserveEventId) reserveEventId.value = eventId;
+        if (reserveTickets) {
+          reserveTickets.value = '1';
+          if (!Number.isNaN(maxTickets) && maxTickets > 0) {
+            reserveTickets.max = String(maxTickets);
+          } else {
+            reserveTickets.removeAttribute('max');
+          }
+        }
+        if (reserveEventInfo) {
+          reserveEventInfo.textContent = `${title} • ${date} às ${time} • ${location}`;
+        }
+      });
+    }
 
     if (window.location.search.includes('msg=')) {
       history.replaceState(null, '', window.location.pathname + window.location.hash);
