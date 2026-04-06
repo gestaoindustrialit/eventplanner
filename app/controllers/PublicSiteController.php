@@ -480,6 +480,7 @@ $isStandaloneView = $activeStandalonePage !== null;
       <section id="inicio" class="hero">
         <div class="container">
           <div class="hero-panel p-4 p-lg-5 col-12 fade-in show">
+            <span class="hero-comedy-icon"><i class="bi bi-mic-fill"></i></span>
             <p class="text-uppercase small mb-2 fw-semibold text-info-emphasis"><?php echo htmlspecialchars((string)($homeCopy['tagline'] ?? '')); ?></p>
             <h1 class="display-4 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
             <p class="lead mb-4 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
@@ -873,6 +874,22 @@ try {
         'notes' => trim((string)($_POST['notes'] ?? '')) ?: null,
         'status' => 'new',
     ]);
+    $reservationId = (int)$db->lastInsertId();
+
+    $db->exec(
+        'CREATE TABLE IF NOT EXISTS event_reservation_tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reservation_id INTEGER NOT NULL,
+            event_id INTEGER NOT NULL,
+            ticket_no INTEGER NOT NULL,
+            ticket_token TEXT NOT NULL UNIQUE,
+            qr_payload TEXT NOT NULL,
+            is_used INTEGER NOT NULL DEFAULT 0,
+            used_at TEXT DEFAULT NULL,
+            used_by_user_id INTEGER DEFAULT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )'
+    );
 
     $db->exec(
         'CREATE TABLE IF NOT EXISTS site_settings (
@@ -882,12 +899,7 @@ try {
         )'
     );
 
-    $settingStmt = $db->prepare('SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN (:template_a, :template_b, :template_selected)');
-    $settingStmt->execute([
-        'template_a' => 'reservation_email_template_a',
-        'template_b' => 'reservation_email_template_b',
-        'template_selected' => 'reservation_email_template_selected',
-    ]);
+    $settingStmt = $db->query("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('reservation_email_template_a', 'reservation_email_template_b', 'reservation_email_template_selected', 'reservation_validation_base_url')");
     $rows = $settingStmt->fetchAll() ?: [];
     $settings = [];
     foreach ($rows as $row) {
@@ -900,6 +912,10 @@ try {
     $templateB = trim((string)($settings['reservation_email_template_b'] ?? '')) !== '' ? (string)$settings['reservation_email_template_b'] : $defaultTemplateB;
     $selectedTemplate = (string)($settings['reservation_email_template_selected'] ?? 'a');
     $bodyTemplate = $selectedTemplate === 'b' ? $templateB : $templateA;
+    $validationBaseUrl = trim((string)($settings['reservation_validation_base_url'] ?? ''));
+    if ($validationBaseUrl === '') {
+        $validationBaseUrl = 'RESERVA:';
+    }
 
     $customerName = trim((string)($_POST['customer_name'] ?? ''));
     $customerEmail = trim((string)($_POST['customer_email'] ?? ''));
@@ -914,15 +930,61 @@ try {
         '{customer_phone}' => $customerPhone,
     ]);
 
+    $ticketInsert = $db->prepare('INSERT INTO event_reservation_tickets (reservation_id, event_id, ticket_no, ticket_token, qr_payload) VALUES (:reservation_id, :event_id, :ticket_no, :ticket_token, :qr_payload)');
+    $ticketsData = [];
+    for ($ticketNo = 1; $ticketNo <= $tickets; $ticketNo++) {
+        $token = bin2hex(random_bytes(16));
+        $qrPayload = str_starts_with($validationBaseUrl, 'http')
+            ? $validationBaseUrl . urlencode($token)
+            : ('RESERVA:' . $token);
+        $ticketInsert->execute([
+            'reservation_id' => $reservationId,
+            'event_id' => $eventId,
+            'ticket_no' => $ticketNo,
+            'ticket_token' => $token,
+            'qr_payload' => $qrPayload,
+        ]);
+        $ticketsData[] = [
+            'ticket_no' => $ticketNo,
+            'token' => $token,
+            'payload' => $qrPayload,
+        ];
+    }
+
     if ($customerEmail !== '') {
         $subject = 'Confirmação de reserva - ' . (string)($event['title'] ?? 'Evento');
         $headers = [
             'MIME-Version: 1.0',
-            'Content-type: text/plain; charset=UTF-8',
+            'Content-type: text/html; charset=UTF-8',
             'From: noreply@chorarderir.com',
             'Reply-To: noreply@chorarderir.com',
         ];
-        @mail($customerEmail, $subject, $messageBody, implode("\r\n", $headers));
+
+        $eventDate = htmlspecialchars((string)($event['date'] ?? ''));
+        $eventTime = htmlspecialchars(substr((string)($event['time'] ?? ''), 0, 5));
+        $eventTitle = htmlspecialchars((string)($event['title'] ?? 'Evento'));
+        $customerNameSafe = htmlspecialchars($customerName);
+        $intro = nl2br(htmlspecialchars($messageBody));
+        $logoUrl = 'https://chorarderir.com/chorarderir-logo.svg';
+        $ticketHtml = '';
+        foreach ($ticketsData as $ticket) {
+            $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=230x230&data=' . rawurlencode((string)$ticket['payload']);
+            $ticketHtml .= '<div style="border:1px solid #dbe4f0;border-radius:12px;padding:16px;margin:12px 0;background:#f8fafc">'
+                . '<p style="margin:0 0 8px;font-weight:700">Bilhete #' . (int)$ticket['ticket_no'] . '</p>'
+                . '<p style="margin:0 0 8px">Evento: <strong>' . $eventTitle . '</strong><br>Data: ' . $eventDate . ' às ' . $eventTime . '</p>'
+                . '<p style="margin:0 0 8px;font-size:12px;color:#475569">Token: ' . htmlspecialchars((string)$ticket['token']) . '</p>'
+                . '<img src="' . htmlspecialchars($qrUrl) . '" alt="QR Bilhete #' . (int)$ticket['ticket_no'] . '" width="180" height="180">'
+                . '</div>';
+        }
+        $htmlBody = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px;color:#0f172a">'
+            . '<div style="margin-bottom:16px"><img src="' . htmlspecialchars($logoUrl) . '" alt="Chorar de Rir" style="max-height:32px"></div>'
+            . '<p>Olá ' . $customerNameSafe . ',</p>'
+            . '<p>' . $intro . '</p>'
+            . $ticketHtml
+            . '<p style="margin-top:16px;color:#64748b;font-size:12px">Cada QR code só pode ser validado uma vez.</p>'
+            . '</div>';
+
+        @mail($customerEmail, $subject, $htmlBody, implode("\r\n", $headers));
     }
 
     header('Location: index.php?msg=ok#eventos');
