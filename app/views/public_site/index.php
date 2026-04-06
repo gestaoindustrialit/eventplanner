@@ -24,9 +24,9 @@
                 <textarea name="home_description" class="form-control" rows="2" required><?= htmlspecialchars($homeDescription ?? '') ?></textarea>
             </div>
             <div class="col-12">
-                <label class="form-label">Imagem de fundo do topo (URL)</label>
-                <input type="url" name="home_background_url" class="form-control" value="<?= htmlspecialchars($homeBackgroundUrl ?? '') ?>" placeholder="https://...">
-                <div class="form-text">Permite trocar a imagem de fundo do header/hero do site público.</div>
+                <label class="form-label">Imagem de fundo do topo (URL/caminho)</label>
+                <input type="text" name="home_background_url" class="form-control" value="<?= htmlspecialchars($homeBackgroundUrl ?? '') ?>" placeholder="https://... ou /imagens/hero.jpg">
+                <div class="form-text">Aceita URL absoluta ou caminho relativo para definir a imagem de fundo do header/hero.</div>
             </div>
             <div class="col-12">
                 <label class="form-label">Texto de consentimento RGPD (newsletter)</label>
