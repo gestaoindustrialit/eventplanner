@@ -312,17 +312,16 @@ foreach ($events as $event) {
       overflow: hidden;
       padding: calc(var(--nav-height) + 2rem) 0 4rem;
       color: var(--text-primary);
+      background-image: var(--hero-background, url('https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80'));
+      background-position: center;
+      background-size: cover;
+      background-repeat: no-repeat;
     }
     .hero::before {
       content: '';
       position: absolute;
       inset: 0;
-      background-image:
-        linear-gradient(115deg, rgba(11,11,13,.84) 0%, rgba(26,26,29,.62) 42%, rgba(225,6,0,.45) 100%),
-        var(--hero-background, url('https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80'));
-      background-position: center, center;
-      background-size: cover, cover;
-      background-repeat: no-repeat, no-repeat;
+      background: linear-gradient(115deg, rgba(11,11,13,.84) 0%, rgba(26,26,29,.62) 42%, rgba(225,6,0,.45) 100%);
       transform: translateY(var(--hero-offset, 0px));
       will-change: transform;
       opacity: .98;
@@ -438,9 +437,7 @@ foreach ($events as $event) {
       position: relative;
       color: #fff;
       border: none;
-      background: linear-gradient(120deg, rgba(0, 0, 0, .84), rgba(0, 0, 0, .62), rgba(205, 28, 24, .28)), var(--section-bg, #0f172a);
-      background-size: cover;
-      background-position: center;
+      background: transparent;
     }
     .contact-special .form-control { background: rgba(255,255,255,.94); border: none; }
     .full-bleed {
@@ -491,7 +488,7 @@ foreach ($events as $event) {
       <div class="collapse navbar-collapse" id="menuPublico">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link <?php echo !$isStandaloneView ? 'active' : ''; ?>" href="index.php#inicio">Início</a></li>
-          <li class="nav-item"><a class="nav-link" href="index.php#eventos">Eventos</a></li>
+          <li class="nav-item"><a class="nav-link" href="index.php#agenda">Agenda</a></li>
           <li class="nav-item"><a class="nav-link" href="index.php#servicos">Serviços</a></li>
           <li class="nav-item"><a class="nav-link" href="index.php#sobre-nos">Sobre</a></li>
           <li class="nav-item"><a class="nav-link" href="index.php#contactos">Contactos</a></li>
@@ -510,99 +507,10 @@ foreach ($events as $event) {
             <h1 class="display-4 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
             <p class="lead mb-4 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
             <div class="d-flex flex-wrap gap-2">
-              <a href="#eventos" class="btn btn-brand px-4 fw-semibold">Agenda</a>
+              <a href="#agenda" class="btn btn-brand px-4 fw-semibold">Agenda</a>
               <?php if ($hasReservableEvents): ?>
                 <a href="#contactos" class="btn btn-outline-brand px-4 fw-semibold">Reservar</a>
               <?php endif; ?>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="eventos" class="section-block">
-        <div class="container">
-          <?php if ($msg === 'ok'): ?>
-            <div class="alert alert-success">Reserva enviada com sucesso! Vamos confirmar por email/telefone.</div>
-          <?php elseif ($msg === 'error'): ?>
-            <div class="alert alert-danger">Não foi possível registar a reserva. Tenta novamente.</div>
-          <?php elseif ($msg === 'subscribed'): ?>
-            <div class="alert alert-success">Subscrição da newsletter confirmada com sucesso.</div>
-          <?php elseif ($msg === 'duplicate'): ?>
-            <div class="alert alert-warning">Este email já está registado na newsletter.</div>
-          <?php elseif ($msg === 'consent'): ?>
-            <div class="alert alert-warning">Precisas de aceitar o consentimento RGPD para subscrever.</div>
-          <?php elseif ($msg === 'closed'): ?>
-            <div class="alert alert-warning">As reservas para esse evento estão fechadas.</div>
-          <?php elseif ($msg === 'soldout'): ?>
-            <div class="alert alert-warning">Não existem lugares suficientes disponíveis para essa reserva.</div>
-          <?php elseif ($msg === 'contact_ok'): ?>
-            <div class="alert alert-success">Mensagem enviada com sucesso. Obrigado pelo contacto!</div>
-          <?php elseif ($msg === 'contact_error'): ?>
-            <div class="alert alert-danger">Não foi possível enviar o contacto. Tenta novamente.</div>
-          <?php endif; ?>
-
-          <h2 class="section-heading">Agenda</h2>
-          <div class="row g-4 mb-5">
-            <?php foreach ($events as $event): ?>
-              <div class="col-lg-6">
-                <div class="event-card surface-card fade-in">
-                  <h4><?php echo htmlspecialchars($event['title']); ?></h4>
-                  <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
-                  <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
-                  <?php
-                    $capacity = (int)($event['reservation_capacity'] ?? 0);
-                    $activeTickets = (int)($event['active_tickets'] ?? 0);
-                    $available = $capacity > 0 ? max(0, $capacity - $activeTickets) : null;
-                  ?>
-                  <?php if ($available !== null): ?>
-                    <p class="small text-secondary mb-3"><strong>Lugares disponíveis:</strong> <?php echo $available; ?> / <?php echo $capacity; ?></p>
-                  <?php endif; ?>
-
-                  <?php if ((int)($event['reservations_open'] ?? 0) !== 1): ?>
-                    <div class="alert alert-secondary py-2 mb-0">Reservas fechadas para este evento.</div>
-                  <?php elseif ($available !== null && $available <= 0): ?>
-                    <div class="alert alert-warning py-2 mb-0">Esgotado. Não existem mais lugares disponíveis.</div>
-                  <?php else: ?>
-                    <button
-                      type="button"
-                      class="btn btn-brand"
-                      data-bs-toggle="modal"
-                      data-bs-target="#reserveModal"
-                      data-event-id="<?php echo (int)$event['id']; ?>"
-                      data-event-title="<?php echo htmlspecialchars((string)$event['title'], ENT_QUOTES); ?>"
-                      data-event-date="<?php echo htmlspecialchars((string)$event['date'], ENT_QUOTES); ?>"
-                      data-event-time="<?php echo htmlspecialchars(substr((string)$event['time'], 0, 5), ENT_QUOTES); ?>"
-                      data-event-location="<?php echo htmlspecialchars((string)$event['location'], ENT_QUOTES); ?>"
-                      data-max-tickets="<?php echo $available !== null ? (int)$available : 0; ?>"
-                    >
-                      Reservar lugar
-                    </button>
-                  <?php endif; ?>
-                </div>
-              </div>
-            <?php endforeach; ?>
-          </div>
-
-          <div class="modal fade" id="reserveModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-              <div class="modal-content bg-dark text-white border border-light border-opacity-10">
-                <div class="modal-header border-secondary border-opacity-25">
-                  <h5 class="modal-title">Reservar evento</h5>
-                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                  <p class="small text-secondary mb-3" id="reserveEventInfo">Preenche os dados para concluir a tua reserva.</p>
-                  <form method="post" action="reserve.php" class="row g-2" id="reserveModalForm">
-                    <input type="hidden" name="event_id" id="reserveEventId">
-                    <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
-                    <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
-                    <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
-                    <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" id="reserveTickets" class="form-control" placeholder="Nº bilhetes"></div>
-                    <div class="col-md-6"><button class="btn btn-brand w-100">Confirmar reserva</button></div>
-                    <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
-                  </form>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -613,6 +521,73 @@ foreach ($events as $event) {
         <?php if ($sectionId === '') { continue; } ?>
         <?php $sectionType = section_type($page); ?>
         <?php $sectionConfig = section_config($page); ?>
+        <?php if ($sectionId === 'agenda'): ?>
+          <section id="agenda" class="section-block">
+            <div class="container">
+              <?php if ($msg === 'ok'): ?>
+                <div class="alert alert-success">Reserva enviada com sucesso! Vamos confirmar por email/telefone.</div>
+              <?php elseif ($msg === 'error'): ?>
+                <div class="alert alert-danger">Não foi possível registar a reserva. Tenta novamente.</div>
+              <?php elseif ($msg === 'subscribed'): ?>
+                <div class="alert alert-success">Subscrição da newsletter confirmada com sucesso.</div>
+              <?php elseif ($msg === 'duplicate'): ?>
+                <div class="alert alert-warning">Este email já está registado na newsletter.</div>
+              <?php elseif ($msg === 'consent'): ?>
+                <div class="alert alert-warning">Precisas de aceitar o consentimento RGPD para subscrever.</div>
+              <?php elseif ($msg === 'closed'): ?>
+                <div class="alert alert-warning">As reservas para esse evento estão fechadas.</div>
+              <?php elseif ($msg === 'soldout'): ?>
+                <div class="alert alert-warning">Não existem lugares suficientes disponíveis para essa reserva.</div>
+              <?php elseif ($msg === 'contact_ok'): ?>
+                <div class="alert alert-success">Mensagem enviada com sucesso. Obrigado pelo contacto!</div>
+              <?php elseif ($msg === 'contact_error'): ?>
+                <div class="alert alert-danger">Não foi possível enviar o contacto. Tenta novamente.</div>
+              <?php endif; ?>
+              <h2 class="section-heading"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
+              <div class="row g-4 mb-5">
+                <?php foreach ($events as $event): ?>
+                  <div class="col-lg-6">
+                    <div class="event-card surface-card fade-in">
+                      <h4><?php echo htmlspecialchars($event['title']); ?></h4>
+                      <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
+                      <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
+                      <?php
+                        $capacity = (int)($event['reservation_capacity'] ?? 0);
+                        $activeTickets = (int)($event['active_tickets'] ?? 0);
+                        $available = $capacity > 0 ? max(0, $capacity - $activeTickets) : null;
+                      ?>
+                      <?php if ($available !== null): ?>
+                        <p class="small text-secondary mb-3"><strong>Lugares disponíveis:</strong> <?php echo $available; ?> / <?php echo $capacity; ?></p>
+                      <?php endif; ?>
+
+                      <?php if ((int)($event['reservations_open'] ?? 0) !== 1): ?>
+                        <div class="alert alert-secondary py-2 mb-0">Reservas fechadas para este evento.</div>
+                      <?php elseif ($available !== null && $available <= 0): ?>
+                        <div class="alert alert-warning py-2 mb-0">Esgotado. Não existem mais lugares disponíveis.</div>
+                      <?php else: ?>
+                        <button
+                          type="button"
+                          class="btn btn-brand"
+                          data-bs-toggle="modal"
+                          data-bs-target="#reserveModal"
+                          data-event-id="<?php echo (int)$event['id']; ?>"
+                          data-event-title="<?php echo htmlspecialchars((string)$event['title'], ENT_QUOTES); ?>"
+                          data-event-date="<?php echo htmlspecialchars((string)$event['date'], ENT_QUOTES); ?>"
+                          data-event-time="<?php echo htmlspecialchars(substr((string)$event['time'], 0, 5), ENT_QUOTES); ?>"
+                          data-event-location="<?php echo htmlspecialchars((string)$event['location'], ENT_QUOTES); ?>"
+                          data-max-tickets="<?php echo $available !== null ? (int)$available : 0; ?>"
+                        >
+                          Reservar lugar
+                        </button>
+                      <?php endif; ?>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          </section>
+          <?php continue; ?>
+        <?php endif; ?>
         <section id="<?php echo htmlspecialchars($sectionId); ?>" class="section-block<?php echo (!empty($page['hero_image_url']) && $sectionType === 'default') ? ' pt-0' : ''; ?>">
           <div class="container">
             <?php if ($sectionType === 'about'): ?>
@@ -693,6 +668,29 @@ foreach ($events as $event) {
           </div>
         </section>
       <?php endif; ?>
+
+      <div class="modal fade" id="reserveModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+          <div class="modal-content bg-dark text-white border border-light border-opacity-10">
+            <div class="modal-header border-secondary border-opacity-25">
+              <h5 class="modal-title">Reservar evento</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <p class="small text-secondary mb-3" id="reserveEventInfo">Preenche os dados para concluir a tua reserva.</p>
+              <form method="post" action="reserve.php" class="row g-2" id="reserveModalForm">
+                <input type="hidden" name="event_id" id="reserveEventId">
+                <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
+                <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
+                <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
+                <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" id="reserveTickets" class="form-control" placeholder="Nº bilhetes"></div>
+                <div class="col-md-6"><button class="btn btn-brand w-100">Confirmar reserva</button></div>
+                <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
     <?php else: ?>
       <section class="section-block">
         <div class="container">
@@ -710,41 +708,6 @@ foreach ($events as $event) {
       </section>
     <?php endif; ?>
 
-    <section class="section-block final-cta">
-      <div class="container py-2">
-        <div class="row align-items-center g-3">
-          <div class="col-lg-8">
-            <h2 class="mb-2">Pronto para uma noite memorável de stand-up?</h2>
-            <p class="mb-0 text-light-emphasis">Leva um line-up premium ao teu bar, auditório ou evento corporativo.</p>
-          </div>
-          <div class="col-lg-4 text-lg-end">
-            <a href="#contactos" class="btn btn-brand btn-lg px-4">Pedir proposta agora</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="newsletter" class="section-block py-4">
-      <div class="container">
-        <div class="surface-card newsletter-panel p-4 p-lg-4 fade-in mb-0">
-          <h3 class="h5 mb-2">Newsletter</h3>
-          <form method="post" action="subscribe.php" class="row g-2 align-items-center newsletter-form">
-            <div class="col-lg-4"><input type="email" name="email" required class="form-control" placeholder="Email"></div>
-            <div class="col-lg-4"><input type="text" name="name" class="form-control" placeholder="Nome (opcional)"></div>
-            <div class="col-lg-2"><button class="btn btn-brand w-100">Subscrever</button></div>
-            <div class="col-lg-2">
-              <label class="form-check-label d-flex gap-2 align-items-start small text-secondary">
-                <input class="form-check-input mt-1" type="checkbox" name="gdpr_consent" value="1" required>
-                <span>RGPD</span>
-              </label>
-            </div>
-            <div class="col-12">
-              <p class="small text-secondary mb-0"><?php echo htmlspecialchars('__NEWSLETTER_CONSENT__'); ?></p>
-            </div>
-          </form>
-        </div>
-      </div>
-    </section>
   </main>
 
   <footer class="py-4">
@@ -754,7 +717,7 @@ foreach ($events as $event) {
         <div class="small">Stand-up comedy • Produção • Booking • Experiência ao vivo</div>
       </div>
       <div class="small d-flex gap-3">
-        <a href="#eventos">Eventos</a>
+        <a href="#agenda">Agenda</a>
         <a href="#servicos">Serviços</a>
         <a href="#contactos">Contactos</a>
       </div>
