@@ -12,9 +12,10 @@ class PublicSiteController extends BaseController
         $homeTagline = $settings->get('home_tagline', 'Produção • Booking • Experiências');
         $homeTitle = $settings->get('home_title', 'Humor e espetáculos com um palco inesquecível.');
         $homeDescription = $settings->get('home_description', 'Layout inspirado no visual "Big Picture": imagem de fundo marcante, tipografia forte e conteúdo em cartões translúcidos para foco total no evento.');
+        $homeBackgroundUrl = $settings->get('home_background_url', 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80');
         $newsletterConsentText = $settings->get('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.');
 
-        $this->render('public_site/index', compact('defaultPath', 'pages', 'homeTagline', 'homeTitle', 'homeDescription', 'newsletterConsentText'));
+        $this->render('public_site/index', compact('defaultPath', 'pages', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText'));
     }
 
     public function publish(): void
@@ -40,6 +41,7 @@ class PublicSiteController extends BaseController
             $settings->set('home_tagline', trim((string)($_POST['home_tagline'] ?? '')));
             $settings->set('home_title', trim((string)($_POST['home_title'] ?? '')));
             $settings->set('home_description', trim((string)($_POST['home_description'] ?? '')));
+            $settings->set('home_background_url', trim((string)($_POST['home_background_url'] ?? '')));
             $settings->set('newsletter_consent_text', trim((string)($_POST['newsletter_consent_text'] ?? '')));
 
             $dbPath = (new Database())->getSqlitePath();
@@ -47,6 +49,7 @@ class PublicSiteController extends BaseController
                 'tagline' => $settings->get('home_tagline', ''),
                 'title' => $settings->get('home_title', ''),
                 'description' => $settings->get('home_description', ''),
+                'background_url' => $settings->get('home_background_url', ''),
             ];
             $newsletterConsentText = $settings->get('newsletter_consent_text', '');
 
@@ -58,6 +61,9 @@ class PublicSiteController extends BaseController
             }
             if (file_put_contents($targetPath . '/subscribe.php', $this->buildSubscribeHandler($dbPath)) === false) {
                 throw new RuntimeException('Falha ao escrever subscribe.php no destino.');
+            }
+            if (file_put_contents($targetPath . '/contact.php', $this->buildContactHandler($dbPath)) === false) {
+                throw new RuntimeException('Falha ao escrever contact.php no destino.');
             }
 
             $logoSource = dirname(__DIR__, 2) . '/assets/branding/chorarderir-logo.svg';
@@ -137,11 +143,13 @@ $defaultHomeCopy = [
     'tagline' => 'Produção • Booking • Experiências',
     'title' => 'Humor e espetáculos com um palco inesquecível.',
     'description' => 'Eventos únicos, noites memoráveis e talento nacional num ambiente vibrante.',
+    'background_url' => 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80',
 ];
 $homeCopy = [
     'tagline' => trim((string)($homeCopy['tagline'] ?? '')) !== '' ? (string)$homeCopy['tagline'] : $defaultHomeCopy['tagline'],
     'title' => trim((string)($homeCopy['title'] ?? '')) !== '' ? (string)$homeCopy['title'] : $defaultHomeCopy['title'],
     'description' => trim((string)($homeCopy['description'] ?? '')) !== '' ? (string)$homeCopy['description'] : $defaultHomeCopy['description'],
+    'background_url' => trim((string)($homeCopy['background_url'] ?? '')) !== '' ? (string)$homeCopy['background_url'] : $defaultHomeCopy['background_url'],
 ];
 
 function safe_content(?string $html): string {
@@ -150,6 +158,40 @@ function safe_content(?string $html): string {
 
 function page_mode(array $page): string {
     return (($page['display_mode'] ?? 'section') === 'page') ? 'page' : 'section';
+}
+
+function section_type(array $page): string {
+    $type = (string)($page['section_type'] ?? 'default');
+    if (in_array($type, ['default', 'about', 'services', 'contact_form'], true) && $type !== 'default') {
+        return $type;
+    }
+    $config = section_config($page);
+    if (!empty($config['services']) && is_array($config['services'])) {
+        return 'services';
+    }
+    if (!empty($config['contact_email_to']) || !empty($config['contact_fields'])) {
+        return 'contact_form';
+    }
+    return 'default';
+}
+
+function section_style(array $page): string {
+    $style = (string)($page['section_style'] ?? 'card');
+    return in_array($style, ['card', 'split', 'icons', 'highlight'], true) ? $style : 'card';
+}
+
+function section_config(array $page): array {
+    $decoded = json_decode((string)($page['section_config_json'] ?? ''), true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function bootstrap_icon_class(string $name): string {
+    $clean = strtolower(trim($name));
+    $clean = str_replace(['bi ', 'bi-', '_'], ['', '', '-'], $clean);
+    if (!preg_match('/^[a-z0-9-]+$/', $clean)) {
+        return 'bi-stars';
+    }
+    return 'bi-' . $clean;
 }
 
 $sectionPages = [];
@@ -175,38 +217,58 @@ $isStandaloneView = $activeStandalonePage !== null;
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?php echo htmlspecialchars($siteTitle); ?></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
     :root {
-      --brand-dark: #0f172a;
-      --brand-base: #ffffff;
-      --brand-surface: #f8fafc;
-      --brand-border: #dbe4f0;
-      --brand-text: #0f172a;
-      --brand-muted: #5b6472;
+      --primary: #E10600;
+      --primary-hover: #FF2A1F;
+      --background-main: #0B0B0D;
+      --background-secondary: #1A1A1D;
+      --text-primary: #FFFFFF;
+      --text-secondary: #B3B3B3;
+      --accent: #FFC300;
+      --accent-secondary: #2A0F2E;
       --nav-height: 74px;
     }
     body {
-      color: var(--brand-text);
-      background: var(--brand-surface);
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: var(--text-primary);
+      background: var(--background-main);
       min-height: 100vh;
       margin: 0;
       display: flex;
       flex-direction: column;
       scroll-behavior: smooth;
     }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 8% 18%, rgba(225,6,0,.22), transparent 33%),
+        radial-gradient(circle at 86% 2%, rgba(255,195,0,.1), transparent 28%),
+        radial-gradient(circle at 52% 112%, rgba(42,15,46,.45), transparent 40%);
+      z-index: 0;
+    }
     .site-main { flex: 1 0 auto; }
     .navbar {
       min-height: var(--nav-height);
       backdrop-filter: blur(10px);
-      background: rgba(15, 23, 42, 0.88);
-      border-bottom: 1px solid rgba(255,255,255,.18);
+      background: rgba(11, 11, 13, 0.9);
+      border-bottom: 1px solid rgba(225, 6, 0, .35);
       transition: box-shadow .35s ease;
+      position: relative;
+      z-index: 30;
     }
-    .navbar.scrolled { box-shadow: 0 14px 40px rgba(2, 6, 23, .22); }
+    .navbar.scrolled { box-shadow: 0 16px 44px rgba(0, 0, 0, .48); }
     .navbar-brand { display: inline-flex; align-items: center; line-height: 1; padding-top: .2rem; padding-bottom: .2rem; }
     .navbar-brand img { height: 16px; max-height: 16px; width: auto; display: block; filter: brightness(0) invert(1); }
-    .nav-link { color: #e8edf7; position: relative; transition: color .25s ease; }
+    .nav-link { color: var(--text-secondary); position: relative; transition: color .25s ease; font-weight: 600; letter-spacing: .01em; }
     .nav-link::after {
       content: '';
       position: absolute;
@@ -215,11 +277,11 @@ $isStandaloneView = $activeStandalonePage !== null;
       bottom: .2rem;
       height: 2px;
       border-radius: 999px;
-      background: #93c5fd;
+      background: linear-gradient(90deg, var(--primary), var(--primary-hover));
       transform: scaleX(0);
       transition: transform .25s ease;
     }
-    .nav-link.active, .nav-link:hover { color: #fff !important; }
+    .nav-link.active, .nav-link:hover { color: #fff !important; text-shadow: 0 0 16px rgba(225, 6, 0, .3); }
     .nav-link.active::after, .nav-link:hover::after { transform: scaleX(1); }
     .hero {
       min-height: min(84vh, 760px);
@@ -228,60 +290,163 @@ $isStandaloneView = $activeStandalonePage !== null;
       position: relative;
       overflow: hidden;
       padding: calc(var(--nav-height) + 2rem) 0 4rem;
-      color: #fff;
+      color: var(--text-primary);
     }
     .hero::before {
       content: '';
       position: absolute;
       inset: 0;
       background:
-        linear-gradient(120deg, rgba(15, 23, 42, 0.84) 15%, rgba(15, 23, 42, 0.55) 55%, rgba(29, 78, 216, 0.25) 100%),
-        url('https://images.unsplash.com/photo-1470229538611-16ba8c7ffbd7?auto=format&fit=crop&w=1800&q=80') center / cover fixed;
+        linear-gradient(135deg, #0B0B0D 0%, #1A1A1D 40%, #E10600 100%),
+        var(--hero-background, url('https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80')) center / cover fixed;
       transform: translateY(var(--hero-offset, 0px));
       will-change: transform;
+      opacity: .92;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 24% 40%, rgba(255,255,255,.08), transparent 34%),
+                  radial-gradient(circle at 68% 62%, rgba(225,6,0,.25), transparent 45%);
+      pointer-events: none;
     }
     .hero > .container { position: relative; z-index: 2; }
     .hero-panel {
       max-width: 780px;
-      background: rgba(15, 23, 42, 0.7);
-      border: 1px solid rgba(255,255,255,.22);
-      border-radius: 1rem;
-      box-shadow: 0 24px 64px rgba(2, 6, 23, .38);
-      backdrop-filter: blur(8px);
+      background: rgba(11, 11, 13, 0.58);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 1.15rem;
+      box-shadow: 0 28px 72px rgba(0, 0, 0, .55);
+      backdrop-filter: blur(10px);
     }
-    .section-block { padding: clamp(3rem, 8vw, 5rem) 0; scroll-margin-top: calc(var(--nav-height) + 1rem); }
-    .section-heading { font-weight: 700; margin-bottom: 1.5rem; color: #0f172a; }
+    .hero .btn-brand { padding: .8rem 1.5rem; }
+    .section-block {
+      padding: clamp(3rem, 7vw, 5rem) 0;
+      scroll-margin-top: calc(var(--nav-height) + 1rem);
+      position: relative;
+      z-index: 1;
+      background: var(--background-main);
+    }
+    .section-block:nth-of-type(even) { background: var(--background-secondary); }
+    .section-heading { font-weight: 800; margin-bottom: 1.2rem; color: var(--text-primary); letter-spacing: -.01em; }
+    .text-secondary { color: var(--text-secondary) !important; }
     .surface-card {
       border-radius: 1rem;
-      border: 1px solid var(--brand-border);
-      background: var(--brand-base);
-      box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.02);
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
     }
     .event-card { padding: 1.25rem; height: 100%; }
-    .event-card input, .event-card textarea { border-color: #ccd8e8; }
-    .event-card input:focus, .event-card textarea:focus { border-color: #93c5fd; box-shadow: 0 0 0 .2rem rgba(59,130,246,.18); }
+    .event-card h4 { font-weight: 800; }
+    .event-card p, .event-card .small { color: var(--text-secondary) !important; }
+    .event-card input, .event-card textarea {
+      border-color: rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: #fff;
+    }
+    .event-card input::placeholder, .event-card textarea::placeholder { color: rgba(255,255,255,.58); }
+    .event-card input:focus, .event-card textarea:focus { border-color: var(--primary-hover); box-shadow: 0 0 0 .2rem rgba(225,6,0,.2); }
     .btn-brand {
-      background: linear-gradient(135deg, #2563eb, #1e40af);
+      background: linear-gradient(90deg, #E10600, #FF2A1F);
       color: #fff;
       border: none;
-      font-weight: 600;
-      transition: transform .2s ease, box-shadow .2s ease;
+      font-weight: 700;
+      border-radius: .75rem;
+      transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
     }
-    .btn-brand:hover { color: #fff; transform: translateY(-1px); box-shadow: 0 10px 18px rgba(37,99,235,.28); }
-    .page-cover { min-height: 220px; border-radius: .95rem; background-size: cover; background-position: center; margin-bottom: 1.2rem; }
-    .page-content { line-height: 1.7; color: #334155; }
-    .newsletter-panel { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #bfdbfe; }
+    .btn-brand:hover { color: #fff; transform: translateY(-2px) scale(1.01); box-shadow: 0 12px 26px rgba(225,6,0,.42); filter: brightness(1.03); }
+    .btn-outline-brand {
+      border: 1px solid rgba(255,255,255,.35);
+      color: #fff;
+      border-radius: .75rem;
+      font-weight: 600;
+    }
+    .btn-outline-brand:hover { border-color: var(--primary-hover); color: #fff; box-shadow: 0 0 18px rgba(225,6,0,.38); }
+    .page-cover { min-height: 240px; border-radius: .95rem; background-size: cover; background-position: center; margin-bottom: 1.2rem; }
+    .page-content { line-height: 1.8; color: var(--text-secondary); }
+    .newsletter-panel {
+      background: linear-gradient(145deg, rgba(42,15,46,.45), rgba(26,26,29,.92));
+      border: 1px solid rgba(255,255,255,.09);
+    }
+    .newsletter-panel h3 { color: #fff; }
+    .newsletter-panel input { background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.12); }
+    .newsletter-panel input::placeholder { color: rgba(255,255,255,.62); }
+    .about-split-image {
+      min-height: 320px;
+      border-radius: 1rem;
+      background-size: cover;
+      background-position: center;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.2), 0 18px 34px rgba(0, 0, 0, .35);
+    }
+    .services-grid .service-item {
+      text-align: center;
+      padding: 1.25rem;
+      border-radius: .95rem;
+      background: rgba(255,255,255,.02);
+      border: 1px solid rgba(255,255,255,.08);
+      height: 100%;
+      transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+    }
+    .services-grid .service-item:hover {
+      transform: translateY(-4px);
+      border-color: rgba(225,6,0,.45);
+      box-shadow: 0 14px 28px rgba(0,0,0,.35), 0 0 24px rgba(225,6,0,.18);
+    }
+    .services-grid .service-icon {
+      width: 82px;
+      height: 82px;
+      margin: 0 auto 1rem;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.1rem;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.18);
+      background: radial-gradient(circle at 30% 30%, rgba(255,42,31,.8), rgba(225,6,0,.65) 45%, rgba(42,15,46,.95) 100%);
+      box-shadow: 0 0 0 4px rgba(225,6,0,.12), 0 10px 26px rgba(225,6,0,.35);
+    }
+    .services-grid h5 { color: #fff; font-weight: 700; }
+    .services-grid p { color: var(--text-secondary) !important; }
+    .contact-special {
+      position: relative;
+      color: #fff;
+      border: none;
+      background: linear-gradient(120deg, rgba(0, 0, 0, .84), rgba(0, 0, 0, .62), rgba(205, 28, 24, .28)), var(--section-bg, #0f172a);
+      background-size: cover;
+      background-position: center;
+    }
+    .contact-special .form-control { background: rgba(255,255,255,.94); border: none; }
+    .full-bleed {
+      width: 100vw;
+      margin-left: calc(50% - 50vw);
+      margin-right: calc(50% - 50vw);
+    }
+    .final-cta {
+      background: linear-gradient(120deg, rgba(225,6,0,.22), rgba(42,15,46,.72));
+      border-top: 1px solid rgba(225,6,0,.38);
+      border-bottom: 1px solid rgba(225,6,0,.2);
+    }
+    .final-cta h2 { font-weight: 900; letter-spacing: -.02em; }
+    footer {
+      flex-shrink: 0;
+      border-top: 1px solid rgba(255,255,255,.08);
+      background: #09090b;
+      color: var(--text-secondary);
+    }
+    footer a { color: var(--text-secondary); text-decoration: none; }
+    footer a:hover { color: #fff; }
     .fade-in { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s ease; }
     .fade-in.show { opacity: 1; transform: translateY(0); }
-    footer { flex-shrink: 0; border-top: 1px solid var(--brand-border); background: #fff; color: var(--brand-muted); }
     @media (max-width: 767.98px) {
       .navbar-brand img { height: 14px; max-height: 14px; }
       .navbar { padding-top: .45rem; padding-bottom: .45rem; }
       .navbar .navbar-toggler { padding: .3rem .45rem; }
       .navbar .navbar-collapse {
         margin-top: .6rem;
-        background: rgba(7, 11, 17, 0.94);
-        border: 1px solid rgba(255,255,255,.14);
+        background: rgba(11, 11, 13, 0.97);
+        border: 1px solid rgba(225, 6, 0, .35);
         border-radius: 10px;
         padding: .45rem .6rem;
       }
@@ -289,7 +454,7 @@ $isStandaloneView = $activeStandalonePage !== null;
     }
   </style>
 </head>
-<body>
+  <body style="--hero-background: url('<?php echo htmlspecialchars((string)$homeCopy['background_url']); ?>');">
   <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container">
       <a class="navbar-brand" href="index.php#inicio">
@@ -302,19 +467,9 @@ $isStandaloneView = $activeStandalonePage !== null;
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link <?php echo !$isStandaloneView ? 'active' : ''; ?>" href="index.php#inicio">Início</a></li>
           <li class="nav-item"><a class="nav-link" href="index.php#eventos">Eventos</a></li>
-          <li class="nav-item"><a class="nav-link" href="index.php#newsletter">Newsletter</a></li>
-          <?php foreach ($sectionPages as $menuPage): ?>
-            <?php $slug = trim((string)($menuPage['slug'] ?? '')); ?>
-            <?php if ($slug !== ''): ?>
-              <li class="nav-item"><a class="nav-link" href="index.php#<?php echo htmlspecialchars($slug); ?>"><?php echo htmlspecialchars((string)$menuPage['title']); ?></a></li>
-            <?php endif; ?>
-          <?php endforeach; ?>
-          <?php foreach ($standalonePages as $menuPage): ?>
-            <?php $slug = trim((string)($menuPage['slug'] ?? '')); ?>
-            <?php if ($slug !== ''): ?>
-              <li class="nav-item"><a class="nav-link <?php echo ($pageSlug === $slug && $isStandaloneView) ? 'active' : ''; ?>" href="index.php?page=<?php echo urlencode($slug); ?>"><?php echo htmlspecialchars((string)$menuPage['title']); ?></a></li>
-            <?php endif; ?>
-          <?php endforeach; ?>
+          <li class="nav-item"><a class="nav-link" href="index.php#servicos">Serviços</a></li>
+          <li class="nav-item"><a class="nav-link" href="index.php#sobre-nos">Sobre</a></li>
+          <li class="nav-item"><a class="nav-link" href="index.php#contactos">Contactos</a></li>
         </ul>
       </div>
     </div>
@@ -326,8 +481,12 @@ $isStandaloneView = $activeStandalonePage !== null;
         <div class="container">
           <div class="hero-panel p-4 p-lg-5 col-12 fade-in show">
             <p class="text-uppercase small mb-2 fw-semibold text-info-emphasis"><?php echo htmlspecialchars((string)($homeCopy['tagline'] ?? '')); ?></p>
-            <h1 class="display-5 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
-            <p class="lead mb-0 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
+            <h1 class="display-4 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
+            <p class="lead mb-4 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
+            <div class="d-flex flex-wrap gap-2">
+              <a href="#eventos" class="btn btn-brand px-4 fw-semibold">Ver eventos</a>
+              <a href="#contactos" class="btn btn-outline-brand px-4 fw-semibold">Reservar</a>
+            </div>
           </div>
         </div>
       </section>
@@ -348,9 +507,13 @@ $isStandaloneView = $activeStandalonePage !== null;
             <div class="alert alert-warning">As reservas para esse evento estão fechadas.</div>
           <?php elseif ($msg === 'soldout'): ?>
             <div class="alert alert-warning">Não existem lugares suficientes disponíveis para essa reserva.</div>
+          <?php elseif ($msg === 'contact_ok'): ?>
+            <div class="alert alert-success">Mensagem enviada com sucesso. Obrigado pelo contacto!</div>
+          <?php elseif ($msg === 'contact_error'): ?>
+            <div class="alert alert-danger">Não foi possível enviar o contacto. Tenta novamente.</div>
           <?php endif; ?>
 
-          <h2 class="section-heading">Próximos eventos</h2>
+          <h2 class="section-heading">Agenda</h2>
           <div class="row g-4 mb-5">
             <?php foreach ($events as $event): ?>
               <div class="col-lg-6">
@@ -372,41 +535,47 @@ $isStandaloneView = $activeStandalonePage !== null;
                   <?php elseif ($available !== null && $available <= 0): ?>
                     <div class="alert alert-warning py-2 mb-0">Esgotado. Não existem mais lugares disponíveis.</div>
                   <?php else: ?>
-                    <form method="post" action="reserve.php" class="row g-2">
-                      <input type="hidden" name="event_id" value="<?php echo (int)$event['id']; ?>">
-                      <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
-                      <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
-                      <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
-                      <div class="col-md-6"><input type="number" min="1" <?php echo $available !== null ? 'max="' . $available . '"' : ''; ?> value="1" name="tickets" class="form-control" placeholder="Nº bilhetes"></div>
-                      <div class="col-md-6"><button class="btn btn-brand w-100">Reservar</button></div>
-                      <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
-                    </form>
+                    <button
+                      type="button"
+                      class="btn btn-brand"
+                      data-bs-toggle="modal"
+                      data-bs-target="#reserveModal"
+                      data-event-id="<?php echo (int)$event['id']; ?>"
+                      data-event-title="<?php echo htmlspecialchars((string)$event['title'], ENT_QUOTES); ?>"
+                      data-event-date="<?php echo htmlspecialchars((string)$event['date'], ENT_QUOTES); ?>"
+                      data-event-time="<?php echo htmlspecialchars(substr((string)$event['time'], 0, 5), ENT_QUOTES); ?>"
+                      data-event-location="<?php echo htmlspecialchars((string)$event['location'], ENT_QUOTES); ?>"
+                      data-max-tickets="<?php echo $available !== null ? (int)$available : 0; ?>"
+                    >
+                      Reservar lugar
+                    </button>
                   <?php endif; ?>
                 </div>
               </div>
             <?php endforeach; ?>
           </div>
-        </div>
-      </section>
 
-      <section id="newsletter" class="section-block pt-0">
-        <div class="container">
-          <div class="surface-card newsletter-panel p-4 p-lg-5 fade-in">
-            <h3 class="h5 mb-2">Newsletter</h3>
-            <form method="post" action="subscribe.php" class="row g-2 align-items-center newsletter-form">
-              <div class="col-lg-4"><input type="email" name="email" required class="form-control" placeholder="Email"></div>
-              <div class="col-lg-4"><input type="text" name="name" class="form-control" placeholder="Nome (opcional)"></div>
-              <div class="col-lg-2"><button class="btn btn-brand w-100">Subscrever</button></div>
-              <div class="col-lg-2">
-                <label class="form-check-label d-flex gap-2 align-items-start small text-secondary">
-                  <input class="form-check-input mt-1" type="checkbox" name="gdpr_consent" value="1" required>
-                  <span>RGPD</span>
-                </label>
+          <div class="modal fade" id="reserveModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+              <div class="modal-content bg-dark text-white border border-light border-opacity-10">
+                <div class="modal-header border-secondary border-opacity-25">
+                  <h5 class="modal-title">Reservar evento</h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  <p class="small text-secondary mb-3" id="reserveEventInfo">Preenche os dados para concluir a tua reserva.</p>
+                  <form method="post" action="reserve.php" class="row g-2" id="reserveModalForm">
+                    <input type="hidden" name="event_id" id="reserveEventId">
+                    <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
+                    <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
+                    <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
+                    <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" id="reserveTickets" class="form-control" placeholder="Nº bilhetes"></div>
+                    <div class="col-md-6"><button class="btn btn-brand w-100">Confirmar reserva</button></div>
+                    <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
+                  </form>
+                </div>
               </div>
-              <div class="col-12">
-                <p class="small text-secondary mb-0"><?php echo htmlspecialchars('__NEWSLETTER_CONSENT__'); ?></p>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       </section>
@@ -414,18 +583,77 @@ $isStandaloneView = $activeStandalonePage !== null;
       <?php foreach ($sectionPages as $page): ?>
         <?php $sectionId = trim((string)($page['slug'] ?? '')); ?>
         <?php if ($sectionId === '') { continue; } ?>
-        <section id="<?php echo htmlspecialchars($sectionId); ?>" class="section-block<?php echo !empty($page['hero_image_url']) ? ' pt-0' : ''; ?>">
+        <?php $sectionType = section_type($page); ?>
+        <?php $sectionConfig = section_config($page); ?>
+        <section id="<?php echo htmlspecialchars($sectionId); ?>" class="section-block<?php echo (!empty($page['hero_image_url']) && $sectionType === 'default') ? ' pt-0' : ''; ?>">
           <div class="container">
-            <div class="surface-card p-4 p-lg-5 fade-in">
-              <?php if (!empty($page['hero_image_url'])): ?>
-                <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars((string)$page['hero_image_url']); ?>');"></div>
-              <?php endif; ?>
-              <h2 class="section-heading mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
-              <?php if (!empty($page['excerpt'])): ?>
-                <p class="lead text-secondary"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p>
-              <?php endif; ?>
-              <div class="page-content"><?php echo safe_content($page['content'] ?? ''); ?></div>
-            </div>
+            <?php if ($sectionType === 'about'): ?>
+              <div class="p-4 p-lg-5 fade-in">
+                <div class="row g-4 align-items-center">
+                  <div class="col-lg-6">
+                    <h2 class="section-heading mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
+                    <?php if (!empty($page['excerpt'])): ?><p class="lead text-secondary"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p><?php endif; ?>
+                    <div class="page-content mb-3"><?php echo safe_content($page['content'] ?? ''); ?></div>
+                    <?php if (!empty($sectionConfig['cta_text'])): ?><p class="mb-0 fw-semibold"><?php echo htmlspecialchars((string)$sectionConfig['cta_text']); ?></p><?php endif; ?>
+                  </div>
+                  <div class="col-lg-6">
+                    <div class="about-split-image" style="background-image:url('<?php echo htmlspecialchars((string)($page['hero_image_url'] ?: 'https://images.unsplash.com/photo-1509824227185-9c5a01ceba0d?auto=format&fit=crop&w=1400&q=80')); ?>');"></div>
+                  </div>
+                </div>
+              </div>
+            <?php elseif ($sectionType === 'services'): ?>
+              <div class="p-4 p-lg-5 fade-in services-grid">
+                <h2 class="section-heading mb-3 text-center"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
+                <?php if (!empty($page['excerpt'])): ?><p class="lead text-secondary text-center"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p><?php endif; ?>
+                <div class="row g-3 mt-1">
+                  <?php $services = $sectionConfig['services'] ?? []; ?>
+                  <?php if (is_array($services) && count($services) > 0): ?>
+                    <?php foreach ($services as $service): ?>
+                      <div class="col-12 col-md-6 col-lg-3">
+                        <div class="service-item">
+                          <span class="service-icon"><i class="<?php echo htmlspecialchars(bootstrap_icon_class((string)($service['icon'] ?? 'stars'))); ?>"></i></span>
+                          <h5 class="mb-2"><?php echo htmlspecialchars((string)($service['name'] ?? 'Serviço')); ?></h5>
+                          <p class="text-secondary mb-0"><?php echo htmlspecialchars((string)($service['description'] ?? '')); ?></p>
+                        </div>
+                      </div>
+                    <?php endforeach; ?>
+                  <?php else: ?>
+                    <div class="col-12"><div class="alert alert-light mb-0">Configura os serviços no backoffice para apresentar nome, ícone e descrição.</div></div>
+                  <?php endif; ?>
+                </div>
+              </div>
+            <?php elseif ($sectionType === 'contact_form'): ?>
+              <?php $contactFields = $sectionConfig['contact_fields'] ?? ['name', 'email', 'message']; ?>
+              <?php if (!is_array($contactFields)) { $contactFields = ['name', 'email', 'message']; } ?>
+              <div class="contact-special full-bleed py-5 py-lg-6 fade-in" style="--section-bg: url('<?php echo htmlspecialchars((string)($page['hero_image_url'] ?: '')); ?>');">
+                <div class="container">
+                  <h2 class="text-center mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
+                  <?php if (!empty($sectionConfig['cta_text'])): ?><p class="text-center mb-4"><?php echo htmlspecialchars((string)$sectionConfig['cta_text']); ?></p><?php endif; ?>
+                  <form method="post" action="contact.php" class="row g-3 justify-content-center">
+                    <input type="hidden" name="page_slug" value="<?php echo htmlspecialchars($sectionId); ?>">
+                    <?php if (in_array('name', $contactFields, true)): ?><div class="col-md-8"><input class="form-control form-control-lg" name="name" placeholder="*Nome" required></div><?php endif; ?>
+                    <?php if (in_array('email', $contactFields, true)): ?><div class="col-md-8"><input type="email" class="form-control form-control-lg" name="email" placeholder="*Email" required></div><?php endif; ?>
+                    <?php if (in_array('phone', $contactFields, true)): ?><div class="col-md-8"><input class="form-control form-control-lg" name="phone" placeholder="Telefone"></div><?php endif; ?>
+                    <?php if (in_array('subject', $contactFields, true)): ?><div class="col-md-8"><input class="form-control form-control-lg" name="subject" placeholder="Assunto"></div><?php endif; ?>
+                    <?php if (in_array('message', $contactFields, true)): ?><div class="col-md-8"><textarea class="form-control form-control-lg" name="message" rows="4" placeholder="Mensagem" required></textarea></div><?php endif; ?>
+                    <div class="col-md-8 text-center">
+                      <button class="btn btn-warning px-5 py-2 fw-semibold"><?php echo htmlspecialchars((string)($sectionConfig['cta_button_text'] ?? 'Enviar mensagem')); ?></button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            <?php else: ?>
+              <div class="p-4 p-lg-5 fade-in">
+                <?php if (!empty($page['hero_image_url'])): ?>
+                  <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars((string)$page['hero_image_url']); ?>');"></div>
+                <?php endif; ?>
+                <h2 class="section-heading mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
+                <?php if (!empty($page['excerpt'])): ?>
+                  <p class="lead text-secondary"><?php echo htmlspecialchars((string)$page['excerpt']); ?></p>
+                <?php endif; ?>
+                <div class="page-content"><?php echo safe_content($page['content'] ?? ''); ?></div>
+              </div>
+            <?php endif; ?>
           </div>
         </section>
       <?php endforeach; ?>
@@ -453,12 +681,55 @@ $isStandaloneView = $activeStandalonePage !== null;
         </div>
       </section>
     <?php endif; ?>
+
+    <section class="section-block final-cta">
+      <div class="container py-2">
+        <div class="row align-items-center g-3">
+          <div class="col-lg-8">
+            <h2 class="mb-2">Pronto para uma noite memorável de stand-up?</h2>
+            <p class="mb-0 text-light-emphasis">Leva um line-up premium ao teu bar, auditório ou evento corporativo.</p>
+          </div>
+          <div class="col-lg-4 text-lg-end">
+            <a href="#contactos" class="btn btn-brand btn-lg px-4">Pedir proposta agora</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="newsletter" class="section-block py-4">
+      <div class="container">
+        <div class="surface-card newsletter-panel p-4 p-lg-4 fade-in mb-0">
+          <h3 class="h5 mb-2">Newsletter</h3>
+          <form method="post" action="subscribe.php" class="row g-2 align-items-center newsletter-form">
+            <div class="col-lg-4"><input type="email" name="email" required class="form-control" placeholder="Email"></div>
+            <div class="col-lg-4"><input type="text" name="name" class="form-control" placeholder="Nome (opcional)"></div>
+            <div class="col-lg-2"><button class="btn btn-brand w-100">Subscrever</button></div>
+            <div class="col-lg-2">
+              <label class="form-check-label d-flex gap-2 align-items-start small text-secondary">
+                <input class="form-check-input mt-1" type="checkbox" name="gdpr_consent" value="1" required>
+                <span>RGPD</span>
+              </label>
+            </div>
+            <div class="col-12">
+              <p class="small text-secondary mb-0"><?php echo htmlspecialchars('__NEWSLETTER_CONSENT__'); ?></p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="py-4">
-    <div class="container d-flex flex-column flex-md-row gap-2 justify-content-between">
-      <span>© <?php echo date('Y'); ?> Chorar de Rir</span>
-      <span>Produção & Booking</span>
+    <div class="container d-flex flex-column flex-md-row gap-2 justify-content-between align-items-md-center">
+      <div>
+        <strong class="text-white">© <?php echo date('Y'); ?> Chorar de Rir</strong>
+        <div class="small">Stand-up comedy • Produção • Booking • Experiência ao vivo</div>
+      </div>
+      <div class="small d-flex gap-3">
+        <a href="#eventos">Eventos</a>
+        <a href="#servicos">Serviços</a>
+        <a href="#contactos">Contactos</a>
+      </div>
     </div>
   </footer>
 
@@ -511,6 +782,38 @@ $isStandaloneView = $activeStandalonePage !== null;
         }
       });
     });
+
+    const reserveModal = document.getElementById('reserveModal');
+    if (reserveModal) {
+      reserveModal.addEventListener('show.bs.modal', (event) => {
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
+
+        const eventId = trigger.getAttribute('data-event-id') || '';
+        const title = trigger.getAttribute('data-event-title') || '';
+        const date = trigger.getAttribute('data-event-date') || '';
+        const time = trigger.getAttribute('data-event-time') || '';
+        const location = trigger.getAttribute('data-event-location') || '';
+        const maxTickets = parseInt(trigger.getAttribute('data-max-tickets') || '0', 10);
+
+        const reserveEventId = document.getElementById('reserveEventId');
+        const reserveTickets = document.getElementById('reserveTickets');
+        const reserveEventInfo = document.getElementById('reserveEventInfo');
+
+        if (reserveEventId) reserveEventId.value = eventId;
+        if (reserveTickets) {
+          reserveTickets.value = '1';
+          if (!Number.isNaN(maxTickets) && maxTickets > 0) {
+            reserveTickets.max = String(maxTickets);
+          } else {
+            reserveTickets.removeAttribute('max');
+          }
+        }
+        if (reserveEventInfo) {
+          reserveEventInfo.textContent = `${title} • ${date} às ${time} • ${location}`;
+        }
+      });
+    }
 
     if (window.location.search.includes('msg=')) {
       history.replaceState(null, '', window.location.pathname + window.location.hash);
@@ -698,5 +1001,77 @@ PHP;
 
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
         return str_replace('__NEWSLETTER_CONSENT__', addslashes(trim((string)($_POST['newsletter_consent_text'] ?? ''))), $template);
+    }
+
+    private function buildContactHandler(string $dbPath): string
+    {
+        $template = <<<'PHP'
+<?php
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: index.php');
+    exit;
+}
+
+$pageSlug = trim((string)($_POST['page_slug'] ?? 'contactos'));
+$anchor = $pageSlug !== '' ? $pageSlug : 'contactos';
+$name = trim((string)($_POST['name'] ?? ''));
+$email = trim((string)($_POST['email'] ?? ''));
+$phone = trim((string)($_POST['phone'] ?? ''));
+$subject = trim((string)($_POST['subject'] ?? ''));
+$message = trim((string)($_POST['message'] ?? ''));
+
+if ($email === '' || $message === '') {
+    header('Location: index.php?msg=contact_error#' . rawurlencode($anchor));
+    exit;
+}
+
+try {
+    $db = new PDO('sqlite:__DB_PATH__', null, null, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+
+    $stmt = $db->prepare('SELECT section_config_json FROM public_pages WHERE slug = :slug LIMIT 1');
+    $stmt->execute(['slug' => $pageSlug]);
+    $page = $stmt->fetch();
+    $config = [];
+    if ($page && !empty($page['section_config_json'])) {
+        $decoded = json_decode((string)$page['section_config_json'], true);
+        if (is_array($decoded)) {
+            $config = $decoded;
+        }
+    }
+
+    $emailTo = trim((string)($config['contact_email_to'] ?? ''));
+    if ($emailTo === '') {
+        $emailTo = 'booking@chorarderir.com';
+    }
+
+    $mailSubject = $subject !== '' ? 'Novo contacto: ' . $subject : 'Novo contacto do website';
+    $mailBody = "Novo contacto recebido no website.\n\n"
+        . "Nome: " . ($name !== '' ? $name : '-') . "\n"
+        . "Email: " . $email . "\n"
+        . "Telefone: " . ($phone !== '' ? $phone : '-') . "\n"
+        . "Assunto: " . ($subject !== '' ? $subject : '-') . "\n\n"
+        . "Mensagem:\n" . $message . "\n";
+
+    $headers = [
+        'MIME-Version: 1.0',
+        'Content-type: text/plain; charset=UTF-8',
+        'From: noreply@chorarderir.com',
+        'Reply-To: ' . $email,
+    ];
+
+    @mail($emailTo, $mailSubject, $mailBody, implode("\r\n", $headers));
+
+    header('Location: index.php?msg=contact_ok#' . rawurlencode($anchor));
+    exit;
+} catch (Throwable $e) {
+    header('Location: index.php?msg=contact_error#' . rawurlencode($anchor));
+    exit;
+}
+PHP;
+
+        return str_replace('__DB_PATH__', addslashes($dbPath), $template);
     }
 }

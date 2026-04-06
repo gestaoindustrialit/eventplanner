@@ -66,6 +66,57 @@ class PublicPageController extends BaseController
             $this->redirect(BASE_URL . '?controller=publicpage&action=index');
         }
 
+        $sectionType = (string)($_POST['section_type'] ?? 'default');
+        if (!in_array($sectionType, ['default', 'about', 'services', 'contact_form'], true)) {
+            $sectionType = 'default';
+        }
+        $sectionStyle = (string)($_POST['section_style'] ?? 'card');
+        if (!in_array($sectionStyle, ['card', 'split', 'icons', 'highlight'], true)) {
+            $sectionStyle = 'card';
+        }
+
+        $serviceNames = $_POST['service_name'] ?? [];
+        $serviceIcons = $_POST['service_icon'] ?? [];
+        $serviceDescriptions = $_POST['service_description'] ?? [];
+        $services = [];
+        if (is_array($serviceNames) && is_array($serviceIcons) && is_array($serviceDescriptions)) {
+            $count = min(count($serviceNames), count($serviceIcons), count($serviceDescriptions));
+            for ($i = 0; $i < $count; $i++) {
+                $name = trim((string)$serviceNames[$i]);
+                $icon = trim((string)$serviceIcons[$i]);
+                $description = trim((string)$serviceDescriptions[$i]);
+                if ($name === '' && $icon === '' && $description === '') {
+                    continue;
+                }
+                $services[] = [
+                    'name' => $name,
+                    'icon' => $icon,
+                    'description' => $description,
+                ];
+            }
+        }
+
+        $contactFields = $_POST['contact_fields'] ?? [];
+        if (!is_array($contactFields)) {
+            $contactFields = [];
+        }
+        $allowedContactFields = ['name', 'email', 'phone', 'subject', 'message'];
+        $contactFields = array_values(array_intersect($allowedContactFields, $contactFields));
+        if (!in_array('email', $contactFields, true)) {
+            $contactFields[] = 'email';
+        }
+        if (!in_array('message', $contactFields, true)) {
+            $contactFields[] = 'message';
+        }
+
+        $sectionConfig = [
+            'cta_text' => trim((string)($_POST['cta_text'] ?? '')),
+            'cta_button_text' => trim((string)($_POST['cta_button_text'] ?? 'Enviar mensagem')),
+            'contact_email_to' => trim((string)($_POST['contact_email_to'] ?? '')),
+            'contact_fields' => $contactFields,
+            'services' => $services,
+        ];
+
         return [
             'title' => $title,
             'slug' => $normalizedSlug,
@@ -73,6 +124,9 @@ class PublicPageController extends BaseController
             'content' => trim((string)($_POST['content'] ?? '')),
             'hero_image_url' => trim((string)($_POST['hero_image_url'] ?? '')),
             'display_mode' => (($_POST['display_mode'] ?? 'section') === 'page') ? 'page' : 'section',
+            'section_type' => $sectionType,
+            'section_style' => $sectionStyle,
+            'section_config_json' => json_encode($sectionConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'is_published' => isset($_POST['is_published']) ? 1 : 0,
             'sort_order' => (int)($_POST['sort_order'] ?? 0),
         ];
