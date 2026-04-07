@@ -87,7 +87,7 @@ class Event
 
     public function create(array $data, array $lineup): int
     {
-        $stmt = $this->db->prepare('INSERT INTO events (title, date, time, location, client_id, reservations_open, reservation_capacity, cachet_total, artist_map_link, artist_details, poster_url, notes) VALUES (:title, :date, :time, :location, :client_id, :reservations_open, :reservation_capacity, :cachet_total, :artist_map_link, :artist_details, :poster_url, :notes)');
+        $stmt = $this->db->prepare('INSERT INTO events (title, date, time, location, client_id, is_visible, reservations_open, reservation_capacity, cachet_total, artist_map_link, artist_details, poster_url, notes) VALUES (:title, :date, :time, :location, :client_id, :is_visible, :reservations_open, :reservation_capacity, :cachet_total, :artist_map_link, :artist_details, :poster_url, :notes)');
         $stmt->execute($data);
         $eventId = (int)$this->db->lastInsertId();
 
@@ -99,7 +99,7 @@ class Event
     public function update(int $id, array $data, array $lineup): bool
     {
         $data['id'] = $id;
-        $stmt = $this->db->prepare('UPDATE events SET title=:title, date=:date, time=:time, location=:location, client_id=:client_id, reservations_open=:reservations_open, reservation_capacity=:reservation_capacity, cachet_total=:cachet_total, artist_map_link=:artist_map_link, artist_details=:artist_details, poster_url=:poster_url, notes=:notes WHERE id=:id');
+        $stmt = $this->db->prepare('UPDATE events SET title=:title, date=:date, time=:time, location=:location, client_id=:client_id, is_visible=:is_visible, reservations_open=:reservations_open, reservation_capacity=:reservation_capacity, cachet_total=:cachet_total, artist_map_link=:artist_map_link, artist_details=:artist_details, poster_url=:poster_url, notes=:notes WHERE id=:id');
         $ok = $stmt->execute($data);
 
         $delete = $this->db->prepare('DELETE FROM event_comedians WHERE event_id=:event_id');
@@ -113,6 +113,15 @@ class Event
     {
         $stmt = $this->db->prepare('DELETE FROM events WHERE id=:id');
         return $stmt->execute(['id' => $id]);
+    }
+
+    public function setVisibility(int $id, bool $isVisible): bool
+    {
+        $stmt = $this->db->prepare('UPDATE events SET is_visible = :is_visible WHERE id = :id');
+        return $stmt->execute([
+            'id' => $id,
+            'is_visible' => $isVisible ? 1 : 0,
+        ]);
     }
 
     public function duplicate(int $id, string $newDate): ?int
@@ -138,6 +147,7 @@ class Event
             'time' => $event['time'],
             'location' => $event['location'],
             'client_id' => (int)$event['client_id'],
+            'is_visible' => (int)($event['is_visible'] ?? 1),
             'reservations_open' => (int)($event['reservations_open'] ?? 1),
             'reservation_capacity' => max(0, (int)($event['reservation_capacity'] ?? 0)),
             'cachet_total' => (float)$event['cachet_total'],

@@ -103,14 +103,15 @@ try {
     $eventColumns = array_column($db->query('PRAGMA table_info(events)')->fetchAll(), 'name');
     $hasReservationsOpen = in_array('reservations_open', $eventColumns, true);
     $hasReservationCapacity = in_array('reservation_capacity', $eventColumns, true);
+    $hasIsVisible = in_array('is_visible', $eventColumns, true);
 
     $eventSql = "SELECT e.*, c.name as client_name, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets
                  FROM events e
                  LEFT JOIN clients c ON c.id = e.client_id
                  LEFT JOIN event_reservations r ON r.event_id = e.id
                  WHERE e.date >= date('now')";
-    if ($hasReservationsOpen) {
-        $eventSql .= " AND e.reservations_open = 1";
+    if ($hasIsVisible) {
+        $eventSql .= " AND e.is_visible = 1";
     }
     $eventSql .= " GROUP BY e.id ORDER BY e.date ASC, e.time ASC";
     $events = $db->query($eventSql)->fetchAll() ?: [];
@@ -132,6 +133,9 @@ try {
             $legacyEvent['reservations_open'] = 1;
             if (!$hasReservationCapacity) {
                 $legacyEvent['reservation_capacity'] = 0;
+            }
+            if (!$hasIsVisible) {
+                $legacyEvent['is_visible'] = 1;
             }
         }
         unset($legacyEvent);
@@ -217,6 +221,7 @@ foreach ($pages as $page) {
 }
 
 $isStandaloneView = $activeStandalonePage !== null;
+$hasAgendaEvents = count($events) > 0;
 $hasReservableEvents = false;
 foreach ($events as $event) {
     if ((int)($event['reservations_open'] ?? 0) !== 1) {
@@ -237,6 +242,7 @@ foreach ($events as $event) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?php echo htmlspecialchars($siteTitle); ?></title>
+  <link rel="icon" type="image/svg+xml" href="chorarderir-logo.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -515,7 +521,7 @@ foreach ($events as $event) {
           <li class="nav-item"><a class="nav-link <?php echo !$isStandaloneView ? 'active' : ''; ?>" href="index.php#inicio">Início</a></li>
           <?php foreach ($sectionPages as $page): ?>
             <?php $menuSlug = trim((string)($page['slug'] ?? '')); ?>
-            <?php if ($menuSlug === '') { continue; } ?>
+            <?php if ($menuSlug === '' || ($menuSlug === 'agenda' && !$hasAgendaEvents)) { continue; } ?>
             <li class="nav-item"><a class="nav-link" href="index.php#<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
           <?php endforeach; ?>
         </ul>
@@ -533,7 +539,9 @@ foreach ($events as $event) {
             <h1 class="display-4 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
             <p class="lead mb-4 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
             <div class="d-flex flex-wrap gap-2">
-              <a href="#agenda" class="btn btn-brand px-4 fw-semibold">Agenda</a>
+              <?php if ($hasAgendaEvents): ?>
+                <a href="#agenda" class="btn btn-brand px-4 fw-semibold">Agenda</a>
+              <?php endif; ?>
               <?php if ($hasReservableEvents): ?>
                 <a href="#contactos" class="btn btn-outline-brand px-4 fw-semibold">Reservar</a>
               <?php endif; ?>
@@ -547,7 +555,7 @@ foreach ($events as $event) {
         <?php if ($sectionId === '') { continue; } ?>
         <?php $sectionType = section_type($page); ?>
         <?php $sectionConfig = section_config($page); ?>
-        <?php if ($sectionId === 'agenda'): ?>
+        <?php if ($sectionId === 'agenda' && $hasAgendaEvents): ?>
           <section id="agenda" class="section-block agenda-section">
             <div class="container">
               <?php if ($msg === 'ok'): ?>
@@ -574,6 +582,9 @@ foreach ($events as $event) {
                 <?php foreach ($events as $event): ?>
                   <div class="col-lg-6">
                     <div class="event-card surface-card fade-in">
+                      <?php if (!empty($event['poster_url'])): ?>
+                        <img src="<?php echo htmlspecialchars((string)$event['poster_url']); ?>" alt="Cartaz de <?php echo htmlspecialchars((string)$event['title']); ?>" class="img-fluid rounded mb-3" style="max-height: 220px; width: 100%; object-fit: cover;">
+                      <?php endif; ?>
                       <h4><?php echo htmlspecialchars($event['title']); ?></h4>
                       <p class="mb-1"><span class="event-meta-label">Data:</span> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
                       <p class="mb-3"><span class="event-meta-label">Local:</span> <?php echo htmlspecialchars($event['location']); ?></p>
@@ -743,7 +754,7 @@ foreach ($events as $event) {
         <div class="small">Stand-up comedy • Produção • Booking • Experiência ao vivo</div>
       </div>
       <div class="small d-flex gap-3">
-        <a href="#agenda">Agenda</a>
+        <?php if ($hasAgendaEvents): ?><a href="#agenda">Agenda</a><?php endif; ?>
         <a href="#servicos">Serviços</a>
         <a href="#contactos">Contactos</a>
       </div>
@@ -854,6 +865,7 @@ PHP;
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chorar de Rir</title>
+  <link rel="icon" type="image/svg+xml" href="chorarderir-logo.svg">
   <meta http-equiv="refresh" content="0; url=index.php">
   <script>
     (function () {

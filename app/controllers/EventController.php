@@ -126,6 +126,22 @@ class EventController extends BaseController
         $this->redirect(BASE_URL . '?controller=event&action=index');
     }
 
+    public function toggleVisibility(): void
+    {
+        requireAdmin();
+
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            $this->redirect(BASE_URL . '?controller=event&action=index');
+        }
+
+        $id = (int)($_GET['id'] ?? 0);
+        $isVisible = isset($_POST['is_visible']) && (int)$_POST['is_visible'] === 1;
+
+        (new Event($this->db))->setVisibility($id, $isVisible);
+        flash('success', $isVisible ? 'Evento visível no site público.' : 'Evento ocultado do site público.');
+        $this->redirect(BASE_URL . '?controller=event&action=index');
+    }
+
     public function duplicate(): void
     {
         requireAdmin();
@@ -158,6 +174,7 @@ class EventController extends BaseController
             'time' => $_POST['time'] ?? '20:00',
             'location' => trim($_POST['location'] ?? ''),
             'client_id' => (int)($_POST['client_id'] ?? 0),
+            'is_visible' => isset($_POST['is_visible']) ? 1 : 0,
             'reservations_open' => isset($_POST['reservations_open']) ? 1 : 0,
             'reservation_capacity' => max(0, (int)($_POST['reservation_capacity'] ?? 0)),
             'cachet_total' => (float)($_POST['cachet_total'] ?? 0),
