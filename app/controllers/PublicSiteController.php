@@ -439,6 +439,22 @@ foreach ($events as $event) {
     }
     .services-grid h5 { color: #fff; font-weight: 700; }
     .services-grid p { color: var(--text-secondary) !important; }
+    .agenda-section .section-heading {
+      text-align: center;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+      margin-bottom: 1.75rem;
+    }
+    .agenda-section .event-card h4 {
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .agenda-section .event-meta-label {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
     .contact-special {
       position: relative;
       color: #fff;
@@ -529,7 +545,7 @@ foreach ($events as $event) {
         <?php $sectionType = section_type($page); ?>
         <?php $sectionConfig = section_config($page); ?>
         <?php if ($sectionId === 'agenda'): ?>
-          <section id="agenda" class="section-block">
+          <section id="agenda" class="section-block agenda-section">
             <div class="container">
               <?php if ($msg === 'ok'): ?>
                 <div class="alert alert-success">Reserva enviada com sucesso! Vamos confirmar por email/telefone.</div>
@@ -551,20 +567,20 @@ foreach ($events as $event) {
                 <div class="alert alert-danger">Não foi possível enviar o contacto. Tenta novamente.</div>
               <?php endif; ?>
               <h2 class="section-heading"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
-              <div class="row g-4 mb-5">
+              <div class="row g-4 mb-5 justify-content-center">
                 <?php foreach ($events as $event): ?>
                   <div class="col-lg-6">
                     <div class="event-card surface-card fade-in">
                       <h4><?php echo htmlspecialchars($event['title']); ?></h4>
-                      <p class="mb-1"><strong>Data:</strong> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
-                      <p class="mb-3"><strong>Local:</strong> <?php echo htmlspecialchars($event['location']); ?></p>
+                      <p class="mb-1"><span class="event-meta-label">Data:</span> <?php echo htmlspecialchars($event['date']); ?> às <?php echo htmlspecialchars(substr($event['time'], 0, 5)); ?></p>
+                      <p class="mb-3"><span class="event-meta-label">Local:</span> <?php echo htmlspecialchars($event['location']); ?></p>
                       <?php
                         $capacity = (int)($event['reservation_capacity'] ?? 0);
                         $activeTickets = (int)($event['active_tickets'] ?? 0);
                         $available = $capacity > 0 ? max(0, $capacity - $activeTickets) : null;
                       ?>
                       <?php if ($available !== null): ?>
-                        <p class="small text-secondary mb-3"><strong>Lugares disponíveis:</strong> <?php echo $available; ?> / <?php echo $capacity; ?></p>
+                        <p class="small text-secondary mb-3"><span class="event-meta-label">Lugares disponíveis:</span> <?php echo $available; ?> / <?php echo $capacity; ?></p>
                       <?php endif; ?>
 
                       <?php if ((int)($event['reservations_open'] ?? 0) !== 1): ?>
