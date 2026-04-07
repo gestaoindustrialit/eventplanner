@@ -147,8 +147,20 @@
             <?php foreach ($reservations as $reservation): ?>
                 <tr>
                     <td>
-                        <strong><?= htmlspecialchars($reservation['event_title']) ?></strong><br>
-                        <small class="text-muted"><?= htmlspecialchars($reservation['event_date']) ?> às <?= htmlspecialchars(substr($reservation['event_time'], 0, 5)) ?></small>
+                        <div class="d-flex gap-2 align-items-start">
+                            <?php if (!empty($reservation['event_poster_url'])): ?>
+                                <img
+                                    src="<?= htmlspecialchars($reservation['event_poster_url']) ?>"
+                                    alt="Cartaz do evento <?= htmlspecialchars($reservation['event_title']) ?>"
+                                    class="rounded border"
+                                    style="width: 64px; height: 84px; object-fit: cover;"
+                                >
+                            <?php endif; ?>
+                            <div>
+                                <strong><?= htmlspecialchars($reservation['event_title']) ?></strong><br>
+                                <small class="text-muted"><?= htmlspecialchars($reservation['event_date']) ?> às <?= htmlspecialchars(substr($reservation['event_time'], 0, 5)) ?></small>
+                            </div>
+                        </div>
                     </td>
                     <td>
                         <input type="text" name="customer_name" class="form-control form-control-sm mb-1" value="<?= htmlspecialchars($reservation['customer_name']) ?>" form="reservation-<?= (int)$reservation['id'] ?>">

@@ -87,7 +87,7 @@ class Event
 
     public function create(array $data, array $lineup): int
     {
-        $stmt = $this->db->prepare('INSERT INTO events (title, date, time, location, client_id, reservations_open, reservation_capacity, cachet_total, artist_map_link, artist_details, notes) VALUES (:title, :date, :time, :location, :client_id, :reservations_open, :reservation_capacity, :cachet_total, :artist_map_link, :artist_details, :notes)');
+        $stmt = $this->db->prepare('INSERT INTO events (title, date, time, location, client_id, reservations_open, reservation_capacity, cachet_total, artist_map_link, artist_details, poster_url, notes) VALUES (:title, :date, :time, :location, :client_id, :reservations_open, :reservation_capacity, :cachet_total, :artist_map_link, :artist_details, :poster_url, :notes)');
         $stmt->execute($data);
         $eventId = (int)$this->db->lastInsertId();
 
@@ -99,7 +99,7 @@ class Event
     public function update(int $id, array $data, array $lineup): bool
     {
         $data['id'] = $id;
-        $stmt = $this->db->prepare('UPDATE events SET title=:title, date=:date, time=:time, location=:location, client_id=:client_id, reservations_open=:reservations_open, reservation_capacity=:reservation_capacity, cachet_total=:cachet_total, artist_map_link=:artist_map_link, artist_details=:artist_details, notes=:notes WHERE id=:id');
+        $stmt = $this->db->prepare('UPDATE events SET title=:title, date=:date, time=:time, location=:location, client_id=:client_id, reservations_open=:reservations_open, reservation_capacity=:reservation_capacity, cachet_total=:cachet_total, artist_map_link=:artist_map_link, artist_details=:artist_details, poster_url=:poster_url, notes=:notes WHERE id=:id');
         $ok = $stmt->execute($data);
 
         $delete = $this->db->prepare('DELETE FROM event_comedians WHERE event_id=:event_id');
@@ -143,6 +143,7 @@ class Event
             'cachet_total' => (float)$event['cachet_total'],
             'artist_map_link' => $event['artist_map_link'],
             'artist_details' => $event['artist_details'],
+            'poster_url' => $event['poster_url'],
             'notes' => $event['notes'],
         ];
 

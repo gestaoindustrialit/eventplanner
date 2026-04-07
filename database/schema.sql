@@ -62,6 +62,7 @@ CREATE TABLE events (
   cachet_total NUMERIC DEFAULT 0,
   artist_map_link TEXT DEFAULT NULL,
   artist_details TEXT DEFAULT NULL,
+  poster_url TEXT DEFAULT NULL,
   notes TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT
@@ -172,9 +173,9 @@ INSERT INTO clients (name, contact_person, phone, email, address, notes) VALUES
 ('Bar Gargalhada', 'Marta Costa', '210000001', 'marta@gargalhada.pt', 'Rua da Alegria 10, Lisboa', 'Eventos mensais'),
 ('Restaurante Comédia & Cia', 'João Pinto', '220000002', 'joao@comediaecia.pt', 'Av. Central 55, Porto', 'Palco equipado com som e luz.');
 
-INSERT INTO events (title, date, time, location, client_id, cachet_total, artist_map_link, artist_details, notes) VALUES
-('Noite de Stand-Up Lisboa', '2026-04-10', '21:30:00', 'Bar Gargalhada', 1, 550.00, 'https://maps.google.com/?q=Rua+da+Alegria+10,+Lisboa', 'Chegada às 20:15 para soundcheck. Entrada técnica pela porta lateral.', 'Entrada livre até às 22h.'),
-('Comedy Dinner Porto', '2026-04-17', '22:00:00', 'Comédia & Cia', 2, 700.00, 'https://maps.google.com/?q=Av.+Central+55,+Porto', 'Parque disponível no piso -1. Contacto técnico no local: João.', 'Evento com jantar incluído.');
+INSERT INTO events (title, date, time, location, client_id, cachet_total, artist_map_link, artist_details, poster_url, notes) VALUES
+('Noite de Stand-Up Lisboa', '2026-04-10', '21:30:00', 'Bar Gargalhada', 1, 550.00, 'https://maps.google.com/?q=Rua+da+Alegria+10,+Lisboa', 'Chegada às 20:15 para soundcheck. Entrada técnica pela porta lateral.', 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=600&q=80', 'Entrada livre até às 22h.'),
+('Comedy Dinner Porto', '2026-04-17', '22:00:00', 'Comédia & Cia', 2, 700.00, 'https://maps.google.com/?q=Av.+Central+55,+Porto', 'Parque disponível no piso -1. Contacto técnico no local: João.', 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80', 'Evento com jantar incluído.');
 
 INSERT INTO event_comedians (event_id, comedian_id, role, cachet, notes) VALUES
 (1, 1, 'host', 200.00, 'Aquecimento e interação.'),

@@ -140,6 +140,9 @@ class Database
             if (!in_array('artist_details', $eventColumns, true)) {
                 $db->exec('ALTER TABLE events ADD COLUMN artist_details TEXT DEFAULT NULL');
             }
+            if (!in_array('poster_url', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN poster_url TEXT DEFAULT NULL');
+            }
             if (!in_array('reservations_open', $eventColumns, true)) {
                 $db->exec('ALTER TABLE events ADD COLUMN reservations_open INTEGER NOT NULL DEFAULT 1');
             }
