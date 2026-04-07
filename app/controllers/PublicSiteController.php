@@ -56,6 +56,9 @@ class PublicSiteController extends BaseController
             if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($dbPath, $homeCopy, $newsletterConsentText)) === false) {
                 throw new RuntimeException('Falha ao escrever index.php no destino.');
             }
+            if (file_put_contents($targetPath . '/index.html', $this->buildIndexHtmlRedirect()) === false) {
+                throw new RuntimeException('Falha ao escrever index.html no destino.');
+            }
             if (file_put_contents($targetPath . '/reserve.php', $this->buildReserveHandler($dbPath)) === false) {
                 throw new RuntimeException('Falha ao escrever reserve.php no destino.');
             }
@@ -840,6 +843,31 @@ PHP;
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
         $template = str_replace('__HOME_COPY_JSON__', addslashes((string)$homeCopyJson), $template);
         return str_replace('__NEWSLETTER_CONSENT__', addslashes($newsletterConsentText), $template);
+    }
+
+    private function buildIndexHtmlRedirect(): string
+    {
+        return <<<'HTML'
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chorar de Rir</title>
+  <meta http-equiv="refresh" content="0; url=index.php">
+  <script>
+    (function () {
+      var query = window.location.search || '';
+      var hash = window.location.hash || '';
+      window.location.replace('index.php' + query + hash);
+    })();
+  </script>
+</head>
+<body>
+  <p>A redirecionar para <a href="index.php">index.php</a>…</p>
+</body>
+</html>
+HTML;
     }
 
     private function buildReserveHandler(string $dbPath): string
