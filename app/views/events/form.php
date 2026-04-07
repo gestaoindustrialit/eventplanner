@@ -16,6 +16,16 @@
         </div>
         <div class="col-md-6"><label class="form-label">Link Google Maps (para artistas)</label><input class="form-control" name="artist_map_link" value="<?= htmlspecialchars($event['artist_map_link'] ?? '') ?>" placeholder="https://maps.google.com/..."></div>
         <div class="col-md-6"><label class="form-label">Detalhes para artistas</label><input class="form-control" name="artist_details" value="<?= htmlspecialchars($event['artist_details'] ?? '') ?>" placeholder="Chegada, estacionamento, contacto técnico..."></div>
+        <div class="col-md-8">
+            <label class="form-label">Cartaz (URL da imagem)</label>
+            <input class="form-control" name="poster_url" value="<?= htmlspecialchars($event['poster_url'] ?? '') ?>" placeholder="https://.../cartaz.jpg">
+            <small class="text-muted">Este cartaz aparece ao lado das informações do evento no ecrã de reservas.</small>
+        </div>
+        <?php if (!empty($event['poster_url'])): ?>
+            <div class="col-md-4 d-flex align-items-end">
+                <img src="<?= htmlspecialchars($event['poster_url']) ?>" alt="Cartaz do evento" class="img-fluid rounded border" style="max-height: 130px; object-fit: cover;">
+            </div>
+        <?php endif; ?>
         <div class="col-md-4">
             <label class="form-label">Capacidade para reservas</label>
             <input type="number" min="0" class="form-control" name="reservation_capacity" value="<?= htmlspecialchars((string)($event['reservation_capacity'] ?? '0')) ?>">

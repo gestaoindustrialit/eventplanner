@@ -35,7 +35,7 @@ class Reservation
 
     public function all(): array
     {
-        $stmt = $this->db->query('SELECT r.*, e.title as event_title, e.date as event_date, e.time as event_time, COALESCE(t.total_tickets, 0) as generated_tickets, COALESCE(t.used_tickets, 0) as used_tickets FROM event_reservations r JOIN events e ON e.id = r.event_id LEFT JOIN (
+        $stmt = $this->db->query('SELECT r.*, e.title as event_title, e.date as event_date, e.time as event_time, e.poster_url as event_poster_url, COALESCE(t.total_tickets, 0) as generated_tickets, COALESCE(t.used_tickets, 0) as used_tickets FROM event_reservations r JOIN events e ON e.id = r.event_id LEFT JOIN (
             SELECT reservation_id, COUNT(*) as total_tickets, SUM(CASE WHEN is_used = 1 THEN 1 ELSE 0 END) as used_tickets
             FROM event_reservation_tickets
             GROUP BY reservation_id
@@ -45,7 +45,7 @@ class Reservation
 
     public function find(int $id): ?array
     {
-        $stmt = $this->db->prepare('SELECT r.*, e.title as event_title, e.date as event_date, e.time as event_time FROM event_reservations r JOIN events e ON e.id = r.event_id WHERE r.id = :id LIMIT 1');
+        $stmt = $this->db->prepare('SELECT r.*, e.title as event_title, e.date as event_date, e.time as event_time, e.poster_url as event_poster_url FROM event_reservations r JOIN events e ON e.id = r.event_id WHERE r.id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch();
         return $row ?: null;
