@@ -151,6 +151,10 @@ $homeCopy = [
     'description' => trim((string)($homeCopy['description'] ?? '')) !== '' ? (string)$homeCopy['description'] : $defaultHomeCopy['description'],
     'background_url' => trim((string)($homeCopy['background_url'] ?? '')) !== '' ? (string)$homeCopy['background_url'] : $defaultHomeCopy['background_url'],
 ];
+$heroBackgroundUrl = trim((string)($homeCopy['background_url'] ?? ''));
+if ($heroBackgroundUrl === '') {
+    $heroBackgroundUrl = $defaultHomeCopy['background_url'];
+}
 
 function safe_content(?string $html): string {
     return strip_tags((string)$html, '<h1><h2><h3><h4><p><ul><ol><li><strong><em><a><blockquote><br><hr>');
@@ -312,7 +316,6 @@ foreach ($events as $event) {
       overflow: hidden;
       padding: calc(var(--nav-height) + 2rem) 0 4rem;
       color: var(--text-primary);
-      background-image: var(--hero-background, url('https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80'));
       background-position: center;
       background-size: cover;
       background-repeat: no-repeat;
@@ -479,7 +482,7 @@ foreach ($events as $event) {
     }
   </style>
 </head>
-  <body style="--hero-background: url(&quot;<?php echo htmlspecialchars((string)$homeCopy['background_url']); ?>&quot;);">
+  <body>
   <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container">
       <a class="navbar-brand" href="index.php#inicio">
@@ -491,10 +494,11 @@ foreach ($events as $event) {
       <div class="collapse navbar-collapse" id="menuPublico">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link <?php echo !$isStandaloneView ? 'active' : ''; ?>" href="index.php#inicio">Início</a></li>
-          <li class="nav-item"><a class="nav-link" href="index.php#agenda">Agenda</a></li>
-          <li class="nav-item"><a class="nav-link" href="index.php#servicos">Serviços</a></li>
-          <li class="nav-item"><a class="nav-link" href="index.php#sobre-nos">Sobre</a></li>
-          <li class="nav-item"><a class="nav-link" href="index.php#contactos">Contactos</a></li>
+          <?php foreach ($sectionPages as $page): ?>
+            <?php $menuSlug = trim((string)($page['slug'] ?? '')); ?>
+            <?php if ($menuSlug === '') { continue; } ?>
+            <li class="nav-item"><a class="nav-link" href="index.php#<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
+          <?php endforeach; ?>
         </ul>
       </div>
     </div>
@@ -502,7 +506,7 @@ foreach ($events as $event) {
 
   <main class="site-main">
     <?php if (!$isStandaloneView): ?>
-      <section id="inicio" class="hero">
+      <section id="inicio" class="hero" style="background-image: url('<?php echo htmlspecialchars((string)$heroBackgroundUrl); ?>');">
         <div class="container">
           <div class="hero-panel p-4 p-lg-5 col-12 fade-in show">
             <span class="hero-comedy-icon"><i class="bi bi-mic-fill"></i></span>
