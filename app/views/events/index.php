@@ -14,7 +14,7 @@
 </div>
 <div class="table-responsive">
     <table class="table table-striped searchable-table">
-        <thead><tr><th>Título</th><th>Data</th><th>Local</th><th>Cliente</th><th>Cachet</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Título</th><th>Data</th><th>Local</th><th>Cliente</th><th>Visível</th><th>Cachet</th><th>Ações</th></tr></thead>
         <tbody>
         <?php foreach ($events as $event): ?>
             <tr>
@@ -22,6 +22,15 @@
                 <td><?= htmlspecialchars($event['date']) ?> <?= htmlspecialchars(substr($event['time'], 0, 5)) ?></td>
                 <td><?= htmlspecialchars($event['location']) ?></td>
                 <td><?= htmlspecialchars($event['client_name'] ?? '-') ?></td>
+                <td>
+                    <?php $isVisible = !isset($event['is_visible']) || (int)$event['is_visible'] === 1; ?>
+                    <form method="post" action="<?= BASE_URL ?>?controller=event&action=toggleVisibility&id=<?= $event['id'] ?>">
+                        <input type="hidden" name="is_visible" value="<?= $isVisible ? 0 : 1 ?>">
+                        <button class="btn btn-sm <?= $isVisible ? 'btn-success' : 'btn-outline-secondary' ?>" type="submit">
+                            <?= $isVisible ? 'ON' : 'OFF' ?>
+                        </button>
+                    </form>
+                </td>
                 <td>€<?= number_format((float)$event['cachet_total'], 2, ',', '.') ?></td>
                 <td>
                     <a class="btn btn-sm btn-outline-dark" href="<?= BASE_URL ?>?controller=event&action=show&id=<?= $event['id'] ?>" title="Ver">

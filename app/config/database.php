@@ -134,6 +134,9 @@ class Database
 
         if ($this->tableExists($db, 'events')) {
             $eventColumns = array_column($db->query('PRAGMA table_info(events)')->fetchAll(), 'name');
+            if (!in_array('is_visible', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN is_visible INTEGER NOT NULL DEFAULT 1');
+            }
             if (!in_array('artist_map_link', $eventColumns, true)) {
                 $db->exec('ALTER TABLE events ADD COLUMN artist_map_link TEXT DEFAULT NULL');
             }
