@@ -30,6 +30,7 @@
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicpage&action=index">Páginas públicas</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicsite&action=index">Publicar website</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=newsletter&action=index">Newsletter</a>
+                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=presscontact&action=index">Contactos Press</a>
                 <?php else: ?>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=comedianarea&action=index">Os meus eventos</a>
                 <?php endif; ?>
@@ -66,6 +67,7 @@
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicpage&action=index">Páginas públicas</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicsite&action=index">Publicar website</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=newsletter&action=index">Newsletter</a>
+                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=presscontact&action=index">Contactos Press</a>
                         <?php else: ?>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=comedianarea&action=index">Os meus eventos</a>
                         <?php endif; ?>

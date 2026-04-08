@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS clients;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS public_pages;
 DROP TABLE IF EXISTS newsletter_subscriptions;
+DROP TABLE IF EXISTS press_contacts;
 DROP TABLE IF EXISTS site_settings;
 
 CREATE TABLE users (
@@ -155,6 +156,16 @@ CREATE TABLE newsletter_subscriptions (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE press_contacts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  locality TEXT DEFAULT NULL,
+  district TEXT DEFAULT NULL,
+  website TEXT DEFAULT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE site_settings (
   setting_key TEXT PRIMARY KEY,
   setting_value TEXT NOT NULL,
@@ -196,6 +207,11 @@ INSERT INTO public_pages (title, slug, excerpt, content, hero_image_url, display
 ('Sobre nós', 'sobre-nos', 'Conhece a nossa missão e equipa de produção.', '<p>Somos uma produtora artística focada em experiências ao vivo, booking de talentos e curadoria de eventos de comédia.</p><p>Trabalhamos com marcas, espaços culturais e artistas para criar noites memoráveis.</p>', 'https://images.unsplash.com/photo-1497032628192-86f99bcd76bc?auto=format&fit=crop&w=1400&q=80', 'section', 'about', 'split', '{"cta_text":"Levamos comédia para marcas, teatros e eventos privados em todo o país.","cta_button_text":"Falar com equipa","contact_email_to":"","contact_fields":["name","email","message"],"services":[]}', 1, 10),
 ('Serviços', 'servicos', 'Produção, agenciamento e consultoria para espetáculos.', '<p>Do conceito à execução, desenhamos noites com público esgotado e impacto real.</p>', 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1400&q=80', 'section', 'services', 'icons', '{"cta_text":"Escolhe um serviço e pede proposta personalizada.","cta_button_text":"Pedir proposta","contact_email_to":"","contact_fields":["name","email","message"],"services":[{"name":"Produção de Evento","icon":"calendar-event","description":"Planeamento, operação e direção de palco."},{"name":"Booking de Comediantes","icon":"mic-fill","description":"Seleção de artistas para cada tipo de público."},{"name":"Consultoria Criativa","icon":"lightbulb","description":"Formatos de conteúdo e ativações de marca."},{"name":"Apresentação / Host","icon":"emoji-laughing","description":"Mestre de cerimónias com energia de stand-up."}]}', 1, 20),
 ('Contactos', 'contactos', 'Fala connosco para reservas e propostas comerciais.', '<p>Estamos disponíveis para parcerias em todo o país.</p>', 'https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=1400&q=80', 'section', 'contact_form', 'highlight', '{"cta_text":"Conta-nos o teu objetivo e criamos uma proposta com timing, elenco e produção.","cta_button_text":"Enviar mensagem","contact_email_to":"booking@casadeartistas.pt","contact_fields":["name","email","phone","subject","message"],"services":[]}', 1, 30);
+
+INSERT INTO press_contacts (name, email, locality, district, website) VALUES
+('Rádio Lisboa FM', 'agenda@radiolisboafm.pt', 'Lisboa', 'Lisboa', 'https://radiolisboafm.pt'),
+('Jornal Norte Cultural', 'redacao@nortecultural.pt', 'Porto', 'Porto', 'https://nortecultural.pt'),
+('Rede Nacional de Agenda', 'eventos@agenda-nacional.pt', 'Nacional', 'Nacional', 'https://agenda-nacional.pt');
 
 INSERT INTO site_settings (setting_key, setting_value) VALUES
 ('home_tagline', 'Produção • Booking • Experiências'),
