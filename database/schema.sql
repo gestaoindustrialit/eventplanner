@@ -242,6 +242,11 @@ INSERT INTO public_pages (title, slug, excerpt, content, hero_image_url, display
 ('Serviços', 'servicos', 'Produção, agenciamento e consultoria para espetáculos.', '<p>Do conceito à execução, desenhamos noites com público esgotado e impacto real.</p>', 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1400&q=80', 'section', 'services', 'icons', '{"cta_text":"Escolhe um serviço e pede proposta personalizada.","cta_button_text":"Pedir proposta","contact_email_to":"","contact_fields":["name","email","message"],"services":[{"name":"Produção de Evento","icon":"calendar-event","description":"Planeamento, operação e direção de palco."},{"name":"Booking de Comediantes","icon":"mic-fill","description":"Seleção de artistas para cada tipo de público."},{"name":"Consultoria Criativa","icon":"lightbulb","description":"Formatos de conteúdo e ativações de marca."},{"name":"Apresentação / Host","icon":"emoji-laughing","description":"Mestre de cerimónias com energia de stand-up."}]}', 1, 20),
 ('Contactos', 'contactos', 'Fala connosco para reservas e propostas comerciais.', '<p>Estamos disponíveis para parcerias em todo o país.</p>', 'https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=1400&q=80', 'section', 'contact_form', 'highlight', '{"cta_text":"Conta-nos o teu objetivo e criamos uma proposta com timing, elenco e produção.","cta_button_text":"Enviar mensagem","contact_email_to":"booking@casadeartistas.pt","contact_fields":["name","email","phone","subject","message"],"services":[]}', 1, 30);
 
+INSERT INTO press_contacts (name, email, locality, district, website) VALUES
+('Rádio Lisboa FM', 'agenda@radiolisboafm.pt', 'Lisboa', 'Lisboa', 'https://radiolisboafm.pt'),
+('Jornal Norte Cultural', 'redacao@nortecultural.pt', 'Porto', 'Porto', 'https://nortecultural.pt'),
+('Rede Nacional de Agenda', 'eventos@agenda-nacional.pt', 'Nacional', 'Nacional', 'https://agenda-nacional.pt');
+
 INSERT INTO site_settings (setting_key, setting_value) VALUES
 ('home_tagline', 'Produção • Booking • Experiências'),
 ('home_title', 'Humor e espetáculos com um palco inesquecível.'),
