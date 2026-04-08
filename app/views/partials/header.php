@@ -24,6 +24,7 @@
                     <a class="nav-link text-white" href="<?= BASE_URL ?>">Dashboard</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=comedian&action=index">Comediantes</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=client&action=index">Clientes</a>
+                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=crm&action=index">CRM</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=index">Eventos</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=openSchedule">Alinhamentos</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=reservation&action=index">Reservas</a>
@@ -60,6 +61,7 @@
                             <a class="nav-link text-white" href="<?= BASE_URL ?>">Dashboard</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=comedian&action=index">Comediantes</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=client&action=index">Clientes</a>
+                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=crm&action=index">CRM</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=index">Eventos</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=openSchedule">Alinhamentos</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=reservation&action=index">Reservas</a>

@@ -40,6 +40,7 @@ $map = [
     'dashboard' => DashboardController::class,
     'comedian' => ComedianController::class,
     'client' => ClientController::class,
+    'crm' => CrmController::class,
     'event' => EventController::class,
     'reservation' => ReservationController::class,
     'publicsite' => PublicSiteController::class,

@@ -120,3 +120,38 @@ body {
         padding-top: 1rem !important;
     }
 }
+
+.crm-metric-card {
+    border-left: 4px solid #0d6efd;
+}
+
+.crm-notes {
+    white-space: pre-wrap;
+    line-height: 1.6;
+}
+
+.crm-status,
+.crm-type {
+    color: #fff;
+    font-weight: 600;
+}
+
+.crm-status-novo { background: #94a3b8; }
+.crm-status-por_contactar { background: #0d6efd; }
+.crm-status-contactado { background: #1e3a8a; }
+.crm-status-aguardar_resposta { background: #f97316; }
+.crm-status-em_negociacao { background: #7c3aed; }
+.crm-status-proposta_enviada { background: #eab308; color: #1f2937; }
+.crm-status-interessado { background: #22c55e; }
+.crm-status-fechado_ganho { background: #16a34a; }
+.crm-status-fechado_perdido { background: #dc2626; }
+.crm-status-sem_interesse { background: #57534e; }
+.crm-status-arquivado { background: #374151; }
+
+.crm-type-venda { background: #2563eb; }
+.crm-type-apoio { background: #0ea5e9; }
+.crm-type-parceria { background: #7c3aed; }
+.crm-type-patrocinador { background: #ca8a04; }
+.crm-type-media { background: #0891b2; }
+.crm-type-fornecedor { background: #475569; }
+.crm-type-outro { background: #64748b; }
