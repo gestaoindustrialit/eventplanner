@@ -222,6 +222,16 @@ foreach ($pages as $page) {
 
 $isStandaloneView = $activeStandalonePage !== null;
 $hasAgendaEvents = count($events) > 0;
+$isAgendaSlug = static function (array $page): bool {
+    return trim((string)($page['slug'] ?? '')) === 'agenda';
+};
+if (!$hasAgendaEvents) {
+    $sectionPages = array_values(array_filter($sectionPages, static fn(array $page): bool => !$isAgendaSlug($page)));
+    if ($activeStandalonePage !== null && $isAgendaSlug($activeStandalonePage)) {
+        $activeStandalonePage = null;
+        $isStandaloneView = false;
+    }
+}
 $hasReservableEvents = false;
 foreach ($events as $event) {
     if ((int)($event['reservations_open'] ?? 0) !== 1) {
@@ -623,6 +633,9 @@ foreach ($events as $event) {
               </div>
             </div>
           </section>
+          <?php continue; ?>
+        <?php endif; ?>
+        <?php if ($sectionId === 'agenda' && !$hasAgendaEvents): ?>
           <?php continue; ?>
         <?php endif; ?>
         <section id="<?php echo htmlspecialchars($sectionId); ?>" class="section-block<?php echo (!empty($page['hero_image_url']) && $sectionType === 'default') ? ' pt-0' : ''; ?>">
