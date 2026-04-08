@@ -35,6 +35,13 @@ try {
 $controllerName = strtolower($_GET['controller'] ?? 'dashboard');
 $actionName = $_GET['action'] ?? 'index';
 
+
+if ($controllerName === 'presscontact' && !isAdmin()) {
+    http_response_code(404);
+    echo 'Página não encontrada.';
+    exit;
+}
+
 $map = [
     'auth' => AuthController::class,
     'dashboard' => DashboardController::class,
@@ -46,6 +53,7 @@ $map = [
     'publicpage' => PublicPageController::class,
     'comedianarea' => ComedianAreaController::class,
     'newsletter' => NewsletterController::class,
+    'presscontact' => PressContactController::class,
 ];
 
 if (!isset($map[$controllerName])) {
