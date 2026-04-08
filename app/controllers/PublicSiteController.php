@@ -222,16 +222,6 @@ foreach ($pages as $page) {
 
 $isStandaloneView = $activeStandalonePage !== null;
 $hasAgendaEvents = count($events) > 0;
-$isAgendaSlug = static function (array $page): bool {
-    return trim((string)($page['slug'] ?? '')) === 'agenda';
-};
-if (!$hasAgendaEvents) {
-    $sectionPages = array_values(array_filter($sectionPages, static fn(array $page): bool => !$isAgendaSlug($page)));
-    if ($activeStandalonePage !== null && $isAgendaSlug($activeStandalonePage)) {
-        $activeStandalonePage = null;
-        $isStandaloneView = false;
-    }
-}
 $hasReservableEvents = false;
 foreach ($events as $event) {
     if ((int)($event['reservations_open'] ?? 0) !== 1) {
