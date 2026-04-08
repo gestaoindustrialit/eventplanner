@@ -625,6 +625,9 @@ foreach ($events as $event) {
           </section>
           <?php continue; ?>
         <?php endif; ?>
+        <?php if ($sectionId === 'agenda' && !$hasAgendaEvents): ?>
+          <?php continue; ?>
+        <?php endif; ?>
         <section id="<?php echo htmlspecialchars($sectionId); ?>" class="section-block<?php echo (!empty($page['hero_image_url']) && $sectionType === 'default') ? ' pt-0' : ''; ?>">
           <div class="container">
             <?php if ($sectionType === 'about'): ?>
