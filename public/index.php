@@ -55,6 +55,7 @@ $map = [
     'comedianarea' => ComedianAreaController::class,
     'newsletter' => NewsletterController::class,
     'presscontact' => PressContactController::class,
+    'partner' => PartnerController::class,
 ];
 
 if (!isset($map[$controllerName])) {

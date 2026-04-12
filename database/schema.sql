@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS public_pages;
 DROP TABLE IF EXISTS newsletter_subscriptions;
 DROP TABLE IF EXISTS crm_contact_notes;
 DROP TABLE IF EXISTS crm_contacts;
+DROP TABLE IF EXISTS partners;
 DROP TABLE IF EXISTS site_settings;
 
 CREATE TABLE users (
@@ -199,6 +200,16 @@ CREATE INDEX idx_crm_contacts_market ON crm_contacts(market);
 CREATE INDEX idx_crm_contacts_priority ON crm_contacts(priority);
 CREATE INDEX idx_crm_contacts_last_contact ON crm_contacts(last_contact_at);
 CREATE INDEX idx_crm_contacts_next_follow_up ON crm_contacts(next_follow_up_at);
+
+CREATE TABLE partners (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  company_name TEXT NOT NULL,
+  logo_url TEXT NOT NULL,
+  company_url TEXT DEFAULT NULL,
+  partnership_start_date TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE site_settings (
   setting_key TEXT PRIMARY KEY,
