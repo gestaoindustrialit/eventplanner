@@ -90,6 +90,7 @@ class PublicSiteController extends BaseController
 <?php
 $events = [];
 $pages = [];
+$partners = [];
 $homeCopy = json_decode('__HOME_COPY_JSON__', true) ?: [];
 $msg = $_GET['msg'] ?? '';
 $pageSlug = trim((string)($_GET['page'] ?? ''));
@@ -128,6 +129,15 @@ try {
     }
     $pages = $db->query($pageSql)->fetchAll() ?: [];
 
+    $partnerColumns = array_column($db->query('PRAGMA table_info(partners)')->fetchAll(), 'name');
+    if (count($partnerColumns) > 0) {
+        $partnerSql = "SELECT * FROM partners
+                       WHERE date(partnership_start_date) <= date('now')
+                         AND date(partnership_start_date, '+1 year') > date('now')
+                       ORDER BY sort_order ASC, company_name ASC";
+        $partners = $db->query($partnerSql)->fetchAll() ?: [];
+    }
+
     if (!$hasReservationsOpen) {
         foreach ($events as &$legacyEvent) {
             $legacyEvent['reservations_open'] = 1;
@@ -143,6 +153,7 @@ try {
 } catch (Throwable $e) {
     $events = [];
     $pages = [];
+    $partners = [];
 }
 
 $siteTitle = 'Chorar de Rir';
@@ -223,6 +234,7 @@ foreach ($pages as $page) {
 $isStandaloneView = $activeStandalonePage !== null;
 $hasAgendaEvents = count($events) > 0;
 $hasReservableEvents = false;
+$hasPartners = count($partners) > 0;
 foreach ($events as $event) {
     if ((int)($event['reservations_open'] ?? 0) !== 1) {
         continue;
@@ -234,6 +246,38 @@ foreach ($events as $event) {
         $hasReservableEvents = true;
         break;
     }
+}
+
+function render_partners_section(array $partners): void {
+    if (count($partners) === 0) {
+        return;
+    }
+    ?>
+    <section id="parceiros" class="section-block pt-0">
+      <div class="container">
+        <div class="surface-card p-4 p-lg-5 fade-in">
+          <h2 class="section-heading mb-4 text-center">Parceiros</h2>
+          <div id="partnersCarousel" class="carousel slide" data-bs-ride="carousel">
+            <div class="carousel-inner">
+              <?php foreach (array_chunk($partners, 4) as $chunkIndex => $partnersChunk): ?>
+                <div class="carousel-item <?php echo $chunkIndex === 0 ? 'active' : ''; ?>">
+                  <div class="row g-3 justify-content-center align-items-center">
+                    <?php foreach ($partnersChunk as $partner): ?>
+                      <div class="col-6 col-md-3 text-center">
+                        <a href="<?php echo htmlspecialchars((string)($partner['company_url'] ?? '#')); ?>" target="_blank" rel="noopener noreferrer" class="d-inline-flex align-items-center justify-content-center p-3 w-100" style="min-height: 110px;">
+                          <img src="<?php echo htmlspecialchars((string)$partner['logo_url']); ?>" alt="<?php echo htmlspecialchars((string)$partner['company_name']); ?>" style="max-height:64px;max-width:100%;object-fit:contain;filter:grayscale(100%);opacity:.92;">
+                        </a>
+                      </div>
+                    <?php endforeach; ?>
+                  </div>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <?php
 }
 ?>
 <!doctype html>
@@ -524,6 +568,9 @@ foreach ($events as $event) {
             <?php if ($menuSlug === '' || ($menuSlug === 'agenda' && !$hasAgendaEvents)) { continue; } ?>
             <li class="nav-item"><a class="nav-link" href="index.php#<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
           <?php endforeach; ?>
+          <?php if ($hasPartners): ?>
+            <li class="nav-item"><a class="nav-link" href="index.php#parceiros">Parceiros</a></li>
+          <?php endif; ?>
         </ul>
       </div>
     </div>
@@ -550,9 +597,14 @@ foreach ($events as $event) {
         </div>
       </section>
 
+      <?php $partnersRendered = false; ?>
       <?php foreach ($sectionPages as $page): ?>
         <?php $sectionId = trim((string)($page['slug'] ?? '')); ?>
         <?php if ($sectionId === '') { continue; } ?>
+        <?php if ($sectionId === 'contactos' && $hasPartners && !$partnersRendered): ?>
+          <?php render_partners_section($partners); ?>
+          <?php $partnersRendered = true; ?>
+        <?php endif; ?>
         <?php $sectionType = section_type($page); ?>
         <?php $sectionConfig = section_config($page); ?>
         <?php if ($sectionId === 'agenda' && $hasAgendaEvents): ?>
@@ -700,6 +752,9 @@ foreach ($events as $event) {
           </div>
         </section>
       <?php endforeach; ?>
+      <?php if ($hasPartners && !$partnersRendered): ?>
+        <?php render_partners_section($partners); ?>
+      <?php endif; ?>
 
       <?php if (count($pages) === 0): ?>
         <section class="section-block pt-0">
@@ -758,6 +813,7 @@ foreach ($events as $event) {
       </div>
       <div class="small d-flex gap-3">
         <?php if ($hasAgendaEvents): ?><a href="#agenda">Agenda</a><?php endif; ?>
+        <?php if ($hasPartners): ?><a href="#parceiros">Parceiros</a><?php endif; ?>
         <a href="#servicos">Serviços</a>
         <a href="#contactos">Contactos</a>
       </div>
