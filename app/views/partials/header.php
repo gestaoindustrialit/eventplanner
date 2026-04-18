@@ -29,6 +29,7 @@
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=openSchedule">Alinhamentos</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=reservation&action=index">Reservas</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicpage&action=index">Páginas públicas</a>
+                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=partner&action=index">Parceiros</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicsite&action=index">Publicar website</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=newsletter&action=index">Newsletter</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=presscontact&action=index">Contactos Press</a>
@@ -67,6 +68,7 @@
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=openSchedule">Alinhamentos</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=reservation&action=index">Reservas</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicpage&action=index">Páginas públicas</a>
+                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=partner&action=index">Parceiros</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicsite&action=index">Publicar website</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=newsletter&action=index">Newsletter</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=presscontact&action=index">Contactos Press</a>
