@@ -16,6 +16,7 @@
         </div>
         <div class="col-md-6"><label class="form-label">Link Google Maps (para artistas)</label><input class="form-control" name="artist_map_link" value="<?= htmlspecialchars($event['artist_map_link'] ?? '') ?>" placeholder="https://maps.google.com/..."></div>
         <div class="col-md-6"><label class="form-label">Detalhes para artistas</label><input class="form-control" name="artist_details" value="<?= htmlspecialchars($event['artist_details'] ?? '') ?>" placeholder="Chegada, estacionamento, contacto técnico..."></div>
+        <div class="col-md-12"><label class="form-label">Link externo para bilhetes</label><input type="url" class="form-control" name="external_ticket_url" value="<?= htmlspecialchars($event['external_ticket_url'] ?? '') ?>" placeholder="https://..."><small class="text-muted">Se as reservas no site estiverem fechadas, este link será mostrado na agenda pública.</small></div>
         <div class="col-md-8">
             <label class="form-label">Cartaz (URL da imagem)</label>
             <input class="form-control" name="poster_url" value="<?= htmlspecialchars($event['poster_url'] ?? '') ?>" placeholder="https://.../cartaz.jpg">

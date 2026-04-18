@@ -180,6 +180,7 @@ class EventController extends BaseController
             'cachet_total' => (float)($_POST['cachet_total'] ?? 0),
             'artist_map_link' => trim($_POST['artist_map_link'] ?? ''),
             'artist_details' => trim($_POST['artist_details'] ?? ''),
+            'external_ticket_url' => trim($_POST['external_ticket_url'] ?? ''),
             'poster_url' => trim($_POST['poster_url'] ?? ''),
             'notes' => trim($_POST['notes'] ?? ''),
         ];

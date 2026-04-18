@@ -659,7 +659,10 @@ function render_partners_section(array $partners): void {
                         <p class="small text-secondary mb-3"><span class="event-meta-label">Lugares disponíveis:</span> <?php echo $available; ?> / <?php echo $capacity; ?></p>
                       <?php endif; ?>
 
-                      <?php if ((int)($event['reservations_open'] ?? 0) !== 1): ?>
+                      <?php $externalTicketUrl = trim((string)($event['external_ticket_url'] ?? '')); ?>
+                      <?php if ((int)($event['reservations_open'] ?? 0) !== 1 && $externalTicketUrl !== ''): ?>
+                        <a class="btn btn-brand" href="<?php echo htmlspecialchars($externalTicketUrl); ?>" target="_blank" rel="noopener noreferrer">Comprar bilhetes</a>
+                      <?php elseif ((int)($event['reservations_open'] ?? 0) !== 1): ?>
                         <div class="alert alert-secondary py-2 mb-0">Reservas fechadas para este evento.</div>
                       <?php elseif ($available !== null && $available <= 0): ?>
                         <div class="alert alert-warning py-2 mb-0">Esgotado. Não existem mais lugares disponíveis.</div>
