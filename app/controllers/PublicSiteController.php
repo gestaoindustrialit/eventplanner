@@ -14,8 +14,10 @@ class PublicSiteController extends BaseController
         $homeDescription = $settings->get('home_description', 'Layout inspirado no visual "Big Picture": imagem de fundo marcante, tipografia forte e conteúdo em cartões translúcidos para foco total no evento.');
         $homeBackgroundUrl = $settings->get('home_background_url', 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80');
         $newsletterConsentText = $settings->get('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.');
+        $recaptchaSiteKey = $settings->get('recaptcha_site_key', '6LcrsLOsAAAAAB9NZ-X2s7ugJ7LsNAamg4VXW0wt');
+        $recaptchaSecretKey = $settings->get('recaptcha_secret_key', '6LcrsLOsAAAAAJniWgy3I-C6PPXk_yTlfFc2U-Hi');
 
-        $this->render('public_site/index', compact('defaultPath', 'pages', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText'));
+        $this->render('public_site/index', compact('defaultPath', 'pages', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText', 'recaptchaSiteKey', 'recaptchaSecretKey'));
     }
 
     public function publish(): void
@@ -43,6 +45,8 @@ class PublicSiteController extends BaseController
             $settings->set('home_description', trim((string)($_POST['home_description'] ?? '')));
             $settings->set('home_background_url', trim((string)($_POST['home_background_url'] ?? '')));
             $settings->set('newsletter_consent_text', trim((string)($_POST['newsletter_consent_text'] ?? '')));
+            $settings->set('recaptcha_site_key', trim((string)($_POST['recaptcha_site_key'] ?? '')));
+            $settings->set('recaptcha_secret_key', trim((string)($_POST['recaptcha_secret_key'] ?? '')));
 
             $dbPath = (new Database())->getSqlitePath();
             $homeCopy = [
@@ -52,20 +56,22 @@ class PublicSiteController extends BaseController
                 'background_url' => $settings->get('home_background_url', ''),
             ];
             $newsletterConsentText = $settings->get('newsletter_consent_text', '');
+            $recaptchaSiteKey = $settings->get('recaptcha_site_key', '6LcrsLOsAAAAAB9NZ-X2s7ugJ7LsNAamg4VXW0wt');
+            $recaptchaSecretKey = $settings->get('recaptcha_secret_key', '6LcrsLOsAAAAAJniWgy3I-C6PPXk_yTlfFc2U-Hi');
 
-            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($dbPath, $homeCopy, $newsletterConsentText)) === false) {
+            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($dbPath, $homeCopy, $newsletterConsentText, $recaptchaSiteKey)) === false) {
                 throw new RuntimeException('Falha ao escrever index.php no destino.');
             }
             if (file_put_contents($targetPath . '/index.html', $this->buildIndexHtmlRedirect()) === false) {
                 throw new RuntimeException('Falha ao escrever index.html no destino.');
             }
-            if (file_put_contents($targetPath . '/reserve.php', $this->buildReserveHandler($dbPath)) === false) {
+            if (file_put_contents($targetPath . '/reserve.php', $this->buildReserveHandler($dbPath, $recaptchaSecretKey)) === false) {
                 throw new RuntimeException('Falha ao escrever reserve.php no destino.');
             }
-            if (file_put_contents($targetPath . '/subscribe.php', $this->buildSubscribeHandler($dbPath)) === false) {
+            if (file_put_contents($targetPath . '/subscribe.php', $this->buildSubscribeHandler($dbPath, $recaptchaSecretKey)) === false) {
                 throw new RuntimeException('Falha ao escrever subscribe.php no destino.');
             }
-            if (file_put_contents($targetPath . '/contact.php', $this->buildContactHandler($dbPath)) === false) {
+            if (file_put_contents($targetPath . '/contact.php', $this->buildContactHandler($dbPath, $recaptchaSecretKey)) === false) {
                 throw new RuntimeException('Falha ao escrever contact.php no destino.');
             }
 
@@ -82,7 +88,7 @@ class PublicSiteController extends BaseController
         $this->redirect(BASE_URL . '?controller=publicsite&action=index');
     }
 
-    private function buildPublicIndex(string $dbPath, array $homeCopy, string $newsletterConsentText): string
+    private function buildPublicIndex(string $dbPath, array $homeCopy, string $newsletterConsentText, string $recaptchaSiteKey): string
     {
         $homeCopyJson = json_encode($homeCopy, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
@@ -94,6 +100,8 @@ $partners = [];
 $homeCopy = json_decode('__HOME_COPY_JSON__', true) ?: [];
 $msg = $_GET['msg'] ?? '';
 $pageSlug = trim((string)($_GET['page'] ?? ''));
+$recaptchaSiteKey = trim((string)'__RECAPTCHA_SITE_KEY__');
+$hasRecaptcha = $recaptchaSiteKey !== '';
 
 try {
     $db = new PDO('sqlite:__DB_PATH__', null, null, [
@@ -628,6 +636,8 @@ function render_partners_section(array $partners): void {
                 <div class="alert alert-success">Mensagem enviada com sucesso. Obrigado pelo contacto!</div>
               <?php elseif ($msg === 'contact_error'): ?>
                 <div class="alert alert-danger">Não foi possível enviar o contacto. Tenta novamente.</div>
+              <?php elseif ($msg === 'captcha'): ?>
+                <div class="alert alert-warning">Validação de segurança falhou. Confirma o reCAPTCHA e tenta novamente.</div>
               <?php endif; ?>
               <h2 class="section-heading"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
               <div class="row g-4 mb-5 justify-content-center">
@@ -731,6 +741,11 @@ function render_partners_section(array $partners): void {
                     <?php if (in_array('phone', $contactFields, true)): ?><div class="col-md-8"><input class="form-control form-control-lg" name="phone" placeholder="Telefone"></div><?php endif; ?>
                     <?php if (in_array('subject', $contactFields, true)): ?><div class="col-md-8"><input class="form-control form-control-lg" name="subject" placeholder="Assunto"></div><?php endif; ?>
                     <?php if (in_array('message', $contactFields, true)): ?><div class="col-md-8"><textarea class="form-control form-control-lg" name="message" rows="4" placeholder="Mensagem" required></textarea></div><?php endif; ?>
+                    <?php if ($hasRecaptcha): ?>
+                      <div class="col-md-8 d-flex justify-content-center">
+                        <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div>
+                      </div>
+                    <?php endif; ?>
                     <div class="col-md-8 text-center">
                       <button class="btn btn-warning px-5 py-2 fw-semibold"><?php echo htmlspecialchars((string)($sectionConfig['cta_button_text'] ?? 'Enviar mensagem')); ?></button>
                     </div>
@@ -779,6 +794,11 @@ function render_partners_section(array $partners): void {
                 <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
                 <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
                 <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" id="reserveTickets" class="form-control" placeholder="Nº bilhetes"></div>
+                <?php if ($hasRecaptcha): ?>
+                  <div class="col-12 d-flex justify-content-center">
+                    <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div>
+                  </div>
+                <?php endif; ?>
                 <div class="col-md-6"><button class="btn btn-brand w-100">Confirmar reserva</button></div>
                 <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
               </form>
@@ -820,6 +840,9 @@ function render_partners_section(array $partners): void {
     </div>
   </footer>
 
+  <?php if ($hasRecaptcha): ?>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+  <?php endif; ?>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const navbar = document.querySelector('.navbar');
@@ -912,7 +935,8 @@ PHP;
 
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
         $template = str_replace('__HOME_COPY_JSON__', addslashes((string)$homeCopyJson), $template);
-        return str_replace('__NEWSLETTER_CONSENT__', addslashes($newsletterConsentText), $template);
+        $template = str_replace('__NEWSLETTER_CONSENT__', addslashes($newsletterConsentText), $template);
+        return str_replace('__RECAPTCHA_SITE_KEY__', addslashes(trim($recaptchaSiteKey)), $template);
     }
 
     private function buildIndexHtmlRedirect(): string
@@ -941,13 +965,40 @@ PHP;
 HTML;
     }
 
-    private function buildReserveHandler(string $dbPath): string
+    private function buildReserveHandler(string $dbPath, string $recaptchaSecretKey): string
     {
         $template = <<<'PHP'
 <?php
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: index.php');
     exit;
+}
+
+$captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
+if ($captchaSecret !== '') {
+    $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));
+    if ($captchaToken === '') {
+        header('Location: index.php?msg=captcha#eventos');
+        exit;
+    }
+
+    $captchaCheck = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
+            'content' => http_build_query([
+                'secret' => $captchaSecret,
+                'response' => $captchaToken,
+                'remoteip' => $_SERVER['REMOTE_ADDR'] ?? '',
+            ]),
+            'timeout' => 8,
+        ],
+    ]));
+    $captchaResult = is_string($captchaCheck) ? json_decode($captchaCheck, true) : null;
+    if (!is_array($captchaResult) || empty($captchaResult['success'])) {
+        header('Location: index.php?msg=captcha#eventos');
+        exit;
+    }
 }
 
 try {
@@ -1107,16 +1158,44 @@ try {
 }
 PHP;
 
-        return str_replace('__DB_PATH__', addslashes($dbPath), $template);
+        $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
+        return str_replace('__RECAPTCHA_SECRET_KEY__', addslashes(trim($recaptchaSecretKey)), $template);
     }
 
-    private function buildSubscribeHandler(string $dbPath): string
+    private function buildSubscribeHandler(string $dbPath, string $recaptchaSecretKey): string
     {
         $template = <<<'PHP'
 <?php
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: index.php');
     exit;
+}
+
+$captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
+if ($captchaSecret !== '') {
+    $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));
+    if ($captchaToken === '') {
+        header('Location: index.php?msg=captcha#newsletter');
+        exit;
+    }
+
+    $captchaCheck = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
+            'content' => http_build_query([
+                'secret' => $captchaSecret,
+                'response' => $captchaToken,
+                'remoteip' => $_SERVER['REMOTE_ADDR'] ?? '',
+            ]),
+            'timeout' => 8,
+        ],
+    ]));
+    $captchaResult = is_string($captchaCheck) ? json_decode($captchaCheck, true) : null;
+    if (!is_array($captchaResult) || empty($captchaResult['success'])) {
+        header('Location: index.php?msg=captcha#newsletter');
+        exit;
+    }
 }
 
 $email = trim((string)($_POST['email'] ?? ''));
@@ -1174,10 +1253,11 @@ try {
 PHP;
 
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
-        return str_replace('__NEWSLETTER_CONSENT__', addslashes(trim((string)($_POST['newsletter_consent_text'] ?? ''))), $template);
+        $template = str_replace('__NEWSLETTER_CONSENT__', addslashes(trim((string)($_POST['newsletter_consent_text'] ?? ''))), $template);
+        return str_replace('__RECAPTCHA_SECRET_KEY__', addslashes(trim($recaptchaSecretKey)), $template);
     }
 
-    private function buildContactHandler(string $dbPath): string
+    private function buildContactHandler(string $dbPath, string $recaptchaSecretKey): string
     {
         $template = <<<'PHP'
 <?php
@@ -1188,6 +1268,33 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $pageSlug = trim((string)($_POST['page_slug'] ?? 'contactos'));
 $anchor = $pageSlug !== '' ? $pageSlug : 'contactos';
+$captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
+if ($captchaSecret !== '') {
+    $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));
+    if ($captchaToken === '') {
+        header('Location: index.php?msg=captcha#' . rawurlencode($anchor));
+        exit;
+    }
+
+    $captchaCheck = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
+            'content' => http_build_query([
+                'secret' => $captchaSecret,
+                'response' => $captchaToken,
+                'remoteip' => $_SERVER['REMOTE_ADDR'] ?? '',
+            ]),
+            'timeout' => 8,
+        ],
+    ]));
+    $captchaResult = is_string($captchaCheck) ? json_decode($captchaCheck, true) : null;
+    if (!is_array($captchaResult) || empty($captchaResult['success'])) {
+        header('Location: index.php?msg=captcha#' . rawurlencode($anchor));
+        exit;
+    }
+}
+
 $name = trim((string)($_POST['name'] ?? ''));
 $email = trim((string)($_POST['email'] ?? ''));
 $phone = trim((string)($_POST['phone'] ?? ''));
@@ -1246,6 +1353,7 @@ try {
 }
 PHP;
 
-        return str_replace('__DB_PATH__', addslashes($dbPath), $template);
+        $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
+        return str_replace('__RECAPTCHA_SECRET_KEY__', addslashes(trim($recaptchaSecretKey)), $template);
     }
 }

@@ -32,6 +32,16 @@
                 <label class="form-label">Texto de consentimento RGPD (newsletter)</label>
                 <textarea name="newsletter_consent_text" class="form-control" rows="2" required><?= htmlspecialchars($newsletterConsentText ?? '') ?></textarea>
             </div>
+            <div class="col-md-6">
+                <label class="form-label">reCAPTCHA chave de site</label>
+                <input type="text" name="recaptcha_site_key" class="form-control" value="<?= htmlspecialchars($recaptchaSiteKey ?? '') ?>" placeholder="6Lc...">
+                <div class="form-text">Chave pública usada no HTML dos formulários públicos.</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">reCAPTCHA chave secreta</label>
+                <input type="text" name="recaptcha_secret_key" class="form-control" value="<?= htmlspecialchars($recaptchaSecretKey ?? '') ?>" placeholder="6Lc...">
+                <div class="form-text">Chave privada usada para validar no servidor (reserve/contact/subscribe).</div>
+            </div>
             <div class="col-12">
                 <button class="btn btn-primary">Guardar e publicar website</button>
                 <p class="text-muted small mt-2 mb-0">Sempre que alterares páginas/textos, publica novamente para atualizar o site externo.</p>
