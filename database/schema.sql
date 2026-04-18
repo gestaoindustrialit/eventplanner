@@ -66,6 +66,7 @@ CREATE TABLE events (
   cachet_total NUMERIC DEFAULT 0,
   artist_map_link TEXT DEFAULT NULL,
   artist_details TEXT DEFAULT NULL,
+  external_ticket_url TEXT DEFAULT NULL,
   poster_url TEXT DEFAULT NULL,
   notes TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,

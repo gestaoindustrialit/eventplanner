@@ -204,6 +204,9 @@ class Database
             if (!in_array('poster_url', $eventColumns, true)) {
                 $db->exec('ALTER TABLE events ADD COLUMN poster_url TEXT DEFAULT NULL');
             }
+            if (!in_array('external_ticket_url', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN external_ticket_url TEXT DEFAULT NULL');
+            }
             if (!in_array('reservations_open', $eventColumns, true)) {
                 $db->exec('ALTER TABLE events ADD COLUMN reservations_open INTEGER NOT NULL DEFAULT 1');
             }
