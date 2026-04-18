@@ -157,6 +157,17 @@ class Database
         $db->exec('CREATE INDEX IF NOT EXISTS idx_crm_contacts_priority ON crm_contacts(priority)');
         $db->exec('CREATE INDEX IF NOT EXISTS idx_crm_contacts_last_contact ON crm_contacts(last_contact_at)');
         $db->exec('CREATE INDEX IF NOT EXISTS idx_crm_contacts_next_follow_up ON crm_contacts(next_follow_up_at)');
+        $db->exec(
+            'CREATE TABLE IF NOT EXISTS partners (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_name TEXT NOT NULL,
+                logo_url TEXT NOT NULL,
+                company_url TEXT DEFAULT NULL,
+                partnership_start_date TEXT NOT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
 
         if ($this->tableExists($db, 'comedians')) {
             $columns = $db->query('PRAGMA table_info(comedians)')->fetchAll();
@@ -199,12 +210,6 @@ class Database
             if (!in_array('reservation_capacity', $eventColumns, true)) {
                 $db->exec('ALTER TABLE events ADD COLUMN reservation_capacity INTEGER NOT NULL DEFAULT 0');
             }
-        }
-        if (!in_array('reservations_open', $eventColumns, true)) {
-            $db->exec('ALTER TABLE events ADD COLUMN reservations_open INTEGER NOT NULL DEFAULT 1');
-        }
-        if (!in_array('reservation_capacity', $eventColumns, true)) {
-            $db->exec('ALTER TABLE events ADD COLUMN reservation_capacity INTEGER NOT NULL DEFAULT 0');
         }
     }
 
