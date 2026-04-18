@@ -1,22 +1,35 @@
-<div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center py-4">
-    <div class="card shadow-sm w-100" style="max-width:420px;">
-        <div class="card-body p-4">
-            <div class="text-center mb-3">
+<div class="login-page">
+    <div class="login-layout">
+        <section class="login-panel">
+            <div class="login-brand-wrap">
                 <img src="<?= BASE_PATH ?>/assets/branding/chorarderir-logo.svg" alt="Chorar de Rir" class="brand-logo-login">
             </div>
-            <h3 class="mb-1 text-center">Login</h3>
-            <p class="text-muted text-center mb-4">Acede ao EventPlanner para gerir eventos e equipas.</p>
-            <form method="post" action="<?= BASE_URL ?>?controller=auth&action=authenticate">
+
+            <h2 class="login-title">LOGIN</h2>
+            <p class="login-subtitle">Acede ao EventPlanner para gerir eventos e equipas.</p>
+
+            <form class="login-form" method="post" action="<?= BASE_URL ?>?controller=auth&action=authenticate">
                 <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-control" required>
+                    <label class="form-label login-label">Email</label>
+                    <input type="email" name="email" class="form-control login-input" placeholder="Email" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Password</label>
-                    <input type="password" name="password" class="form-control" required>
+                    <label class="form-label login-label">Password</label>
+                    <input type="password" name="password" class="form-control login-input" placeholder="Password" required>
                 </div>
-                <button class="btn btn-dark w-100">Entrar</button>
+                <button class="btn login-btn w-100">Entrar</button>
             </form>
-        </div>
+
+            <p class="login-hint">Novo na plataforma? <a href="#" aria-disabled="true">Fala com o administrador</a></p>
+        </section>
+
+        <aside class="login-showcase" aria-hidden="true">
+            <div class="login-showcase-shape"></div>
+            <article class="login-showcase-card">
+                <div class="login-showcase-icon">⬇</div>
+                <h3>Planeia sem stress</h3>
+                <p>Centraliza eventos, equipas e reservas num painel simples e moderno.</p>
+            </article>
+        </aside>
     </div>
 </div>
