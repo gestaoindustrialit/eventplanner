@@ -15,6 +15,45 @@ class PressContactController extends BaseController
         $this->render('press_contacts/form', ['contact' => null]);
     }
 
+    public function outreach(): void
+    {
+        requireAdmin();
+
+        $eventId = (int)($_GET['event_id'] ?? 0);
+        $district = trim((string)($_GET['district'] ?? ''));
+        $locality = trim((string)($_GET['locality'] ?? ''));
+
+        $eventModel = new Event($this->db);
+        $events = $eventModel->all(date('Y-m-d'));
+        $event = $eventId > 0 ? $eventModel->find($eventId) : null;
+
+        $pressContactModel = new PressContact($this->db);
+        $districts = $pressContactModel->districts();
+        $localities = $pressContactModel->localities($district ?: null);
+        $contacts = $pressContactModel->filterByLocation($district ?: null, $locality ?: null);
+        $emails = array_values(array_filter(array_map(static function (array $contact): string {
+            return trim((string)$contact['email']);
+        }, $contacts)));
+
+        $emailList = implode(';', $emails);
+        $subject = $event ? sprintf('Divulgação: %s', $event['title']) : 'Divulgação de evento';
+        $body = $event ? $this->eventPressTemplate($event) : "Olá,\n\nPartilhamos o próximo evento para divulgação.\n\nObrigado.";
+        $mailtoLink = 'mailto:?bcc=' . rawurlencode($emailList) . '&subject=' . rawurlencode($subject) . '&body=' . rawurlencode($body);
+
+        $this->render('press_contacts/outreach', compact(
+            'events',
+            'event',
+            'eventId',
+            'districts',
+            'district',
+            'localities',
+            'locality',
+            'contacts',
+            'emails',
+            'mailtoLink'
+        ));
+    }
+
     public function store(): void
     {
         requireAdmin();
@@ -58,5 +97,19 @@ class PressContactController extends BaseController
             'district' => trim($_POST['district'] ?? ''),
             'website' => trim($_POST['website'] ?? ''),
         ];
+    }
+
+    private function eventPressTemplate(array $event): string
+    {
+        $eventDate = !empty($event['date']) ? date('d/m/Y', strtotime((string)$event['date'])) : '';
+        $eventTime = !empty($event['time']) ? substr((string)$event['time'], 0, 5) : '';
+
+        return "Olá,\n\nSegue sugestão para agenda cultural:\n\n"
+            . $event['title'] . "\n"
+            . 'Data: ' . $eventDate . "\n"
+            . 'Hora: ' . $eventTime . "\n"
+            . 'Local: ' . $event['location'] . "\n\n"
+            . "Agradecemos a divulgação.\n\n"
+            . "Cumprimentos,";
     }
 }
