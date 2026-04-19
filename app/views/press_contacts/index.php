@@ -5,6 +5,11 @@
     </div>
     <a class="btn btn-dark" href="<?= BASE_URL ?>?controller=presscontact&action=create">Novo Contacto</a>
 </div>
+<div class="mb-3">
+    <a class="btn btn-outline-dark" href="<?= BASE_URL ?>?controller=presscontact&action=outreach">
+        <i class="bi bi-megaphone"></i> Difusão rápida por localidade/distrito
+    </a>
+</div>
 <input type="text" class="form-control mb-3 table-search" placeholder="Pesquisar por nome, email, localidade ou distrito...">
 <div class="table-responsive">
     <table class="table table-hover searchable-table">

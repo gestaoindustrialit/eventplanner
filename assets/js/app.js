@@ -81,3 +81,92 @@ if (addScheduleRowBtn && scheduleTemplate && scheduleWrapper) {
     }
   });
 }
+
+function refreshIndexedCheckboxValues(wrapperSelector, checkboxName) {
+  const wrapper = document.querySelector(wrapperSelector);
+  if (!wrapper) return;
+  wrapper.querySelectorAll(`input[name="${checkboxName}[]"]`).forEach((input, index) => {
+    input.value = String(index);
+  });
+}
+
+const addTemplateFieldBtn = document.getElementById('add-template-field-row');
+const templateFieldTemplate = document.getElementById('template-field-template');
+const templateFieldWrapper = document.getElementById('template-field-wrapper');
+
+if (addTemplateFieldBtn && templateFieldTemplate && templateFieldWrapper) {
+  addTemplateFieldBtn.addEventListener('click', () => {
+    const idx = templateFieldWrapper.querySelectorAll('.template-field-row').length;
+    templateFieldWrapper.insertAdjacentHTML('beforeend', templateFieldTemplate.innerHTML.replaceAll('__INDEX__', String(idx)));
+    refreshIndexedCheckboxValues('#template-field-wrapper', 'field_required');
+  });
+
+  templateFieldWrapper.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-template-field-row')) {
+      const rows = templateFieldWrapper.querySelectorAll('.template-field-row');
+      if (rows.length > 1) {
+        e.target.closest('.template-field-row').remove();
+        refreshIndexedCheckboxValues('#template-field-wrapper', 'field_required');
+      }
+    }
+  });
+
+  refreshIndexedCheckboxValues('#template-field-wrapper', 'field_required');
+}
+
+const addEventChecklistItemBtn = document.getElementById('add-event-checklist-item');
+const eventChecklistTemplate = document.getElementById('event-checklist-template');
+const eventChecklistWrapper = document.getElementById('event-checklist-wrapper');
+
+function syncChecklistValueUi(row) {
+  const typeSelect = row.querySelector('.event-item-type');
+  const textInput = row.querySelector('.event-item-value-text');
+  const checkWrapper = row.querySelector('.event-item-value-check');
+  if (!typeSelect || !textInput || !checkWrapper) return;
+
+  if (typeSelect.value === 'text') {
+    textInput.classList.remove('d-none');
+    checkWrapper.classList.add('d-none');
+  } else {
+    textInput.classList.add('d-none');
+    checkWrapper.classList.remove('d-none');
+  }
+}
+
+function refreshEventChecklistIndexes() {
+  if (!eventChecklistWrapper) return;
+  eventChecklistWrapper.querySelectorAll('.event-checklist-row').forEach((row, index) => {
+    row.querySelectorAll('input[name="item_required[]"], input[name="item_checked[]"]').forEach((input) => {
+      input.value = String(index);
+    });
+  });
+}
+
+if (addEventChecklistItemBtn && eventChecklistTemplate && eventChecklistWrapper) {
+  addEventChecklistItemBtn.addEventListener('click', () => {
+    const idx = eventChecklistWrapper.querySelectorAll('.event-checklist-row').length;
+    eventChecklistWrapper.insertAdjacentHTML('beforeend', eventChecklistTemplate.innerHTML.replaceAll('__INDEX__', String(idx)));
+    refreshEventChecklistIndexes();
+  });
+
+  eventChecklistWrapper.addEventListener('change', (e) => {
+    const row = e.target.closest('.event-checklist-row');
+    if (!row) return;
+    if (e.target.classList.contains('event-item-type')) {
+      syncChecklistValueUi(row);
+    }
+  });
+
+  eventChecklistWrapper.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-event-checklist-item')) {
+      const rows = eventChecklistWrapper.querySelectorAll('.event-checklist-row');
+      if (rows.length > 1) {
+        e.target.closest('.event-checklist-row').remove();
+        refreshEventChecklistIndexes();
+      }
+    }
+  });
+
+  eventChecklistWrapper.querySelectorAll('.event-checklist-row').forEach((row) => syncChecklistValueUi(row));
+  refreshEventChecklistIndexes();
+}
