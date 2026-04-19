@@ -96,6 +96,23 @@ class Database
         );
 
         $db->exec(
+            'CREATE TABLE IF NOT EXISTS press_contacts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT DEFAULT NULL,
+                locality TEXT DEFAULT NULL,
+                district TEXT DEFAULT NULL,
+                website TEXT DEFAULT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
+
+        $pressContactColumns = array_column($db->query('PRAGMA table_info(press_contacts)')->fetchAll(), 'name');
+        if (!in_array('website', $pressContactColumns, true)) {
+            $db->exec('ALTER TABLE press_contacts ADD COLUMN website TEXT DEFAULT NULL');
+        }
+
+        $db->exec(
             'CREATE TABLE IF NOT EXISTS event_schedule_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 event_id INTEGER NOT NULL,

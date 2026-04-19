@@ -9,6 +9,9 @@
     <a class="btn btn-outline-dark" href="<?= BASE_URL ?>?controller=presscontact&action=outreach">
         <i class="bi bi-megaphone"></i> Difusão rápida por localidade/distrito
     </a>
+    <a class="btn btn-outline-primary" href="<?= BASE_URL ?>?controller=presscontact&action=downloadTemplate">
+        <i class="bi bi-download"></i> Download template importação
+    </a>
 </div>
 <input type="text" class="form-control mb-3 table-search" placeholder="Pesquisar por nome, email, localidade ou distrito...">
 <div class="table-responsive">
