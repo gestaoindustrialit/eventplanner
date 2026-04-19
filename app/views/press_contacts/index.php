@@ -23,9 +23,55 @@
         </button>
     </div>
 </form>
-<input type="text" class="form-control mb-3 table-search" placeholder="Pesquisar por nome, email, localidade ou distrito...">
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-lg-5">
+                <label class="form-label small text-muted mb-1" for="press-contact-search">Pesquisa rápida</label>
+                <input
+                    id="press-contact-search"
+                    type="text"
+                    class="form-control table-search"
+                    placeholder="Nome, email, localidade ou distrito..."
+                >
+            </div>
+            <div class="col-sm-6 col-lg-2">
+                <label class="form-label small text-muted mb-1" for="press-contact-district">Distrito</label>
+                <select id="press-contact-district" class="form-select press-filter-district">
+                    <option value="">Todos</option>
+                    <?php foreach (array_values(array_unique(array_filter(array_map(static fn ($item) => trim((string)$item['district']), $contacts)))) as $district): ?>
+                        <option value="<?= htmlspecialchars($district) ?>"><?= htmlspecialchars($district) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-sm-6 col-lg-2">
+                <label class="form-label small text-muted mb-1" for="press-contact-locality">Localidade</label>
+                <select id="press-contact-locality" class="form-select press-filter-locality">
+                    <option value="">Todas</option>
+                    <?php foreach (array_values(array_unique(array_filter(array_map(static fn ($item) => trim((string)$item['locality']), $contacts)))) as $locality): ?>
+                        <option value="<?= htmlspecialchars($locality) ?>"><?= htmlspecialchars($locality) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-sm-6 col-lg-2">
+                <label class="form-label small text-muted mb-1" for="press-contact-page-size">Por página</label>
+                <select id="press-contact-page-size" class="form-select press-page-size">
+                    <option value="10">10</option>
+                    <option value="20" selected>20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <div class="col-sm-6 col-lg-1 d-grid">
+                <button type="button" class="btn btn-outline-secondary press-filters-reset" title="Limpar filtros">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 <div class="table-responsive">
-    <table class="table table-hover searchable-table">
+    <table class="table table-hover searchable-table press-contacts-table">
         <thead>
             <tr>
                 <th>ID</th>
@@ -55,11 +101,33 @@
                     <?php endif; ?>
                 </td>
                 <td>
-                    <a class="btn btn-sm btn-outline-secondary" href="<?= BASE_URL ?>?controller=presscontact&action=edit&id=<?= $contact['id'] ?>">Editar</a>
-                    <a class="btn btn-sm btn-outline-danger delete-btn" href="<?= BASE_URL ?>?controller=presscontact&action=delete&id=<?= $contact['id'] ?>">Eliminar</a>
+                    <div class="d-flex gap-2">
+                        <a
+                            class="btn btn-sm btn-outline-secondary action-icon-btn"
+                            href="<?= BASE_URL ?>?controller=presscontact&action=edit&id=<?= $contact['id'] ?>"
+                            title="Editar contacto"
+                            aria-label="Editar contacto"
+                        >
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a
+                            class="btn btn-sm btn-outline-danger delete-btn action-icon-btn"
+                            href="<?= BASE_URL ?>?controller=presscontact&action=delete&id=<?= $contact['id'] ?>"
+                            title="Eliminar contacto"
+                            aria-label="Eliminar contacto"
+                        >
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
                 </td>
             </tr>
         <?php endforeach; ?>
         </tbody>
     </table>
+</div>
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3 press-pagination">
+    <small class="text-muted press-pagination-info"></small>
+    <nav aria-label="Paginação contactos imprensa">
+        <ul class="pagination pagination-sm mb-0 press-pagination-controls"></ul>
+    </nav>
 </div>
