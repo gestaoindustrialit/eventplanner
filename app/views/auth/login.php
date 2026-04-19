@@ -26,7 +26,9 @@
         <aside class="login-showcase" aria-hidden="true">
             <div class="login-showcase-shape"></div>
             <article class="login-showcase-card">
-                <div class="login-showcase-icon">⬇</div>
+                <div class="login-showcase-icon">
+                    <img src="<?= BASE_PATH ?>/assets/branding/cdr-label.jpg" alt="CDR Label" class="login-showcase-label" width="88" height="88">
+                </div>
                 <h3>Planeia sem stress</h3>
                 <p>Centraliza eventos, equipas e reservas num painel simples e moderno.</p>
             </article>
