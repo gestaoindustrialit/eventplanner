@@ -18,21 +18,92 @@ class PressContactController extends BaseController
     public function downloadTemplate(): void
     {
         requireAdmin();
-
-        $templatePath = dirname(__DIR__, 2) . '/assets/templates/press_contacts_import_template.csv';
-        if (!is_file($templatePath)) {
-            http_response_code(404);
-            echo 'Template não encontrado.';
-            return;
-        }
-
         header('Content-Type: text/csv; charset=UTF-8');
         header('Content-Disposition: attachment; filename="press_contacts_import_template.csv"');
         header('Cache-Control: no-store, no-cache, must-revalidate');
         header('Pragma: no-cache');
         echo "\xEF\xBB\xBF";
-        readfile($templatePath);
+        echo "name,email,locality,district,website\n";
+        echo "\"Jornal Exemplo\",\"agenda@jornalexemplo.pt\",\"Lisboa\",\"Lisboa\",\"https://jornalexemplo.pt\"\n";
+        echo "\"Rádio Exemplo\",\"cultura@radioexemplo.pt\",\"Porto\",\"Porto\",\"https://radioexemplo.pt\"\n";
         exit;
+    }
+
+    public function uploadTemplate(): void
+    {
+        requireAdmin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '?controller=presscontact&action=index');
+            return;
+        }
+
+        if (empty($_FILES['contacts_csv']) || !is_uploaded_file($_FILES['contacts_csv']['tmp_name'])) {
+            flash('error', 'Seleciona um ficheiro CSV para importar.');
+            $this->redirect(BASE_URL . '?controller=presscontact&action=index');
+            return;
+        }
+
+        $file = $_FILES['contacts_csv'];
+        $handle = fopen($file['tmp_name'], 'rb');
+        if ($handle === false) {
+            flash('error', 'Não foi possível ler o ficheiro enviado.');
+            $this->redirect(BASE_URL . '?controller=presscontact&action=index');
+            return;
+        }
+
+        $header = fgetcsv($handle);
+        if ($header === false) {
+            fclose($handle);
+            flash('error', 'Ficheiro CSV vazio.');
+            $this->redirect(BASE_URL . '?controller=presscontact&action=index');
+            return;
+        }
+
+        if (!empty($header[0])) {
+            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string)$header[0]) ?? (string)$header[0];
+        }
+
+        $normalizedHeader = array_map(static function ($value): string {
+            return strtolower(trim((string)$value));
+        }, $header);
+        $expected = ['name', 'email', 'locality', 'district', 'website'];
+        if ($normalizedHeader !== $expected) {
+            fclose($handle);
+            flash('error', 'Cabeçalho inválido. Usa o template oficial: name,email,locality,district,website.');
+            $this->redirect(BASE_URL . '?controller=presscontact&action=index');
+            return;
+        }
+
+        $model = new PressContact($this->db);
+        $imported = 0;
+        $ignored = 0;
+        while (($row = fgetcsv($handle)) !== false) {
+            if (count($row) === 1 && trim((string)$row[0]) === '') {
+                continue;
+            }
+
+            $row = array_pad($row, 5, '');
+            $data = [
+                'name' => trim((string)$row[0]),
+                'email' => trim((string)$row[1]),
+                'locality' => trim((string)$row[2]),
+                'district' => trim((string)$row[3]),
+                'website' => trim((string)$row[4]),
+            ];
+
+            if ($data['name'] === '') {
+                $ignored++;
+                continue;
+            }
+
+            $model->create($data);
+            $imported++;
+        }
+        fclose($handle);
+
+        flash('success', sprintf('Importação concluída: %d contactos importados, %d ignorados.', $imported, $ignored));
+        $this->redirect(BASE_URL . '?controller=presscontact&action=index');
     }
 
     public function outreach(): void
