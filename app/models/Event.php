@@ -34,7 +34,7 @@ class Event
 
     public function openEvents(): array
     {
-        $stmt = $this->db->query("SELECT e.*, c.name as client_name, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets FROM events e LEFT JOIN clients c ON c.id = e.client_id LEFT JOIN event_reservations r ON r.event_id = e.id WHERE e.date >= date('now') AND e.reservations_open = 1 GROUP BY e.id ORDER BY e.date ASC, e.time ASC");
+        $stmt = $this->db->query("SELECT e.*, c.name as client_name, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets FROM events e LEFT JOIN clients c ON c.id = e.client_id LEFT JOIN event_reservations r ON r.event_id = e.id WHERE e.date >= date('now') GROUP BY e.id ORDER BY e.date ASC, e.time ASC");
         return $stmt->fetchAll();
     }
 
