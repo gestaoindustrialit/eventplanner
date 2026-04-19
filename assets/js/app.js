@@ -1,4 +1,133 @@
+const pressContactsTable = document.querySelector('.press-contacts-table');
+const pressSearchInput = document.getElementById('press-contact-search');
+const pressDistrictFilter = document.querySelector('.press-filter-district');
+const pressLocalityFilter = document.querySelector('.press-filter-locality');
+const pressPageSizeSelect = document.querySelector('.press-page-size');
+const pressResetFiltersBtn = document.querySelector('.press-filters-reset');
+const pressPaginationInfo = document.querySelector('.press-pagination-info');
+const pressPaginationControls = document.querySelector('.press-pagination-controls');
+
+if (
+  pressContactsTable
+  && pressSearchInput
+  && pressDistrictFilter
+  && pressLocalityFilter
+  && pressPageSizeSelect
+  && pressPaginationInfo
+  && pressPaginationControls
+) {
+  const rows = Array.from(pressContactsTable.querySelectorAll('tbody tr'));
+  let currentPage = 1;
+
+  const normalize = (value) => value.trim().toLowerCase();
+  const getSelectedPageSize = () => Number.parseInt(pressPageSizeSelect.value, 10) || 20;
+
+  const filterRows = () => {
+    const searchTerm = normalize(pressSearchInput.value);
+    const districtTerm = normalize(pressDistrictFilter.value);
+    const localityTerm = normalize(pressLocalityFilter.value);
+
+    return rows.filter((row) => {
+      const rowText = normalize(row.innerText);
+      const districtCell = normalize(row.children[4]?.innerText || '');
+      const localityCell = normalize(row.children[3]?.innerText || '');
+      const matchesSearch = searchTerm === '' || rowText.includes(searchTerm);
+      const matchesDistrict = districtTerm === '' || districtCell === districtTerm;
+      const matchesLocality = localityTerm === '' || localityCell === localityTerm;
+
+      return matchesSearch && matchesDistrict && matchesLocality;
+    });
+  };
+
+  const buildPagination = (totalPages, onPageChange) => {
+    pressPaginationControls.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const appendControl = (label, page, disabled = false, active = false) => {
+      const li = document.createElement('li');
+      li.className = `page-item${disabled ? ' disabled' : ''}${active ? ' active' : ''}`;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'page-link';
+      button.textContent = label;
+      button.disabled = disabled;
+      button.addEventListener('click', () => onPageChange(page));
+      li.appendChild(button);
+      pressPaginationControls.appendChild(li);
+    };
+
+    appendControl('‹', currentPage - 1, currentPage === 1);
+
+    const pageWindow = 2;
+    const start = Math.max(1, currentPage - pageWindow);
+    const end = Math.min(totalPages, currentPage + pageWindow);
+
+    for (let page = start; page <= end; page += 1) {
+      appendControl(String(page), page, false, page === currentPage);
+    }
+
+    appendControl('›', currentPage + 1, currentPage === totalPages);
+  };
+
+  const render = () => {
+    const filteredRows = filterRows();
+    const pageSize = getSelectedPageSize();
+    const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const visibleRows = new Set(filteredRows.slice(startIndex, endIndex));
+
+    rows.forEach((row) => {
+      row.style.display = visibleRows.has(row) ? '' : 'none';
+    });
+
+    if (filteredRows.length === 0) {
+      pressPaginationInfo.textContent = 'Sem resultados para os filtros aplicados.';
+    } else {
+      pressPaginationInfo.textContent = `A mostrar ${startIndex + 1}-${Math.min(endIndex, filteredRows.length)} de ${filteredRows.length} contactos`;
+    }
+
+    buildPagination(totalPages, (page) => {
+      currentPage = page;
+      render();
+    });
+  };
+
+  [pressSearchInput, pressDistrictFilter, pressLocalityFilter].forEach((field) => {
+    field.addEventListener('input', () => {
+      currentPage = 1;
+      render();
+    });
+    field.addEventListener('change', () => {
+      currentPage = 1;
+      render();
+    });
+  });
+
+  pressPageSizeSelect.addEventListener('change', () => {
+    currentPage = 1;
+    render();
+  });
+
+  if (pressResetFiltersBtn) {
+    pressResetFiltersBtn.addEventListener('click', () => {
+      pressSearchInput.value = '';
+      pressDistrictFilter.value = '';
+      pressLocalityFilter.value = '';
+      pressPageSizeSelect.value = '20';
+      currentPage = 1;
+      render();
+    });
+  }
+
+  render();
+}
+
 document.querySelectorAll('.table-search').forEach((input) => {
+  if (input.id === 'press-contact-search') return;
   input.addEventListener('input', () => {
     const table = input.parentElement.querySelector('.searchable-table') || document.querySelector('.searchable-table');
     if (!table) return;

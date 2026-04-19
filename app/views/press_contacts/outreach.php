@@ -55,10 +55,10 @@
         <h5 class="card-title mb-3">Resumo do envio</h5>
         <p class="mb-2"><strong>Evento:</strong> <?= $event ? htmlspecialchars($event['title']) : 'Não selecionado' ?></p>
         <p class="mb-2"><strong>Filtro:</strong> <?= $district ? htmlspecialchars($district) : 'Todos os distritos' ?><?= $locality ? ' · ' . htmlspecialchars($locality) : '' ?></p>
-        <p class="mb-3"><strong>Destinatários encontrados:</strong> <?= count($emails) ?></p>
+        <p class="mb-3"><strong>Destinatários selecionados:</strong> <span id="selected-recipients-count"><?= count($emails) ?></span></p>
 
         <?php if ($event && $emails): ?>
-            <a class="btn btn-success" href="<?= htmlspecialchars($mailtoLink) ?>">
+            <a class="btn btn-success" id="open-bcc-email-btn" href="<?= htmlspecialchars($mailtoLink) ?>">
                 <i class="bi bi-envelope-paper"></i>
                 Abrir email com BCC preenchido
             </a>
@@ -74,6 +74,9 @@
     <table class="table table-hover">
         <thead>
             <tr>
+                <th style="width: 1%;">
+                    <input class="form-check-input" type="checkbox" id="select-all-recipients" checked title="Selecionar todos">
+                </th>
                 <th>Nome</th>
                 <th>Email</th>
                 <th>Localidade</th>
@@ -83,11 +86,20 @@
         <tbody>
         <?php if (!$contacts): ?>
             <tr>
-                <td colspan="4" class="text-muted">Sem contactos para os filtros selecionados.</td>
+                <td colspan="5" class="text-muted">Sem contactos para os filtros selecionados.</td>
             </tr>
         <?php endif; ?>
         <?php foreach ($contacts as $contact): ?>
             <tr>
+                <td>
+                    <?php $email = trim((string)($contact['email'] ?? '')); ?>
+                    <input
+                        class="form-check-input outreach-recipient-checkbox"
+                        type="checkbox"
+                        value="<?= htmlspecialchars($email) ?>"
+                        <?= $email !== '' ? 'checked' : 'disabled' ?>
+                    >
+                </td>
                 <td><?= htmlspecialchars($contact['name']) ?></td>
                 <td><?= htmlspecialchars($contact['email']) ?></td>
                 <td><?= htmlspecialchars($contact['locality']) ?></td>
@@ -97,3 +109,79 @@
         </tbody>
     </table>
 </div>
+
+<?php if ($event && $emails): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var recipientCheckboxes = Array.prototype.slice.call(document.querySelectorAll('.outreach-recipient-checkbox'));
+    var selectAllCheckbox = document.getElementById('select-all-recipients');
+    var selectedRecipientsCount = document.getElementById('selected-recipients-count');
+    var emailButton = document.getElementById('open-bcc-email-btn');
+    if (!selectAllCheckbox || !selectedRecipientsCount || !emailButton || recipientCheckboxes.length === 0) {
+        return;
+    }
+
+    var baseSubject = <?= json_encode($event ? sprintf('Divulgação: %s', $event['title']) : 'Divulgação de evento') ?>;
+    var baseBody = <?= json_encode($event ? $this->eventPressTemplate($event) : "Olá,\n\nPartilhamos o próximo evento para divulgação.\n\nObrigado.") ?>;
+
+    var getActiveCheckboxes = function () {
+        return recipientCheckboxes.filter(function (checkbox) {
+            return !checkbox.disabled;
+        });
+    };
+
+    var getSelectedEmails = function () {
+        return recipientCheckboxes
+            .filter(function (checkbox) {
+                return checkbox.checked && !checkbox.disabled && checkbox.value.trim() !== '';
+            })
+            .map(function (checkbox) {
+                return checkbox.value.trim();
+            });
+    };
+
+    var updateState = function () {
+        var selectedEmails = getSelectedEmails();
+        selectedRecipientsCount.textContent = String(selectedEmails.length);
+
+        var activeCheckboxes = getActiveCheckboxes();
+        var allChecked = activeCheckboxes.length > 0 && activeCheckboxes.every(function (checkbox) {
+            return checkbox.checked;
+        });
+        selectAllCheckbox.checked = allChecked;
+        selectAllCheckbox.indeterminate = !allChecked && selectedEmails.length > 0;
+
+        if (selectedEmails.length === 0) {
+            emailButton.classList.add('disabled');
+            emailButton.setAttribute('aria-disabled', 'true');
+            emailButton.setAttribute('tabindex', '-1');
+            emailButton.href = '#';
+            return;
+        }
+
+        emailButton.classList.remove('disabled');
+        emailButton.removeAttribute('aria-disabled');
+        emailButton.removeAttribute('tabindex');
+        emailButton.href = 'mailto:?bcc='
+            + encodeURIComponent(selectedEmails.join(';'))
+            + '&subject=' + encodeURIComponent(baseSubject)
+            + '&body=' + encodeURIComponent(baseBody);
+    };
+
+    selectAllCheckbox.addEventListener('change', function () {
+        recipientCheckboxes.forEach(function (checkbox) {
+            if (!checkbox.disabled) {
+                checkbox.checked = selectAllCheckbox.checked;
+            }
+        });
+        updateState();
+    });
+
+    recipientCheckboxes.forEach(function (checkbox) {
+        checkbox.addEventListener('change', updateState);
+    });
+
+    updateState();
+});
+</script>
+<?php endif; ?>
