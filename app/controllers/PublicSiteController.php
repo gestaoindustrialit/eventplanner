@@ -632,10 +632,6 @@ function render_partners_section(array $partners): void {
                 <div class="alert alert-warning">As reservas para esse evento estão fechadas.</div>
               <?php elseif ($msg === 'soldout'): ?>
                 <div class="alert alert-warning">Não existem lugares suficientes disponíveis para essa reserva.</div>
-              <?php elseif ($msg === 'contact_ok'): ?>
-                <div class="alert alert-success">Mensagem enviada com sucesso. Obrigado pelo contacto!</div>
-              <?php elseif ($msg === 'contact_error'): ?>
-                <div class="alert alert-danger">Não foi possível enviar o contacto. Tenta novamente.</div>
               <?php elseif ($msg === 'captcha'): ?>
                 <div class="alert alert-warning">Validação de segurança falhou. Confirma o reCAPTCHA e tenta novamente.</div>
               <?php endif; ?>
@@ -737,6 +733,11 @@ function render_partners_section(array $partners): void {
                 <div class="container">
                   <h2 class="text-center mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
                   <?php if (!empty($sectionConfig['cta_text'])): ?><p class="text-center mb-4"><?php echo htmlspecialchars((string)$sectionConfig['cta_text']); ?></p><?php endif; ?>
+                  <?php if ($msg === 'contact_ok'): ?>
+                    <div class="alert alert-success col-md-8 mx-auto">Mensagem enviada com sucesso. Obrigado pelo contacto!</div>
+                  <?php elseif ($msg === 'contact_error' || $msg === 'contact_captcha'): ?>
+                    <div class="alert alert-danger col-md-8 mx-auto">Não foi possível enviar o contacto. Confirma os dados e tenta novamente.</div>
+                  <?php endif; ?>
                   <form method="post" action="contact.php" class="row g-3 justify-content-center">
                     <input type="hidden" name="page_slug" value="<?php echo htmlspecialchars($sectionId); ?>">
                     <?php if (in_array('name', $contactFields, true)): ?><div class="col-md-8"><input class="form-control form-control-lg" name="name" placeholder="*Nome" required></div><?php endif; ?>
@@ -1275,7 +1276,7 @@ $captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
 if ($captchaSecret !== '') {
     $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));
     if ($captchaToken === '') {
-        header('Location: index.php?msg=captcha#' . rawurlencode($anchor));
+        header('Location: index.php?msg=contact_captcha#' . rawurlencode($anchor));
         exit;
     }
 
@@ -1293,7 +1294,7 @@ if ($captchaSecret !== '') {
     ]));
     $captchaResult = is_string($captchaCheck) ? json_decode($captchaCheck, true) : null;
     if (!is_array($captchaResult) || empty($captchaResult['success'])) {
-        header('Location: index.php?msg=captcha#' . rawurlencode($anchor));
+        header('Location: index.php?msg=contact_captcha#' . rawurlencode($anchor));
         exit;
     }
 }
