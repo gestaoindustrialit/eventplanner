@@ -2,6 +2,7 @@
 <?php if (isAdmin()): ?>
     <div class="mb-3 d-flex gap-2">
         <a class="btn btn-sm btn-outline-dark" href="<?= BASE_URL ?>?controller=event&action=schedule&id=<?= (int)$event['id'] ?>">Gerir alinhamento</a>
+        <a class="btn btn-sm btn-outline-primary" href="<?= BASE_URL ?>?controller=checklist&action=event&event_id=<?= (int)$event['id'] ?>">Checklist do evento</a>
         <a class="btn btn-sm btn-dark" target="_blank" href="<?= BASE_URL ?>?controller=event&action=schedulePdf&id=<?= (int)$event['id'] ?>">Exportar PDF</a>
     </div>
 <?php endif; ?>
