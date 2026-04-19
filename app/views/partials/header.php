@@ -27,6 +27,7 @@
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=crm&action=index">CRM</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=index">Eventos</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=openSchedule">Alinhamentos</a>
+                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=checklist&action=index">Checklists</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=reservation&action=index">Reservas</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicpage&action=index">Páginas públicas</a>
                     <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=partner&action=index">Parceiros</a>
@@ -66,6 +67,7 @@
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=crm&action=index">CRM</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=index">Eventos</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=openSchedule">Alinhamentos</a>
+                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=checklist&action=index">Checklists</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=reservation&action=index">Reservas</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicpage&action=index">Páginas públicas</a>
                             <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=partner&action=index">Parceiros</a>
