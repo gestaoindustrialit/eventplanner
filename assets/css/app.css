@@ -103,6 +103,20 @@ body {
     border-radius: .7rem;
 }
 
+.action-icon-btn {
+    width: 2.1rem;
+    height: 2.1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.press-pagination .page-link {
+    border-radius: .55rem;
+    margin-left: .25rem;
+}
+
 .badge {
     text-transform: capitalize;
 }
@@ -254,7 +268,6 @@ body {
     width: 96px;
     height: 96px;
     margin: 0 auto 1rem;
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -270,6 +283,15 @@ body {
     max-width: 72px;
     max-height: 72px;
     object-fit: contain;
+}
+
+.login-showcase-label {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 84px;
+    max-height: 84px;
+    object-fit: cover;
 }
 
 @media (max-width: 991px) {
