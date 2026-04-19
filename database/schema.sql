@@ -2,6 +2,10 @@ PRAGMA foreign_keys = OFF;
 
 DROP TABLE IF EXISTS event_comedians;
 DROP TABLE IF EXISTS event_schedule_items;
+DROP TABLE IF EXISTS event_checklist_items;
+DROP TABLE IF EXISTS event_checklists;
+DROP TABLE IF EXISTS checklist_template_fields;
+DROP TABLE IF EXISTS checklist_templates;
 DROP TABLE IF EXISTS event_reservation_tickets;
 DROP TABLE IF EXISTS event_reservations;
 DROP TABLE IF EXISTS events;
@@ -130,6 +134,49 @@ CREATE TABLE event_schedule_items (
 );
 
 
+CREATE TABLE checklist_templates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT DEFAULT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE checklist_template_fields (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  template_id INTEGER NOT NULL,
+  label TEXT NOT NULL,
+  field_type TEXT NOT NULL DEFAULT 'checkbox' CHECK (field_type IN ('checkbox', 'text')),
+  is_required INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (template_id) REFERENCES checklist_templates(id) ON DELETE CASCADE
+);
+
+CREATE TABLE event_checklists (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL UNIQUE,
+  template_id INTEGER DEFAULT NULL,
+  name TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+  FOREIGN KEY (template_id) REFERENCES checklist_templates(id) ON DELETE SET NULL
+);
+
+CREATE TABLE event_checklist_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_checklist_id INTEGER NOT NULL,
+  label TEXT NOT NULL,
+  field_type TEXT NOT NULL DEFAULT 'checkbox' CHECK (field_type IN ('checkbox', 'text')),
+  is_required INTEGER NOT NULL DEFAULT 0,
+  value TEXT DEFAULT NULL,
+  is_checked INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (event_checklist_id) REFERENCES event_checklists(id) ON DELETE CASCADE
+);
+
 CREATE TABLE public_pages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
@@ -248,6 +295,14 @@ INSERT INTO event_schedule_items (event_id, starts_at, duration_minutes, item_ty
 (1, '21:55', 10, 'break', 'Pausa técnica', 'Técnico de som', 'Ajuste de microfones e luz.', 4),
 (1, '22:05', 20, 'artist', 'Encerramento e fotos', 'Ana Riso', 'Agradecimentos e conteúdo para redes.', 5);
 
+
+INSERT INTO checklist_templates (name, description) VALUES
+('Produção padrão', 'Checklist base para preparação de eventos presenciais.');
+
+INSERT INTO checklist_template_fields (template_id, label, field_type, is_required, sort_order) VALUES
+(1, 'Confirmar rider técnico com o espaço', 'checkbox', 1, 1),
+(1, 'Enviar call sheet à equipa', 'checkbox', 1, 2),
+(1, 'Contacto técnico no local', 'text', 0, 3);
 
 INSERT INTO public_pages (title, slug, excerpt, content, hero_image_url, display_mode, section_type, section_style, section_config_json, is_published, sort_order) VALUES
 ('Sobre nós', 'sobre-nos', 'Conhece a nossa missão e equipa de produção.', '<p>Somos uma produtora artística focada em experiências ao vivo, booking de talentos e curadoria de eventos de comédia.</p><p>Trabalhamos com marcas, espaços culturais e artistas para criar noites memoráveis.</p>', 'https://images.unsplash.com/photo-1497032628192-86f99bcd76bc?auto=format&fit=crop&w=1400&q=80', 'section', 'about', 'split', '{"cta_text":"Levamos comédia para marcas, teatros e eventos privados em todo o país.","cta_button_text":"Falar com equipa","contact_email_to":"","contact_fields":["name","email","message"],"services":[]}', 1, 10),
