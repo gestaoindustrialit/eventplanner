@@ -265,15 +265,24 @@ body {
 }
 
 .login-showcase-icon {
-    width: 84px;
-    height: 84px;
+    width: 96px;
+    height: 96px;
     margin: 0 auto 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: linear-gradient(180deg, #000000 0%, #b30000 100%);
-    box-shadow: inset 0 -6px 10px rgba(0, 0, 0, 0.2);
+    background: #3f434a;
+    box-shadow: inset 0 -6px 10px rgba(0, 0, 0, 0.18), 0 8px 16px rgba(2, 6, 23, 0.12);
+}
+
+.login-showcase-label {
+    display: block;
+    width: 72px !important;
+    height: 72px !important;
+    max-width: 72px;
+    max-height: 72px;
+    object-fit: contain;
 }
 
 .login-showcase-label {
