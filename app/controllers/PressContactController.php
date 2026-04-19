@@ -15,6 +15,26 @@ class PressContactController extends BaseController
         $this->render('press_contacts/form', ['contact' => null]);
     }
 
+    public function downloadTemplate(): void
+    {
+        requireAdmin();
+
+        $templatePath = dirname(__DIR__, 2) . '/assets/templates/press_contacts_import_template.csv';
+        if (!is_file($templatePath)) {
+            http_response_code(404);
+            echo 'Template não encontrado.';
+            return;
+        }
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="press_contacts_import_template.csv"');
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        echo "\xEF\xBB\xBF";
+        readfile($templatePath);
+        exit;
+    }
+
     public function outreach(): void
     {
         requireAdmin();
