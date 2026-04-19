@@ -9,7 +9,20 @@
     <a class="btn btn-outline-dark" href="<?= BASE_URL ?>?controller=presscontact&action=outreach">
         <i class="bi bi-megaphone"></i> Difusão rápida por localidade/distrito
     </a>
+    <a class="btn btn-outline-primary" href="<?= BASE_URL ?>?controller=presscontact&action=downloadtemplate">
+        <i class="bi bi-download"></i> Download template importação
+    </a>
 </div>
+<form class="row g-2 mb-3" method="post" action="<?= BASE_URL ?>?controller=presscontact&action=uploadtemplate" enctype="multipart/form-data">
+    <div class="col-md-5">
+        <input type="file" class="form-control" name="contacts_csv" accept=".csv,text/csv" required>
+    </div>
+    <div class="col-md-auto">
+        <button type="submit" class="btn btn-outline-success">
+            <i class="bi bi-upload"></i> Upload CSV
+        </button>
+    </div>
+</form>
 <input type="text" class="form-control mb-3 table-search" placeholder="Pesquisar por nome, email, localidade ou distrito...">
 <div class="table-responsive">
     <table class="table table-hover searchable-table">
