@@ -9,7 +9,7 @@ class PressContactController extends BaseController
 
         try {
             $contacts = (new PressContact($this->db))->all();
-        } catch (Throwable $e) {
+        } catch (Exception $e) {
             error_log('PressContactController::index failed: ' . $e->getMessage());
             flash('error', 'Não foi possível carregar os contactos de imprensa. Verifica se a base de dados está atualizada.');
         }
