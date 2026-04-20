@@ -9,7 +9,7 @@ class ChecklistController extends BaseController
 
         try {
             $templates = (new Checklist($this->db))->allTemplates();
-        } catch (Throwable $e) {
+        } catch (Exception $e) {
             error_log('ChecklistController::index failed: ' . $e->getMessage());
             flash('error', 'Não foi possível carregar os templates de checklist. Verifica se a base de dados está atualizada.');
         }
