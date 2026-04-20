@@ -5,7 +5,15 @@ class PressContactController extends BaseController
     public function index(): void
     {
         requireAdmin();
-        $contacts = (new PressContact($this->db))->all();
+        $contacts = [];
+
+        try {
+            $contacts = (new PressContact($this->db))->all();
+        } catch (Throwable $e) {
+            error_log('PressContactController::index failed: ' . $e->getMessage());
+            flash('error', 'Não foi possível carregar os contactos de imprensa. Verifica se a base de dados está atualizada.');
+        }
+
         $this->render('press_contacts/index', compact('contacts'));
     }
 

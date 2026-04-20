@@ -5,7 +5,15 @@ class ChecklistController extends BaseController
     public function index(): void
     {
         requireAdmin();
-        $templates = (new Checklist($this->db))->allTemplates();
+        $templates = [];
+
+        try {
+            $templates = (new Checklist($this->db))->allTemplates();
+        } catch (Throwable $e) {
+            error_log('ChecklistController::index failed: ' . $e->getMessage());
+            flash('error', 'Não foi possível carregar os templates de checklist. Verifica se a base de dados está atualizada.');
+        }
+
         $this->render('checklists/index', compact('templates'));
     }
 
