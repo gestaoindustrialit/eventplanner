@@ -1,4 +1,20 @@
-<?php $user = currentUser(); ?>
+<?php
+$user = currentUser();
+$currentController = strtolower((string)($_GET['controller'] ?? 'dashboard'));
+$currentAction = strtolower((string)($_GET['action'] ?? 'index'));
+
+$isActiveLink = static function (string $controller, ?string $action = null) use ($currentController, $currentAction): bool {
+    if ($currentController !== strtolower($controller)) {
+        return false;
+    }
+
+    if ($action === null) {
+        return true;
+    }
+
+    return $currentAction === strtolower($action);
+};
+?>
 <!doctype html>
 <html lang="pt">
 <head>
@@ -14,30 +30,30 @@
 <div class="app-shell d-flex" id="app-shell">
     <?php if (isLoggedIn()): ?>
         <aside class="sidebar text-white p-3 d-none d-lg-flex flex-column">
-            <h5 class="mb-4">🎤 <?= APP_NAME ?></h5>
+            <h5 class="mb-4 sidebar-brand"><i class="bi bi-mic-fill"></i> <span><?= APP_NAME ?></span></h5>
             <div class="sidebar-user mb-3">
                 <p class="small mb-1">Olá, <?= htmlspecialchars($user['name']) ?></p>
                 <span class="badge bg-light text-dark"><?= htmlspecialchars($user['role']) ?></span>
             </div>
-            <nav class="nav flex-column gap-2">
+            <nav class="nav flex-column gap-1 sidebar-nav">
                 <?php if (isAdmin()): ?>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>">Dashboard</a>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=comedian&action=index">Comediantes</a>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=client&action=index">Clientes</a>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=crm&action=index">CRM</a>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=index">Eventos</a>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=openSchedule">Alinhamentos</a>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=checklist&action=index">Checklists</a>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=reservation&action=index">Reservas</a>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicpage&action=index">Páginas públicas</a>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=partner&action=index">Parceiros</a>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicsite&action=index">Publicar website</a>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=newsletter&action=index">Newsletter</a>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=presscontact&action=index">Contactos Press</a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('dashboard') ? 'active' : '' ?>" href="<?= BASE_URL ?>"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('comedian') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=comedian&action=index"><i class="bi bi-mic"></i><span>Comediantes</span></a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('client') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=client&action=index"><i class="bi bi-people"></i><span>Clientes</span></a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('crm') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=crm&action=index"><i class="bi bi-kanban"></i><span>CRM</span></a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('event', 'index') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=event&action=index"><i class="bi bi-calendar-event"></i><span>Eventos</span></a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('event', 'openSchedule') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=event&action=openSchedule"><i class="bi bi-list-check"></i><span>Alinhamentos</span></a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('checklist') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=checklist&action=index"><i class="bi bi-check2-square"></i><span>Checklists</span></a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('reservation') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=reservation&action=index"><i class="bi bi-ticket-detailed"></i><span>Reservas</span></a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('publicpage') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=publicpage&action=index"><i class="bi bi-layout-text-window-reverse"></i><span>Páginas públicas</span></a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('partner') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=partner&action=index"><i class="bi bi-diagram-3"></i><span>Parceiros</span></a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('publicsite') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=publicsite&action=index"><i class="bi bi-globe2"></i><span>Publicar website</span></a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('newsletter') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=newsletter&action=index"><i class="bi bi-envelope-paper"></i><span>Newsletter</span></a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('presscontact') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=presscontact&action=index"><i class="bi bi-newspaper"></i><span>Contactos Press</span></a>
                 <?php else: ?>
-                    <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=comedianarea&action=index">Os meus eventos</a>
+                    <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('comedianarea') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=comedianarea&action=index"><i class="bi bi-calendar2-week"></i><span>Os meus eventos</span></a>
                 <?php endif; ?>
-                <a class="nav-link nav-link-logout text-warning mt-2" href="<?= BASE_URL ?>?controller=auth&action=logout">Terminar sessão</a>
+                <a class="nav-link nav-link-logout text-warning mt-2 sidebar-nav-link logout-link" href="<?= BASE_URL ?>?controller=auth&action=logout"><i class="bi bi-box-arrow-right"></i><span>Terminar sessão</span></a>
             </nav>
         </aside>
     <?php endif; ?>
@@ -61,21 +77,21 @@
                 <div class="offcanvas-body">
                     <nav class="nav flex-column gap-2">
                         <?php if (isAdmin()): ?>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>">Dashboard</a>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=comedian&action=index">Comediantes</a>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=client&action=index">Clientes</a>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=crm&action=index">CRM</a>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=index">Eventos</a>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=event&action=openSchedule">Alinhamentos</a>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=checklist&action=index">Checklists</a>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=reservation&action=index">Reservas</a>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicpage&action=index">Páginas públicas</a>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=partner&action=index">Parceiros</a>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=publicsite&action=index">Publicar website</a>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=newsletter&action=index">Newsletter</a>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=presscontact&action=index">Contactos Press</a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('dashboard') ? 'active' : '' ?>" href="<?= BASE_URL ?>"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('comedian') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=comedian&action=index"><i class="bi bi-mic"></i><span>Comediantes</span></a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('client') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=client&action=index"><i class="bi bi-people"></i><span>Clientes</span></a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('crm') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=crm&action=index"><i class="bi bi-kanban"></i><span>CRM</span></a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('event', 'index') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=event&action=index"><i class="bi bi-calendar-event"></i><span>Eventos</span></a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('event', 'openSchedule') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=event&action=openSchedule"><i class="bi bi-list-check"></i><span>Alinhamentos</span></a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('checklist') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=checklist&action=index"><i class="bi bi-check2-square"></i><span>Checklists</span></a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('reservation') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=reservation&action=index"><i class="bi bi-ticket-detailed"></i><span>Reservas</span></a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('publicpage') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=publicpage&action=index"><i class="bi bi-layout-text-window-reverse"></i><span>Páginas públicas</span></a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('partner') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=partner&action=index"><i class="bi bi-diagram-3"></i><span>Parceiros</span></a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('publicsite') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=publicsite&action=index"><i class="bi bi-globe2"></i><span>Publicar website</span></a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('newsletter') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=newsletter&action=index"><i class="bi bi-envelope-paper"></i><span>Newsletter</span></a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('presscontact') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=presscontact&action=index"><i class="bi bi-newspaper"></i><span>Contactos Press</span></a>
                         <?php else: ?>
-                            <a class="nav-link text-white" href="<?= BASE_URL ?>?controller=comedianarea&action=index">Os meus eventos</a>
+                            <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('comedianarea') ? 'active' : '' ?>" href="<?= BASE_URL ?>?controller=comedianarea&action=index"><i class="bi bi-calendar2-week"></i><span>Os meus eventos</span></a>
                         <?php endif; ?>
                     </nav>
                 </div>

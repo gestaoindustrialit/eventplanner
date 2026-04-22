@@ -39,7 +39,9 @@
                 <label class="form-label small text-muted mb-1" for="press-contact-district">Distrito</label>
                 <select id="press-contact-district" class="form-select press-filter-district">
                     <option value="">Todos</option>
-                    <?php foreach (array_values(array_unique(array_filter(array_map(static fn ($item) => trim((string)$item['district']), $contacts)))) as $district): ?>
+                    <?php foreach (array_values(array_unique(array_filter(array_map(static function ($item) {
+                        return trim((string)$item['district']);
+                    }, $contacts)))) as $district): ?>
                         <option value="<?= htmlspecialchars($district) ?>"><?= htmlspecialchars($district) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -48,7 +50,9 @@
                 <label class="form-label small text-muted mb-1" for="press-contact-locality">Localidade</label>
                 <select id="press-contact-locality" class="form-select press-filter-locality">
                     <option value="">Todas</option>
-                    <?php foreach (array_values(array_unique(array_filter(array_map(static fn ($item) => trim((string)$item['locality']), $contacts)))) as $locality): ?>
+                    <?php foreach (array_values(array_unique(array_filter(array_map(static function ($item) {
+                        return trim((string)$item['locality']);
+                    }, $contacts)))) as $locality): ?>
                         <option value="<?= htmlspecialchars($locality) ?>"><?= htmlspecialchars($locality) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -125,6 +129,18 @@
         </tbody>
     </table>
 </div>
+<?php if (empty($contacts)): ?>
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-newspaper fs-1 text-danger"></i>
+            <h5 class="mt-3 mb-2">Sem contactos de imprensa</h5>
+            <p class="text-muted mb-3">Adiciona contactos manualmente ou importa um CSV para começar a difusão.</p>
+            <a class="btn btn-primary" href="<?= BASE_URL ?>?controller=presscontact&action=create">
+                <i class="bi bi-plus-circle"></i> Adicionar contacto
+            </a>
+        </div>
+    </div>
+<?php endif; ?>
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3 press-pagination">
     <small class="text-muted press-pagination-info"></small>
     <nav aria-label="Paginação contactos imprensa">

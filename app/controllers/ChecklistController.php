@@ -9,9 +9,16 @@ class ChecklistController extends BaseController
 
         try {
             $templates = (new Checklist($this->db))->allTemplates();
-        } catch (Throwable $e) {
-            error_log('ChecklistController::index failed: ' . $e->getMessage());
-            flash('error', 'Não foi possível carregar os templates de checklist. Verifica se a base de dados está atualizada.');
+        } catch (Exception $e) {
+            error_log('ChecklistController::index failed (first try): ' . $e->getMessage());
+            $this->ensureChecklistSchema();
+
+            try {
+                $templates = (new Checklist($this->db))->allTemplates();
+            } catch (Exception $retryException) {
+                error_log('ChecklistController::index failed (retry): ' . $retryException->getMessage());
+                flash('error', 'Não foi possível carregar os templates de checklist. Verifica se a base de dados está atualizada.');
+            }
         }
 
         $this->render('checklists/index', compact('templates'));
@@ -171,5 +178,59 @@ class ChecklistController extends BaseController
         }
 
         return $items;
+    }
+
+    private function ensureChecklistSchema(): void
+    {
+        $this->db->exec(
+            'CREATE TABLE IF NOT EXISTS checklist_templates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                description TEXT DEFAULT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
+
+        $this->db->exec(
+            'CREATE TABLE IF NOT EXISTS checklist_template_fields (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                template_id INTEGER NOT NULL,
+                label TEXT NOT NULL,
+                field_type TEXT NOT NULL DEFAULT \'checkbox\' CHECK (field_type IN (\'checkbox\', \'text\')),
+                is_required INTEGER NOT NULL DEFAULT 0,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (template_id) REFERENCES checklist_templates(id) ON DELETE CASCADE
+            )'
+        );
+
+        $this->db->exec(
+            'CREATE TABLE IF NOT EXISTS event_checklists (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL UNIQUE,
+                template_id INTEGER DEFAULT NULL,
+                name TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+                FOREIGN KEY (template_id) REFERENCES checklist_templates(id) ON DELETE SET NULL
+            )'
+        );
+
+        $this->db->exec(
+            'CREATE TABLE IF NOT EXISTS event_checklist_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_checklist_id INTEGER NOT NULL,
+                label TEXT NOT NULL,
+                field_type TEXT NOT NULL DEFAULT \'checkbox\' CHECK (field_type IN (\'checkbox\', \'text\')),
+                is_required INTEGER NOT NULL DEFAULT 0,
+                value TEXT DEFAULT NULL,
+                is_checked INTEGER NOT NULL DEFAULT 0,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (event_checklist_id) REFERENCES event_checklists(id) ON DELETE CASCADE
+            )'
+        );
     }
 }
