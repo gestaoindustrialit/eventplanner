@@ -10,8 +10,15 @@ class PressContactController extends BaseController
         try {
             $contacts = (new PressContact($this->db))->all();
         } catch (Exception $e) {
-            error_log('PressContactController::index failed: ' . $e->getMessage());
-            flash('error', 'Não foi possível carregar os contactos de imprensa. Verifica se a base de dados está atualizada.');
+            error_log('PressContactController::index failed (first try): ' . $e->getMessage());
+            $this->ensurePressContactSchema();
+
+            try {
+                $contacts = (new PressContact($this->db))->all();
+            } catch (Exception $retryException) {
+                error_log('PressContactController::index failed (retry): ' . $retryException->getMessage());
+                flash('error', 'Não foi possível carregar os contactos de imprensa. Verifica se a base de dados está atualizada.');
+            }
         }
 
         $this->render('press_contacts/index', compact('contacts'));
@@ -210,5 +217,25 @@ class PressContactController extends BaseController
             . 'Local: ' . $event['location'] . "\n\n"
             . "Agradecemos a divulgação.\n\n"
             . "Cumprimentos,";
+    }
+
+    private function ensurePressContactSchema(): void
+    {
+        $this->db->exec(
+            'CREATE TABLE IF NOT EXISTS press_contacts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT DEFAULT NULL,
+                locality TEXT DEFAULT NULL,
+                district TEXT DEFAULT NULL,
+                website TEXT DEFAULT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
+
+        $columns = array_column($this->db->query('PRAGMA table_info(press_contacts)')->fetchAll(), 'name');
+        if (!in_array('website', $columns, true)) {
+            $this->db->exec('ALTER TABLE press_contacts ADD COLUMN website TEXT DEFAULT NULL');
+        }
     }
 }

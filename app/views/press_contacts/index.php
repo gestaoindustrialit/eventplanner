@@ -39,7 +39,9 @@
                 <label class="form-label small text-muted mb-1" for="press-contact-district">Distrito</label>
                 <select id="press-contact-district" class="form-select press-filter-district">
                     <option value="">Todos</option>
-                    <?php foreach (array_values(array_unique(array_filter(array_map(static fn ($item) => trim((string)$item['district']), $contacts)))) as $district): ?>
+                    <?php foreach (array_values(array_unique(array_filter(array_map(static function ($item) {
+                        return trim((string)$item['district']);
+                    }, $contacts)))) as $district): ?>
                         <option value="<?= htmlspecialchars($district) ?>"><?= htmlspecialchars($district) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -48,7 +50,9 @@
                 <label class="form-label small text-muted mb-1" for="press-contact-locality">Localidade</label>
                 <select id="press-contact-locality" class="form-select press-filter-locality">
                     <option value="">Todas</option>
-                    <?php foreach (array_values(array_unique(array_filter(array_map(static fn ($item) => trim((string)$item['locality']), $contacts)))) as $locality): ?>
+                    <?php foreach (array_values(array_unique(array_filter(array_map(static function ($item) {
+                        return trim((string)$item['locality']);
+                    }, $contacts)))) as $locality): ?>
                         <option value="<?= htmlspecialchars($locality) ?>"><?= htmlspecialchars($locality) ?></option>
                     <?php endforeach; ?>
                 </select>
