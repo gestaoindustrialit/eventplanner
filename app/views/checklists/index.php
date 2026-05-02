@@ -6,14 +6,11 @@
 <div class="card">
     <div class="card-body">
         <?php if (empty($templates)): ?>
-            <div class="text-center py-5">
-                <i class="bi bi-check2-square fs-1 text-danger"></i>
-                <h5 class="mt-3 mb-2">Ainda não existem templates</h5>
-                <p class="text-muted mb-3">Cria o primeiro template para começares a reutilizar checklists em cada evento.</p>
-                <a class="btn btn-primary" href="<?= BASE_URL ?>?controller=checklist&action=create">
-                    <i class="bi bi-plus-circle"></i> Criar template
-                </a>
+            <div class="mb-4">
+                <h5 class="mt-1 mb-2">Ainda não existem templates</h5>
+                <p class="text-muted mb-0">Cria o primeiro template para começares a reutilizar checklists em cada evento.</p>
             </div>
+            <?php include __DIR__ . '/form.php'; ?>
         <?php else: ?>
         <div class="table-responsive">
             <table class="table table-striped searchable-table">
