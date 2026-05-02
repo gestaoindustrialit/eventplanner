@@ -9,13 +9,13 @@ class ChecklistController extends BaseController
 
         try {
             $templates = (new Checklist($this->db))->allTemplates();
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             error_log('ChecklistController::index failed (first try): ' . $e->getMessage());
-            $this->ensureChecklistSchema();
 
             try {
+                $this->ensureChecklistSchema();
                 $templates = (new Checklist($this->db))->allTemplates();
-            } catch (Exception $retryException) {
+            } catch (Throwable $retryException) {
                 error_log('ChecklistController::index failed (retry): ' . $retryException->getMessage());
                 flash('error', 'Não foi possível carregar os templates de checklist. Verifica se a base de dados está atualizada.');
             }
