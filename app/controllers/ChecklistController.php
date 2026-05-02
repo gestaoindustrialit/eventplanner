@@ -22,16 +22,10 @@ class ChecklistController extends BaseController
         }
 
 
-        if (empty($templates)) {
-            flash('error', 'Ainda não existem templates. Cria o primeiro template de checklist abaixo.');
-            $this->render('checklists/form', [
-                'template' => null,
-                'fields' => [['label' => '', 'field_type' => 'checkbox', 'is_required' => 0]],
-            ]);
-            return;
-        }
+        $template = null;
+        $fields = [['label' => '', 'field_type' => 'checkbox', 'is_required' => 0]];
 
-        $this->render('checklists/index', compact('templates'));
+        $this->render('checklists/index', compact('templates', 'template', 'fields'));
     }
 
     public function create(): void
