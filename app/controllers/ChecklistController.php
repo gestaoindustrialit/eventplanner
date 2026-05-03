@@ -9,16 +9,22 @@ class ChecklistController extends BaseController
 
         try {
             $templates = (new Checklist($this->db))->allTemplates();
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             error_log('ChecklistController::index failed (first try): ' . $e->getMessage());
-            $this->ensureChecklistSchema();
 
             try {
+                $this->ensureChecklistSchema();
                 $templates = (new Checklist($this->db))->allTemplates();
-            } catch (Exception $retryException) {
+            } catch (Throwable $retryException) {
                 error_log('ChecklistController::index failed (retry): ' . $retryException->getMessage());
                 flash('error', 'Não foi possível carregar os templates de checklist. Verifica se a base de dados está atualizada.');
             }
+        }
+
+
+        if (empty($templates)) {
+            flash('error', 'Ainda não existem templates. Cria o primeiro template de checklist.');
+            $this->redirect(BASE_URL . '?controller=checklist&action=create');
         }
 
         $this->render('checklists/index', compact('templates'));
@@ -27,10 +33,7 @@ class ChecklistController extends BaseController
     public function create(): void
     {
         requireAdmin();
-        $this->render('checklists/form', [
-            'template' => null,
-            'fields' => [['label' => '', 'field_type' => 'checkbox', 'is_required' => 0]],
-        ]);
+        $this->render('checklists/create');
     }
 
     public function store(): void
