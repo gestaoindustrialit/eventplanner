@@ -33,10 +33,7 @@ class ChecklistController extends BaseController
     public function create(): void
     {
         requireAdmin();
-        $this->render('checklists/form', [
-            'template' => null,
-            'fields' => [['label' => '', 'field_type' => 'checkbox', 'is_required' => 0]],
-        ]);
+        $this->render('checklists/create');
     }
 
     public function store(): void
