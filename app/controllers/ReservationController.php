@@ -2,6 +2,16 @@
 
 class ReservationController extends BaseController
 {
+    public function eventos(): void
+    {
+        requireLogin();
+        $reservationModel = new Reservation($this->db);
+        $eventOverview = $reservationModel->eventOverview();
+        $validationResult = $_SESSION['reservation_validation_result'] ?? null;
+        unset($_SESSION['reservation_validation_result']);
+        $this->render('reservations/eventos', compact('eventOverview', 'validationResult'));
+    }
+
     public function index(): void
     {
         requireAdmin();
@@ -168,11 +178,23 @@ class ReservationController extends BaseController
                 . '</div>';
         }
 
-        $htmlBody = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px;color:#0f172a">'
-            . '<p>Olá ' . $customerName . ',</p>'
-            . '<p>A tua reserva foi confirmada. Seguem os dados e os QR codes dos bilhetes:</p>'
+        $htmlBody = '<div style="margin:0;padding:24px;background:#f1f5f9;font-family:Segoe UI,Arial,sans-serif;color:#0f172a">'
+            . '<div style="max-width:720px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden">'
+            . '<div style="padding:24px;background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff">'
+            . '<h1 style="margin:0;font-size:22px;">Reserva Confirmada ✅</h1>'
+            . '<p style="margin:8px 0 0;opacity:.9">Evento: <strong>' . $eventTitle . '</strong></p>'
+            . '</div>'
+            . '<div style="padding:24px">'
+            . '<p style="margin-top:0">Olá <strong>' . $customerName . '</strong>,</p>'
+            . '<p>A tua reserva foi confirmada com sucesso. Em baixo seguem os dados do evento e os QR codes dos bilhetes.</p>'
+            . '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin:14px 0 20px">'
+            . '<p style="margin:0 0 4px"><strong>Data:</strong> ' . $eventDate . ' às ' . $eventTime . '</p>'
+            . '<p style="margin:0"><strong>Total de bilhetes:</strong> ' . count($tickets) . '</p>'
+            . '</div>'
             . $ticketHtml
-            . '<p style="margin-top:16px;color:#64748b;font-size:12px">Cada QR code só pode ser validado uma vez.</p>'
+            . '<p style="margin-top:20px;color:#475569;font-size:12px">Cada QR code só pode ser validado uma vez. Guarda este e-mail até ao dia do evento.</p>'
+            . '</div>'
+            . '</div>'
             . '</div>';
 
         @mail($customerEmail, $subject, $htmlBody, implode("\r\n", $headers));
@@ -195,6 +217,10 @@ class ReservationController extends BaseController
         $token = trim((string)($_REQUEST['token'] ?? ''));
         $result = (new Reservation($this->db))->validateTicket($token, (int)(currentUser()['id'] ?? 0));
         $_SESSION['reservation_validation_result'] = $result;
+        $redirectTarget = (string)($_REQUEST['redirect'] ?? 'index');
+        if ($redirectTarget === 'eventos') {
+            $this->redirect(BASE_URL . '?controller=reservation&action=eventos');
+        }
         $this->redirect(BASE_URL . '?controller=reservation&action=index#validacao-qr');
     }
 }
