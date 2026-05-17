@@ -43,6 +43,7 @@
                 <thead>
                     <tr>
                         <th>Evento</th>
+                        <th>Link direto</th>
                         <th>Estado reservas</th>
                         <th>Lotação</th>
                         <th>Reservas ativas</th>
@@ -58,9 +59,16 @@
                             $available = $capacity > 0 ? max(0, $capacity - $activeTickets) : null;
                         ?>
                         <tr>
+                            <?php $directReservationUrl = 'index.php?reserve_event=' . (int)$event['id'] . '#eventos'; ?>
                             <td>
                                 <strong><?= htmlspecialchars($event['title']) ?></strong><br>
                                 <small class="text-muted"><?= htmlspecialchars($event['date']) ?> às <?= htmlspecialchars(substr((string)$event['time'], 0, 5)) ?></small>
+                            </td>
+                            <td style="min-width: 280px;">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" readonly class="form-control" value="<?= htmlspecialchars($directReservationUrl) ?>">
+                                    <a class="btn btn-outline-dark" href="<?= htmlspecialchars($directReservationUrl) ?>" target="_blank" rel="noopener">Abrir</a>
+                                </div>
                             </td>
                             <td>
                                 <span class="badge <?= (int)$event['reservations_open'] === 1 ? 'bg-success' : 'bg-secondary' ?>">

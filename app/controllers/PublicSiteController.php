@@ -927,6 +927,16 @@ function render_partners_section(array $partners): void {
           reserveEventInfo.textContent = `${title} • ${date} às ${time} • ${location}`;
         }
       });
+
+      const reserveParams = new URLSearchParams(window.location.search);
+      const reserveEventIdFromUrl = (reserveParams.get('reserve_event') || '').trim();
+      if (reserveEventIdFromUrl !== '') {
+        const directReserveTrigger = document.querySelector(`[data-bs-target="#reserveModal"][data-event-id="${reserveEventIdFromUrl}"]`);
+        if (directReserveTrigger) {
+          const reserveModalInstance = bootstrap.Modal.getOrCreateInstance(reserveModal);
+          reserveModalInstance.show(directReserveTrigger);
+        }
+      }
     }
 
     if (window.location.search.includes('msg=')) {
