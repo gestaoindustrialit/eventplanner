@@ -5,6 +5,12 @@ require_once __DIR__ . '/../app/config/config.php';
 require_once __DIR__ . '/../app/config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 
+$helperFiles = glob(__DIR__ . '/../app/helpers/*.php') ?: [];
+sort($helperFiles);
+foreach ($helperFiles as $file) {
+    require_once $file;
+}
+
 $modelFiles = glob(__DIR__ . '/../app/models/*.php') ?: [];
 sort($modelFiles);
 foreach ($modelFiles as $file) {
