@@ -297,6 +297,7 @@ if ($eventSlug !== '' && isset($eventIdBySlug[$eventSlug])) {
         }
     }
 }
+$isEventView = $selectedEvent !== null;
 $hasReservableEvents = false;
 $hasPartners = count($partners) > 0;
 foreach ($events as $event) {
@@ -626,7 +627,7 @@ function render_partners_section(array $partners): void {
       </button>
       <div class="collapse navbar-collapse" id="menuPublico">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link <?php echo !$isStandaloneView ? 'active' : ''; ?>" href="index.php#inicio">Início</a></li>
+          <li class="nav-item"><a class="nav-link <?php echo (!$isStandaloneView && !$isEventView) ? 'active' : ''; ?>" href="index.php#inicio">Início</a></li>
           <?php foreach ($sectionPages as $page): ?>
             <?php $menuSlug = trim((string)($page['slug'] ?? '')); ?>
             <?php if ($menuSlug === '' || ($menuSlug === 'agenda' && !$hasAgendaEvents)) { continue; } ?>
@@ -641,7 +642,7 @@ function render_partners_section(array $partners): void {
   </nav>
 
   <main class="site-main">
-    <?php if (!$isStandaloneView): ?>
+    <?php if (!$isStandaloneView && !$isEventView): ?>
       <section id="inicio" class="hero" style="background-image: url('<?php echo htmlspecialchars((string)$heroBackgroundUrl); ?>');">
         <div class="container">
           <div class="hero-panel p-4 p-lg-5 col-12 fade-in show">
@@ -864,6 +865,87 @@ function render_partners_section(array $partners): void {
         </section>
       <?php endif; ?>
 
+      <div class="modal fade" id="reserveModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+          <div class="modal-content bg-dark text-white border border-light border-opacity-10">
+            <div class="modal-header border-secondary border-opacity-25">
+              <h5 class="modal-title">Reservar evento</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <p class="small text-secondary mb-3" id="reserveEventInfo">Preenche os dados para concluir a tua reserva.</p>
+              <form method="post" action="reserve.php" class="row g-2" id="reserveModalForm">
+                <input type="hidden" name="event_id" id="reserveEventId">
+                <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
+                <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
+                <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
+                <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" id="reserveTickets" class="form-control" placeholder="Nº bilhetes"></div>
+                <?php if ($hasRecaptcha): ?>
+                  <div class="col-12 d-flex justify-content-center">
+                    <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div>
+                  </div>
+                <?php endif; ?>
+                <div class="col-md-6"><button class="btn btn-brand w-100">Confirmar reserva</button></div>
+                <div class="col-12"><textarea name="notes" class="form-control" rows="2" placeholder="Notas (opcional)"></textarea></div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    <?php elseif ($isEventView): ?>
+      <section class="section-block agenda-section pt-5">
+        <div class="container">
+          <div class="mb-4">
+            <a class="btn btn-sm btn-outline-light" href="index.php#agenda">← Voltar à agenda</a>
+          </div>
+          <div class="event-card surface-card fade-in show mb-4">
+            <?php if (!empty($selectedEvent['poster_url'])): ?>
+              <img src="<?php echo htmlspecialchars((string)$selectedEvent['poster_url']); ?>" alt="Cartaz de <?php echo htmlspecialchars((string)$selectedEvent['title']); ?>" class="img-fluid rounded mb-3" style="max-height: 360px; width: 100%; object-fit: cover;">
+            <?php endif; ?>
+            <h2><?php echo htmlspecialchars((string)$selectedEvent['title']); ?></h2>
+            <p class="mb-1"><span class="event-meta-label">Data:</span> <?php echo htmlspecialchars((string)$selectedEvent['date']); ?> às <?php echo htmlspecialchars(substr((string)$selectedEvent['time'], 0, 5)); ?></p>
+            <p class="mb-3"><span class="event-meta-label">Local:</span> <?php echo htmlspecialchars((string)$selectedEvent['location']); ?></p>
+            <?php if (!empty($selectedEvent['notes'])): ?>
+              <p class="text-secondary mb-3"><?php echo nl2br(htmlspecialchars((string)$selectedEvent['notes'])); ?></p>
+            <?php endif; ?>
+            <?php
+              $selectedCapacity = (int)($selectedEvent['reservation_capacity'] ?? 0);
+              $selectedActiveTickets = (int)($selectedEvent['active_tickets'] ?? 0);
+              $selectedAvailable = $selectedCapacity > 0 ? max(0, $selectedCapacity - $selectedActiveTickets) : null;
+            ?>
+            <?php if ($selectedAvailable !== null): ?>
+              <p class="small text-secondary mb-3"><span class="event-meta-label">Lugares disponíveis:</span> <?php echo $selectedAvailable; ?> / <?php echo $selectedCapacity; ?></p>
+            <?php endif; ?>
+            <?php $selectedExternalTicketUrl = trim((string)($selectedEvent['external_ticket_url'] ?? '')); ?>
+            <?php if ((int)($selectedEvent['reservations_open'] ?? 0) !== 1 && $selectedExternalTicketUrl !== ''): ?>
+              <a class="btn btn-brand" href="<?php echo htmlspecialchars($selectedExternalTicketUrl); ?>" target="_blank" rel="noopener noreferrer">Comprar bilhetes</a>
+            <?php elseif ((int)($selectedEvent['reservations_open'] ?? 0) !== 1): ?>
+              <div class="alert alert-secondary py-2 mb-0">Reservas fechadas para este evento.</div>
+            <?php elseif ($selectedAvailable !== null && $selectedAvailable <= 0): ?>
+              <div class="alert alert-warning py-2 mb-0">Esgotado. Não existem mais lugares disponíveis.</div>
+            <?php else: ?>
+              <button
+                type="button"
+                class="btn btn-brand"
+                data-bs-toggle="modal"
+                data-bs-target="#reserveModal"
+                data-event-id="<?php echo (int)$selectedEvent['id']; ?>"
+                data-event-title="<?php echo htmlspecialchars((string)$selectedEvent['title'], ENT_QUOTES); ?>"
+                data-event-date="<?php echo htmlspecialchars((string)$selectedEvent['date'], ENT_QUOTES); ?>"
+                data-event-time="<?php echo htmlspecialchars(substr((string)$selectedEvent['time'], 0, 5), ENT_QUOTES); ?>"
+                data-event-location="<?php echo htmlspecialchars((string)$selectedEvent['location'], ENT_QUOTES); ?>"
+                data-max-tickets="<?php echo $selectedAvailable !== null ? (int)$selectedAvailable : 0; ?>"
+              >
+                Reservar lugar
+              </button>
+            <?php endif; ?>
+          </div>
+          <?php $eventSchemaScript = function_exists('renderEventSchema') ? renderEventSchema(build_event_schema_payload($selectedEvent)) : ''; ?>
+          <?php if ($eventSchemaScript !== ''): ?>
+            <?php echo $eventSchemaScript; ?>
+          <?php endif; ?>
+        </div>
+      </section>
       <div class="modal fade" id="reserveModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
           <div class="modal-content bg-dark text-white border border-light border-opacity-10">
