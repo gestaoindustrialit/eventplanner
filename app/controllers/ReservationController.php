@@ -7,9 +7,11 @@ class ReservationController extends BaseController
         requireLogin();
         $reservationModel = new Reservation($this->db);
         $eventOverview = $reservationModel->eventOverview();
+        $selectedEventId = (int)($_GET['event_id'] ?? 0);
         $validationResult = $_SESSION['reservation_validation_result'] ?? null;
         unset($_SESSION['reservation_validation_result']);
-        $this->render('reservations/eventos', compact('eventOverview', 'validationResult'));
+        $ticketsOverview = $reservationModel->ticketsOverview($selectedEventId > 0 ? $selectedEventId : null);
+        $this->render('reservations/eventos', compact('eventOverview', 'validationResult', 'ticketsOverview', 'selectedEventId'));
     }
 
     public function index(): void
@@ -219,7 +221,12 @@ class ReservationController extends BaseController
         $_SESSION['reservation_validation_result'] = $result;
         $redirectTarget = (string)($_REQUEST['redirect'] ?? 'index');
         if ($redirectTarget === 'eventos') {
-            $this->redirect(BASE_URL . '?controller=reservation&action=eventos');
+            $eventId = (int)($_REQUEST['event_id'] ?? 0);
+            $redirectUrl = BASE_URL . '?controller=reservation&action=eventos';
+            if ($eventId > 0) {
+                $redirectUrl .= '&event_id=' . $eventId;
+            }
+            $this->redirect($redirectUrl);
         }
         $this->redirect(BASE_URL . '?controller=reservation&action=index#validacao-qr');
     }

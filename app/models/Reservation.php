@@ -178,6 +178,27 @@ class Reservation
         return ['ok' => true, 'ticket' => $updated];
     }
 
+
+    public function ticketsOverview(?int $eventId = null): array
+    {
+        $sql = 'SELECT t.id, t.event_id, t.ticket_no, t.ticket_token, t.is_used, t.used_at,
+                       r.customer_name, r.status AS reservation_status, e.title AS event_title
+                FROM event_reservation_tickets t
+                JOIN event_reservations r ON r.id = t.reservation_id
+                JOIN events e ON e.id = t.event_id';
+        $params = [];
+
+        if ($eventId !== null && $eventId > 0) {
+            $sql .= ' WHERE t.event_id = :event_id';
+            $params['event_id'] = $eventId;
+        }
+
+        $sql .= ' ORDER BY e.date DESC, e.time DESC, t.ticket_no ASC, t.id ASC';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
     public function pendingCount(): int
     {
         $stmt = $this->db->query("SELECT COUNT(*) as total FROM event_reservations WHERE status = 'new'");
