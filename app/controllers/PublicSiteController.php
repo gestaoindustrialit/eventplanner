@@ -186,6 +186,21 @@ function safe_content(?string $html): string {
     return strip_tags((string)$html, '<h1><h2><h3><h4><p><ul><ol><li><strong><em><a><blockquote><br><hr>');
 }
 
+function build_event_schema_payload(array $event): array {
+    return [
+        'title' => (string)($event['title'] ?? ''),
+        'description' => (string)($event['notes'] ?? ''),
+        'date' => (string)($event['date'] ?? ''),
+        'time' => (string)($event['time'] ?? ''),
+        'location' => (string)($event['location'] ?? ''),
+        'poster_url' => (string)($event['poster_url'] ?? ''),
+        'external_ticket_url' => (string)($event['external_ticket_url'] ?? ''),
+        'price_currency' => 'EUR',
+        'reservations_open' => (int)($event['reservations_open'] ?? 0),
+        'status' => ((string)($event['date'] ?? '') >= date('Y-m-d')) ? 'scheduled' : 'cancelled',
+    ];
+}
+
 function page_mode(array $page): string {
     return (($page['display_mode'] ?? 'section') === 'page') ? 'page' : 'section';
 }
@@ -679,6 +694,10 @@ function render_partners_section(array $partners): void {
                         </button>
                       <?php endif; ?>
                     </div>
+                    <?php $eventSchemaScript = function_exists('renderEventSchema') ? renderEventSchema(build_event_schema_payload($event)) : ''; ?>
+                    <?php if ($eventSchemaScript !== ''): ?>
+                      <?php echo $eventSchemaScript; ?>
+                    <?php endif; ?>
                   </div>
                 <?php endforeach; ?>
               </div>
