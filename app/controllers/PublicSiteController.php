@@ -100,6 +100,7 @@ $partners = [];
 $homeCopy = json_decode('__HOME_COPY_JSON__', true) ?: [];
 $msg = $_GET['msg'] ?? '';
 $pageSlug = trim((string)($_GET['page'] ?? ''));
+$eventSlug = trim((string)($_GET['evento'] ?? ''));
 $recaptchaSiteKey = trim((string)'__RECAPTCHA_SITE_KEY__');
 $hasRecaptcha = $recaptchaSiteKey !== '';
 
@@ -186,6 +187,30 @@ function safe_content(?string $html): string {
     return strip_tags((string)$html, '<h1><h2><h3><h4><p><ul><ol><li><strong><em><a><blockquote><br><hr>');
 }
 
+function build_event_schema_payload(array $event): array {
+    return [
+        'title' => (string)($event['title'] ?? ''),
+        'description' => (string)($event['notes'] ?? ''),
+        'date' => (string)($event['date'] ?? ''),
+        'time' => (string)($event['time'] ?? ''),
+        'location' => (string)($event['location'] ?? ''),
+        'poster_url' => (string)($event['poster_url'] ?? ''),
+        'external_ticket_url' => (string)($event['external_ticket_url'] ?? ''),
+        'price_currency' => 'EUR',
+        'reservations_open' => (int)($event['reservations_open'] ?? 0),
+        'status' => ((string)($event['date'] ?? '') >= date('Y-m-d')) ? 'scheduled' : 'cancelled',
+    ];
+}
+
+
+function event_public_url(array $event, array $eventSlugById): string {
+    $id = (int)($event['id'] ?? 0);
+    if ($id <= 0 || !isset($eventSlugById[$id])) {
+        return 'index.php#agenda';
+    }
+    return 'index.php?evento=' . rawurlencode((string)$eventSlugById[$id]);
+}
+
 function page_mode(array $page): string {
     return (($page['display_mode'] ?? 'section') === 'page') ? 'page' : 'section';
 }
@@ -241,6 +266,37 @@ foreach ($pages as $page) {
 
 $isStandaloneView = $activeStandalonePage !== null;
 $hasAgendaEvents = count($events) > 0;
+$selectedEvent = null;
+$selectedEventSlug = '';
+$eventSlugById = [];
+$eventIdBySlug = [];
+$usedSlugs = [];
+foreach ($events as $index => $event) {
+    $baseSlug = strtolower(trim((string)($event['title'] ?? '')));
+    $baseSlug = preg_replace('/[^\p{L}\p{N}]+/u', '-', $baseSlug ?? '');
+    $baseSlug = trim((string)$baseSlug, '-');
+    if ($baseSlug === '') {
+        $baseSlug = 'evento-' . (int)($event['id'] ?? ($index + 1));
+    }
+    $slug = $baseSlug;
+    $suffix = 2;
+    while (isset($usedSlugs[$slug])) {
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+    $usedSlugs[$slug] = true;
+    $eventSlugById[(int)$event['id']] = $slug;
+    $eventIdBySlug[$slug] = (int)$event['id'];
+}
+if ($eventSlug !== '' && isset($eventIdBySlug[$eventSlug])) {
+    foreach ($events as $event) {
+        if ((int)$event['id'] === (int)$eventIdBySlug[$eventSlug]) {
+            $selectedEvent = $event;
+            $selectedEventSlug = $eventSlug;
+            break;
+        }
+    }
+}
 $hasReservableEvents = false;
 $hasPartners = count($partners) > 0;
 foreach ($events as $event) {
@@ -636,8 +692,26 @@ function render_partners_section(array $partners): void {
                 <div class="alert alert-warning">Validação de segurança falhou. Confirma o reCAPTCHA e tenta novamente.</div>
               <?php endif; ?>
               <h2 class="section-heading"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
+              <?php if ($selectedEvent !== null): ?>
+                <div class="event-card surface-card fade-in show mb-4">
+                  <?php if (!empty($selectedEvent['poster_url'])): ?>
+                    <img src="<?php echo htmlspecialchars((string)$selectedEvent['poster_url']); ?>" alt="Cartaz de <?php echo htmlspecialchars((string)$selectedEvent['title']); ?>" class="img-fluid rounded mb-3" style="max-height: 280px; width: 100%; object-fit: cover;">
+                  <?php endif; ?>
+                  <h3><?php echo htmlspecialchars((string)$selectedEvent['title']); ?></h3>
+                  <p class="mb-1"><span class="event-meta-label">Data:</span> <?php echo htmlspecialchars((string)$selectedEvent['date']); ?> às <?php echo htmlspecialchars(substr((string)$selectedEvent['time'], 0, 5)); ?></p>
+                  <p class="mb-3"><span class="event-meta-label">Local:</span> <?php echo htmlspecialchars((string)$selectedEvent['location']); ?></p>
+                  <?php if (!empty($selectedEvent['notes'])): ?>
+                    <p class="text-secondary mb-3"><?php echo nl2br(htmlspecialchars((string)$selectedEvent['notes'])); ?></p>
+                  <?php endif; ?>
+                </div>
+                <?php $eventSchemaScript = function_exists('renderEventSchema') ? renderEventSchema(build_event_schema_payload($selectedEvent)) : ''; ?>
+                <?php if ($eventSchemaScript !== ''): ?>
+                  <?php echo $eventSchemaScript; ?>
+                <?php endif; ?>
+              <?php endif; ?>
               <div class="row g-4 mb-5 justify-content-center">
                 <?php foreach ($events as $event): ?>
+                  <?php if ($selectedEvent !== null && (int)$event['id'] === (int)$selectedEvent['id']) { continue; } ?>
                   <div class="col-lg-6">
                     <div class="event-card surface-card fade-in">
                       <?php if (!empty($event['poster_url'])): ?>
@@ -678,6 +752,9 @@ function render_partners_section(array $partners): void {
                           Reservar lugar
                         </button>
                       <?php endif; ?>
+                      <div class="mt-2 mb-2">
+                        <a class="btn btn-sm btn-outline-light" href="<?php echo htmlspecialchars(event_public_url($event, $eventSlugById)); ?>">Ver detalhes</a>
+                      </div>
                     </div>
                   </div>
                 <?php endforeach; ?>
