@@ -756,6 +756,10 @@ function render_partners_section(array $partners): void {
                         <a class="btn btn-sm btn-outline-light" href="<?php echo htmlspecialchars(event_public_url($event, $eventSlugById)); ?>">Ver detalhes</a>
                       </div>
                     </div>
+                    <?php $eventSchemaScript = function_exists('renderEventSchema') ? renderEventSchema(build_event_schema_payload($event)) : ''; ?>
+                    <?php if ($eventSchemaScript !== ''): ?>
+                      <?php echo $eventSchemaScript; ?>
+                    <?php endif; ?>
                   </div>
                 <?php endforeach; ?>
               </div>
