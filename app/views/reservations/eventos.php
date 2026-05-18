@@ -3,20 +3,28 @@
 
 <div class="card shadow-sm mb-4">
     <div class="card-body">
-        <div class="row g-2 align-items-end">
-            <div class="col-md-6">
+        <form method="get" action="<?= BASE_URL ?>" class="row g-2 align-items-end mb-3">
+            <input type="hidden" name="controller" value="reservation">
+            <input type="hidden" name="action" value="eventos">
+            <div class="col-md-9">
                 <label class="form-label">Evento</label>
-                <select id="eventFilter" class="form-select">
+                <select id="eventFilter" name="event_id" class="form-select" onchange="this.form.submit()">
                     <option value="">Todos os eventos</option>
                     <?php foreach ($eventOverview as $event): ?>
-                        <option value="<?= (int)$event['id'] ?>"><?= htmlspecialchars($event['title']) ?> · <?= htmlspecialchars($event['date']) ?> <?= htmlspecialchars(substr((string)$event['time'], 0, 5)) ?></option>
+                        <option value="<?= (int)$event['id'] ?>" <?= ((int)$selectedEventId === (int)$event['id']) ? 'selected' : '' ?>><?= htmlspecialchars($event['title']) ?> · <?= htmlspecialchars($event['date']) ?> <?= htmlspecialchars(substr((string)$event['time'], 0, 5)) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-md-3">
+                <a href="<?= BASE_URL ?>?controller=reservation&action=eventos" class="btn btn-outline-secondary w-100">Limpar filtro</a>
+            </div>
+        </form>
+
+        <div class="row g-2 align-items-end">
+            <div class="col-md-6">
                 <button id="startScan" class="btn btn-dark w-100">Iniciar câmara</button>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <button id="stopScan" class="btn btn-outline-secondary w-100" type="button">Parar</button>
             </div>
         </div>
@@ -27,6 +35,9 @@
 
         <form method="post" action="<?= BASE_URL ?>?controller=reservation&action=validateTicket" class="row g-2 mt-3">
             <input type="hidden" name="redirect" value="eventos">
+            <?php if ((int)$selectedEventId > 0): ?>
+                <input type="hidden" name="event_id" value="<?= (int)$selectedEventId ?>">
+            <?php endif; ?>
             <div class="col-md-9">
                 <input id="tokenInput" type="text" name="token" class="form-control" required placeholder="Token lido / QR payload">
             </div>
@@ -44,30 +55,92 @@
                     Bilhete #<?= (int)$ticket['ticket_no'] ?> validado.
                 </div>
             <?php else: ?>
-                <div class="alert alert-danger mt-3 mb-0">QR/token inválido ou já utilizado.</div>
+                <?php $reason = (string)($validationResult['reason'] ?? ''); ?>
+                <div class="alert alert-danger mt-3 mb-0">
+                    <?php if ($reason === 'already_used'): ?>
+                        QR/token já utilizado anteriormente para este bilhete.
+                    <?php elseif ($reason === 'cancelled'): ?>
+                        Este bilhete pertence a uma reserva cancelada.
+                    <?php else: ?>
+                        QR/token inválido.
+                    <?php endif; ?>
+                </div>
             <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>
 
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5 class="mb-3">Bilhetes do evento<?= (int)$selectedEventId > 0 ? ' selecionado' : 's' ?></h5>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Evento</th>
+                        <th>Cliente</th>
+                        <th>Bilhete</th>
+                        <th>Estado</th>
+                        <th>Validado em</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($ticketsOverview)): ?>
+                        <tr><td colspan="5" class="text-muted">Sem bilhetes para apresentar.</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($ticketsOverview as $ticket): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($ticket['event_title']) ?></td>
+                                <td><?= htmlspecialchars($ticket['customer_name']) ?></td>
+                                <td>#<?= (int)$ticket['ticket_no'] ?></td>
+                                <td>
+                                    <?php if ((int)$ticket['is_used'] === 1): ?>
+                                        <span class="badge text-bg-success">Validado</span>
+                                    <?php else: ?>
+                                        <span class="badge text-bg-secondary">Por validar</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?= !empty($ticket['used_at']) ? htmlspecialchars((string)$ticket['used_at']) : '—' ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
 (() => {
   const video = document.getElementById('qrVideo');
   const tokenInput = document.getElementById('tokenInput');
   const startBtn = document.getElementById('startScan');
   const stopBtn = document.getElementById('stopScan');
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   let stream = null;
   let rafId = null;
 
-  async function start() {
+  async function start(event) {
+    event.preventDefault();
+    stop();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       alert('Câmara não suportada neste dispositivo.');
       return;
     }
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    video.srcObject = stream;
-    await video.play();
-    scanLoop();
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      });
+      video.srcObject = stream;
+      await video.play();
+      scanLoop();
+    } catch (err) {
+      alert('Não foi possível abrir a câmara. Verifica permissões do Safari.');
+    }
   }
 
   function stop() {
@@ -80,25 +153,28 @@
     video.srcObject = null;
   }
 
-  async function scanLoop() {
-    if (!('BarcodeDetector' in window)) {
-      return;
-    }
-    const detector = new BarcodeDetector({ formats: ['qr_code'] });
-    const tick = async () => {
+  function scanLoop() {
+    const tick = () => {
       if (!video || video.readyState < 2) {
         rafId = requestAnimationFrame(tick);
         return;
       }
-      try {
-        const codes = await detector.detect(video);
-        if (codes.length > 0 && codes[0].rawValue) {
-          tokenInput.value = codes[0].rawValue;
-          stop();
-        }
-      } catch (e) {}
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const qrCode = window.jsQR ? window.jsQR(imageData.data, imageData.width, imageData.height) : null;
+
+      if (qrCode && qrCode.data) {
+        tokenInput.value = qrCode.data;
+        stop();
+        return;
+      }
+
       rafId = requestAnimationFrame(tick);
     };
+
     tick();
   }
 
