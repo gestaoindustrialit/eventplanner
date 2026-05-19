@@ -281,11 +281,18 @@ class Reservation
         if (strpos($value, 'token=') !== false) {
             $query = (string)parse_url($value, PHP_URL_QUERY);
             parse_str($query, $queryParams);
-            return trim((string)($queryParams['token'] ?? ''));
+            $tokenFromQuery = trim((string)($queryParams['token'] ?? ''));
+            if ($tokenFromQuery !== '') {
+                return urldecode($tokenFromQuery);
+            }
         }
 
         if (str_starts_with($value, 'RESERVA:')) {
             return trim(substr($value, 8));
+        }
+
+        if (preg_match('/([a-f0-9]{32})$/i', $value, $matches)) {
+            return strtolower($matches[1]);
         }
 
         return $value;

@@ -33,7 +33,7 @@
             <video id="qrVideo" playsinline muted style="width:100%;border-radius:8px;"></video>
         </div>
 
-        <form method="post" action="<?= BASE_URL ?>?controller=reservation&action=validateTicket" class="row g-2 mt-3">
+        <form id="validateTicketForm" method="post" action="<?= BASE_URL ?>?controller=reservation&action=validateTicket" class="row g-2 mt-3">
             <input type="hidden" name="redirect" value="eventos">
             <?php if ((int)$selectedEventId > 0): ?>
                 <input type="hidden" name="event_id" value="<?= (int)$selectedEventId ?>">
@@ -117,10 +117,13 @@
   const tokenInput = document.getElementById('tokenInput');
   const startBtn = document.getElementById('startScan');
   const stopBtn = document.getElementById('stopScan');
+  const validateForm = document.getElementById('validateTicketForm');
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   let stream = null;
   let rafId = null;
+  let lastScannedPayload = '';
+  let submitting = false;
 
   async function start(event) {
     event.preventDefault();
@@ -167,9 +170,14 @@
       const qrCode = window.jsQR ? window.jsQR(imageData.data, imageData.width, imageData.height) : null;
 
       if (qrCode && qrCode.data) {
-        tokenInput.value = qrCode.data;
-        stop();
-        return;
+        const payload = String(qrCode.data).trim();
+        if (payload && payload !== lastScannedPayload && !submitting) {
+          lastScannedPayload = payload;
+          tokenInput.value = payload;
+          submitting = true;
+          validateForm.requestSubmit();
+          return;
+        }
       }
 
       rafId = requestAnimationFrame(tick);
