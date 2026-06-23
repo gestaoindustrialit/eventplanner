@@ -16,8 +16,13 @@ class PublicSiteController extends BaseController
         $newsletterConsentText = $settings->get('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.');
         $recaptchaSiteKey = $settings->get('recaptcha_site_key', '6LcrsLOsAAAAAB9NZ-X2s7ugJ7LsNAamg4VXW0wt');
         $recaptchaSecretKey = $settings->get('recaptcha_secret_key', '6LcrsLOsAAAAAJniWgy3I-C6PPXk_yTlfFc2U-Hi');
+        $siteMetaDescription = $settings->get('site_meta_description', 'Chorar de Rir produz espetáculos de comédia, booking de comediantes e experiências ao vivo para empresas, teatros e eventos privados em Portugal.');
+        $siteCanonicalUrl = $settings->get('site_canonical_url', 'https://chorarderir.com/');
+        $homeMenuOrder = (int)$settings->get('home_menu_order', '0');
+        $agendaMenuOrder = (int)$settings->get('agenda_menu_order', '40');
+        $partnersMenuOrder = (int)$settings->get('partners_menu_order', '90');
 
-        $this->render('public_site/index', compact('defaultPath', 'pages', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText', 'recaptchaSiteKey', 'recaptchaSecretKey'));
+        $this->render('public_site/index', compact('defaultPath', 'pages', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText', 'recaptchaSiteKey', 'recaptchaSecretKey', 'siteMetaDescription', 'siteCanonicalUrl', 'homeMenuOrder', 'agendaMenuOrder', 'partnersMenuOrder'));
     }
 
     public function publish(): void
@@ -47,6 +52,11 @@ class PublicSiteController extends BaseController
             $settings->set('newsletter_consent_text', trim((string)($_POST['newsletter_consent_text'] ?? '')));
             $settings->set('recaptcha_site_key', trim((string)($_POST['recaptcha_site_key'] ?? '')));
             $settings->set('recaptcha_secret_key', trim((string)($_POST['recaptcha_secret_key'] ?? '')));
+            $settings->set('site_meta_description', trim((string)($_POST['site_meta_description'] ?? '')));
+            $settings->set('site_canonical_url', trim((string)($_POST['site_canonical_url'] ?? '')));
+            $settings->set('home_menu_order', (string)(int)($_POST['home_menu_order'] ?? 0));
+            $settings->set('agenda_menu_order', (string)(int)($_POST['agenda_menu_order'] ?? 40));
+            $settings->set('partners_menu_order', (string)(int)($_POST['partners_menu_order'] ?? 90));
 
             $dbPath = (new Database())->getSqlitePath();
             $homeCopy = [
@@ -58,8 +68,15 @@ class PublicSiteController extends BaseController
             $newsletterConsentText = $settings->get('newsletter_consent_text', '');
             $recaptchaSiteKey = $settings->get('recaptcha_site_key', '6LcrsLOsAAAAAB9NZ-X2s7ugJ7LsNAamg4VXW0wt');
             $recaptchaSecretKey = $settings->get('recaptcha_secret_key', '6LcrsLOsAAAAAJniWgy3I-C6PPXk_yTlfFc2U-Hi');
+            $seoSettings = [
+                'meta_description' => $settings->get('site_meta_description', ''),
+                'canonical_url' => $settings->get('site_canonical_url', ''),
+                'home_menu_order' => (int)$settings->get('home_menu_order', '0'),
+                'agenda_menu_order' => (int)$settings->get('agenda_menu_order', '40'),
+                'partners_menu_order' => (int)$settings->get('partners_menu_order', '90'),
+            ];
 
-            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($dbPath, $homeCopy, $newsletterConsentText, $recaptchaSiteKey)) === false) {
+            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($dbPath, $homeCopy, $newsletterConsentText, $recaptchaSiteKey, $seoSettings)) === false) {
                 throw new RuntimeException('Falha ao escrever index.php no destino.');
             }
             if (file_put_contents($targetPath . '/index.html', $this->buildIndexHtmlRedirect()) === false) {
@@ -73,6 +90,12 @@ class PublicSiteController extends BaseController
             }
             if (file_put_contents($targetPath . '/contact.php', $this->buildContactHandler($dbPath, $recaptchaSecretKey)) === false) {
                 throw new RuntimeException('Falha ao escrever contact.php no destino.');
+            }
+            if (file_put_contents($targetPath . '/robots.txt', $this->buildRobotsTxt($seoSettings['canonical_url'])) === false) {
+                throw new RuntimeException('Falha ao escrever robots.txt no destino.');
+            }
+            if (file_put_contents($targetPath . '/sitemap.xml', $this->buildSitemapXml($seoSettings['canonical_url'], $dbPath)) === false) {
+                throw new RuntimeException('Falha ao escrever sitemap.xml no destino.');
             }
 
             $logoSource = dirname(__DIR__, 2) . '/assets/branding/chorarderir-logo.svg';
@@ -88,9 +111,10 @@ class PublicSiteController extends BaseController
         $this->redirect(BASE_URL . '?controller=publicsite&action=index');
     }
 
-    private function buildPublicIndex(string $dbPath, array $homeCopy, string $newsletterConsentText, string $recaptchaSiteKey): string
+    private function buildPublicIndex(string $dbPath, array $homeCopy, string $newsletterConsentText, string $recaptchaSiteKey, array $seoSettings): string
     {
         $homeCopyJson = json_encode($homeCopy, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $seoSettingsJson = json_encode($seoSettings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
         $template = <<<'PHP'
 <?php
@@ -98,6 +122,7 @@ $events = [];
 $pages = [];
 $partners = [];
 $homeCopy = json_decode('__HOME_COPY_JSON__', true) ?: [];
+$seoSettings = json_decode('__SEO_SETTINGS_JSON__', true) ?: [];
 $msg = $_GET['msg'] ?? '';
 $pageSlug = trim((string)($_GET['page'] ?? ''));
 $eventSlug = trim((string)($_GET['evento'] ?? ''));
@@ -165,7 +190,15 @@ try {
     $partners = [];
 }
 
-$siteTitle = 'Chorar de Rir';
+$siteTitle = 'Chorar de Rir | Comédia, espetáculos e eventos ao vivo';
+$siteMetaDescription = trim((string)($seoSettings['meta_description'] ?? ''));
+if ($siteMetaDescription === '') {
+    $siteMetaDescription = 'Chorar de Rir produz espetáculos de comédia, booking de comediantes e experiências ao vivo para empresas, teatros e eventos privados em Portugal.';
+}
+$siteCanonicalUrl = rtrim(trim((string)($seoSettings['canonical_url'] ?? '')), '/');
+$homeMenuOrder = (int)($seoSettings['home_menu_order'] ?? 0);
+$agendaMenuOrder = (int)($seoSettings['agenda_menu_order'] ?? 40);
+$partnersMenuOrder = (int)($seoSettings['partners_menu_order'] ?? 90);
 $defaultHomeCopy = [
     'tagline' => 'Produção • Booking • Experiências',
     'title' => 'Humor e espetáculos com um palco inesquecível.',
@@ -300,6 +333,27 @@ if ($eventSlug !== '' && isset($eventIdBySlug[$eventSlug])) {
 $isEventView = $selectedEvent !== null;
 $hasReservableEvents = false;
 $hasPartners = count($partners) > 0;
+$menuItems = [
+    ['label' => 'Início', 'href' => 'index.php#inicio', 'order' => $homeMenuOrder, 'active' => (!$isStandaloneView && !$isEventView)],
+];
+foreach ($sectionPages as $menuPage) {
+    $menuSlug = trim((string)($menuPage['slug'] ?? ''));
+    if ($menuSlug === '' || ($menuSlug === 'agenda' && !$hasAgendaEvents)) {
+        continue;
+    }
+    $menuItems[] = [
+        'label' => (string)($menuPage['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug))),
+        'href' => 'index.php#' . $menuSlug,
+        'order' => ($menuSlug === 'agenda') ? $agendaMenuOrder : (int)($menuPage['sort_order'] ?? 50),
+        'active' => false,
+    ];
+}
+if ($hasPartners) {
+    $menuItems[] = ['label' => 'Parceiros', 'href' => 'index.php#parceiros', 'order' => $partnersMenuOrder, 'active' => false];
+}
+usort($menuItems, static function (array $a, array $b): int {
+    return ((int)$a['order'] <=> (int)$b['order']) ?: strcmp((string)$a['label'], (string)$b['label']);
+});
 foreach ($events as $event) {
     if ((int)($event['reservations_open'] ?? 0) !== 1) {
         continue;
@@ -329,9 +383,10 @@ function render_partners_section(array $partners): void {
                   <div class="row g-3 justify-content-center align-items-center">
                     <?php foreach ($partnersChunk as $partner): ?>
                       <div class="col-6 col-md-3 text-center">
-                        <a href="<?php echo htmlspecialchars((string)($partner['company_url'] ?? '#')); ?>" target="_blank" rel="noopener noreferrer" class="d-inline-flex align-items-center justify-content-center p-3 w-100" style="min-height: 110px;">
-                          <img src="<?php echo htmlspecialchars((string)$partner['logo_url']); ?>" alt="<?php echo htmlspecialchars((string)$partner['company_name']); ?>" style="max-height:64px;max-width:100%;object-fit:contain;filter:grayscale(100%);opacity:.92;">
+                        <a href="<?php echo htmlspecialchars((string)($partner['company_url'] ?? '#')); ?>" target="_blank" rel="noopener noreferrer" class="d-inline-flex align-items-center justify-content-center p-3 w-100" style="min-height: 140px;">
+                          <img src="<?php echo htmlspecialchars((string)$partner['logo_url']); ?>" alt="<?php echo htmlspecialchars((string)$partner['company_name']); ?>" style="max-height:96px;max-width:100%;object-fit:contain;opacity:1;">
                         </a>
+                        <div class="partner-name fw-semibold mt-2"><?php echo htmlspecialchars((string)$partner['company_name']); ?></div>
                       </div>
                     <?php endforeach; ?>
                   </div>
@@ -351,6 +406,8 @@ function render_partners_section(array $partners): void {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?php echo htmlspecialchars($siteTitle); ?></title>
+  <meta name="description" content="<?php echo htmlspecialchars($siteMetaDescription); ?>">
+  <?php if ($siteCanonicalUrl !== ''): ?><link rel="canonical" href="<?php echo htmlspecialchars($siteCanonicalUrl . '/'); ?>"><?php endif; ?>
   <link rel="icon" type="image/svg+xml" href="chorarderir-logo.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -627,15 +684,9 @@ function render_partners_section(array $partners): void {
       </button>
       <div class="collapse navbar-collapse" id="menuPublico">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link <?php echo (!$isStandaloneView && !$isEventView) ? 'active' : ''; ?>" href="index.php#inicio">Início</a></li>
-          <?php foreach ($sectionPages as $page): ?>
-            <?php $menuSlug = trim((string)($page['slug'] ?? '')); ?>
-            <?php if ($menuSlug === '' || ($menuSlug === 'agenda' && !$hasAgendaEvents)) { continue; } ?>
-            <li class="nav-item"><a class="nav-link" href="index.php#<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
+          <?php foreach ($menuItems as $menuItem): ?>
+            <li class="nav-item"><a class="nav-link <?php echo !empty($menuItem['active']) ? 'active' : ''; ?>" href="<?php echo htmlspecialchars((string)$menuItem['href']); ?>"><?php echo htmlspecialchars((string)$menuItem['label']); ?></a></li>
           <?php endforeach; ?>
-          <?php if ($hasPartners): ?>
-            <li class="nav-item"><a class="nav-link" href="index.php#parceiros">Parceiros</a></li>
-          <?php endif; ?>
         </ul>
       </div>
     </div>
@@ -1112,8 +1163,71 @@ PHP;
 
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
         $template = str_replace('__HOME_COPY_JSON__', addslashes((string)$homeCopyJson), $template);
+        $template = str_replace('__SEO_SETTINGS_JSON__', addslashes((string)$seoSettingsJson), $template);
         $template = str_replace('__NEWSLETTER_CONSENT__', addslashes($newsletterConsentText), $template);
         return str_replace('__RECAPTCHA_SITE_KEY__', addslashes(trim($recaptchaSiteKey)), $template);
+    }
+
+    private function buildRobotsTxt(string $canonicalUrl): string
+    {
+        $baseUrl = rtrim(trim($canonicalUrl), '/');
+        $lines = [
+            'User-agent: *',
+            'Allow: /',
+        ];
+        if ($baseUrl !== '') {
+            $lines[] = 'Sitemap: ' . $baseUrl . '/sitemap.xml';
+        }
+        return implode("\n", $lines) . "\n";
+    }
+
+    private function buildSitemapXml(string $canonicalUrl, string $dbPath): string
+    {
+        $baseUrl = rtrim(trim($canonicalUrl), '/');
+        if ($baseUrl === '') {
+            $baseUrl = 'https://chorarderir.com';
+        }
+
+        $urls = [
+            ['loc' => $baseUrl . '/', 'priority' => '1.0'],
+        ];
+
+        try {
+            $db = new PDO('sqlite:' . $dbPath, null, null, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            ]);
+            $pageColumns = array_column($db->query('PRAGMA table_info(public_pages)')->fetchAll(), 'name');
+            if (count($pageColumns) > 0) {
+                $pageSql = 'SELECT slug, display_mode FROM public_pages';
+                if (in_array('is_published', $pageColumns, true)) {
+                    $pageSql .= ' WHERE is_published = 1';
+                }
+                foreach ($db->query($pageSql)->fetchAll() ?: [] as $page) {
+                    $slug = trim((string)($page['slug'] ?? ''));
+                    if ($slug === '') {
+                        continue;
+                    }
+                    if (($page['display_mode'] ?? 'section') !== 'page') {
+                        continue;
+                    }
+                    $urls[] = [
+                        'loc' => $baseUrl . '/?page=' . rawurlencode($slug),
+                        'priority' => '0.8',
+                    ];
+                }
+            }
+        } catch (Throwable $e) {
+            // Mantém pelo menos a página principal no sitemap se a base de dados não estiver acessível.
+        }
+
+        $updatedAt = date('c');
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n"
+            . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        foreach ($urls as $url) {
+            $xml .= '  <url><loc>' . htmlspecialchars($url['loc'], ENT_XML1) . '</loc><lastmod>' . $updatedAt . '</lastmod><priority>' . htmlspecialchars($url['priority'], ENT_XML1) . '</priority></url>' . "\n";
+        }
+        return $xml . '</urlset>' . "\n";
     }
 
     private function buildIndexHtmlRedirect(): string
