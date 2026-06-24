@@ -299,3 +299,60 @@ if (addEventChecklistItemBtn && eventChecklistTemplate && eventChecklistWrapper)
   eventChecklistWrapper.querySelectorAll('.event-checklist-row').forEach((row) => syncChecklistValueUi(row));
   refreshEventChecklistIndexes();
 }
+
+function enhanceEvaluationDepartmentSelector() {
+  const normalizeLabel = (value) => value.trim().toLowerCase();
+  const findFieldByLabel = (root, labelText, selector = 'input, select') => {
+    const labels = Array.from(root.querySelectorAll('label'));
+    const label = labels.find((item) => normalizeLabel(item.textContent || '') === normalizeLabel(labelText));
+    if (!label) return null;
+
+    if (label.htmlFor) {
+      const byId = root.querySelector(`#${CSS.escape(label.htmlFor)}`);
+      if (byId?.matches(selector)) return byId;
+    }
+
+    return label.parentElement?.querySelector(selector) || null;
+  };
+
+  const evaluationForm = Array.from(document.querySelectorAll('form')).find((form) => {
+    const heading = form.closest('.card, section, div')?.querySelector('h1, h2, h3, h4, h5, h6');
+    const headingText = normalizeLabel(heading?.textContent || '');
+    return headingText.includes('nova avaliação') || headingText.includes('editar avaliação');
+  });
+
+  if (!evaluationForm) return;
+
+  const departmentField = findFieldByLabel(evaluationForm, 'Departamento');
+  if (!departmentField || departmentField.tagName.toLowerCase() === 'select') return;
+
+  const departmentFilter = Array.from(document.querySelectorAll('select')).find((select) => {
+    const label = select.id ? document.querySelector(`label[for="${CSS.escape(select.id)}"]`) : null;
+    const nearbyLabel = label || select.closest('div')?.querySelector('label');
+    return nearbyLabel && normalizeLabel(nearbyLabel.textContent || '') === 'departamento' && select !== departmentField;
+  });
+
+  if (!departmentFilter || departmentFilter.options.length === 0) return;
+
+  const departmentSelect = document.createElement('select');
+  Array.from(departmentField.attributes).forEach((attribute) => {
+    departmentSelect.setAttribute(attribute.name, attribute.value);
+  });
+  departmentSelect.className = departmentField.className;
+  departmentSelect.required = departmentField.required;
+
+  const currentValue = departmentField.value;
+  const selectableOptions = Array.from(departmentFilter.options).filter((option) => option.value !== '');
+  departmentSelect.appendChild(new Option('', ''));
+  selectableOptions.forEach((option) => {
+    departmentSelect.appendChild(new Option(option.textContent, option.value, false, option.value === currentValue));
+  });
+
+  if (currentValue && !Array.from(departmentSelect.options).some((option) => option.value === currentValue)) {
+    departmentSelect.appendChild(new Option(currentValue, currentValue, false, true));
+  }
+
+  departmentField.replaceWith(departmentSelect);
+}
+
+enhanceEvaluationDepartmentSelector();
