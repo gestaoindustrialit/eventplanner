@@ -32,6 +32,38 @@
                 <label class="form-label">Texto de consentimento RGPD (newsletter)</label>
                 <textarea name="newsletter_consent_text" class="form-control" rows="2" required><?= htmlspecialchars($newsletterConsentText ?? '') ?></textarea>
             </div>
+
+            <div class="col-12">
+                <div class="card border-0 bg-light mt-2">
+                    <div class="card-body">
+                        <h5 class="mb-3">SEO e ordem do menu</h5>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Meta descrição do website</label>
+                                <textarea name="site_meta_description" class="form-control" rows="2" maxlength="160" placeholder="Resumo claro com serviços, localização e proposta de valor"><?= htmlspecialchars($siteMetaDescription ?? '') ?></textarea>
+                                <div class="form-text">Usada na tag <code>meta description</code>. Recomenda-se 140–160 caracteres.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">URL canónico / domínio público</label>
+                                <input type="url" name="site_canonical_url" class="form-control" value="<?= htmlspecialchars($siteCanonicalUrl ?? '') ?>" placeholder="https://chorarderir.com/">
+                                <div class="form-text">Usado no canonical, robots.txt e sitemap.xml.</div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Ordem Início</label>
+                                <input type="number" name="home_menu_order" class="form-control" value="<?= (int)($homeMenuOrder ?? 0) ?>">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Ordem Agenda</label>
+                                <input type="number" name="agenda_menu_order" class="form-control" value="<?= (int)($agendaMenuOrder ?? 40) ?>">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Ordem Parceiros</label>
+                                <input type="number" name="partners_menu_order" class="form-control" value="<?= (int)($partnersMenuOrder ?? 90) ?>">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="col-md-6">
                 <label class="form-label">reCAPTCHA chave de site</label>
                 <input type="text" name="recaptcha_site_key" class="form-control" value="<?= htmlspecialchars($recaptchaSiteKey ?? '') ?>" placeholder="6Lc...">
