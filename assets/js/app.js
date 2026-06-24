@@ -317,7 +317,8 @@ function enhanceEvaluationDepartmentSelector() {
 
   const evaluationForm = Array.from(document.querySelectorAll('form')).find((form) => {
     const heading = form.closest('.card, section, div')?.querySelector('h1, h2, h3, h4, h5, h6');
-    return heading && normalizeLabel(heading.textContent || '').includes('nova avaliação');
+    const headingText = normalizeLabel(heading?.textContent || '');
+    return headingText.includes('nova avaliação') || headingText.includes('editar avaliação');
   });
 
   if (!evaluationForm) return;
