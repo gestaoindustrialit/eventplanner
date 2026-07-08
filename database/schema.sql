@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS comedians;
 DROP TABLE IF EXISTS clients;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS public_pages;
+DROP TABLE IF EXISTS blog_posts;
 DROP TABLE IF EXISTS newsletter_subscriptions;
 DROP TABLE IF EXISTS crm_contact_notes;
 DROP TABLE IF EXISTS crm_contacts;
@@ -191,6 +192,23 @@ CREATE TABLE public_pages (
   is_published INTEGER NOT NULL DEFAULT 1,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE blog_posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  category TEXT DEFAULT NULL,
+  excerpt TEXT DEFAULT NULL,
+  content TEXT DEFAULT NULL,
+  hero_image_url TEXT DEFAULT NULL,
+  meta_title TEXT DEFAULT NULL,
+  meta_description TEXT DEFAULT NULL,
+  is_published INTEGER NOT NULL DEFAULT 0,
+  published_at TEXT DEFAULT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE newsletter_subscriptions (
