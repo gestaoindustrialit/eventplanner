@@ -373,7 +373,7 @@ $activeVirtualSlug = $currentPath !== '' ? $currentPath : $pageSlug;
 $activeVirtualPage = $virtualPages[$activeVirtualSlug] ?? null;
 $activeBlogIndex = $activeVirtualSlug === 'blog' && count($blogPosts) > 0;
 $activeBlogPost = null;
-if (str_starts_with($activeVirtualSlug, 'blog/')) {
+if (substr($activeVirtualSlug, 0, 5) === 'blog/') {
     $postSlug = substr($activeVirtualSlug, 5);
     foreach ($blogPosts as $post) {
         if ((string)($post['slug'] ?? '') === $postSlug) {
@@ -1406,7 +1406,7 @@ function sitemap_slug(string $value): string {
 }
 $urls = [['loc' => $baseUrl . '/', 'priority' => '1.0']];
 $static = ['stand-up-comedy','eventos-de-humor','eventos-corporativos','team-building-com-humor','booking-de-humoristas','producao-de-eventos','stand-up-comedy-portugal','stand-up-comedy-aveiro','stand-up-comedy-porto','stand-up-comedy-lisboa','stand-up-comedy-braga','stand-up-comedy-coimbra','stand-up-comedy-faro','stand-up-comedy-suica','stand-up-comedy-franca','stand-up-comedy-luxemburgo'];
-foreach ($static as $slug) { $urls[] = ['loc' => $baseUrl . '/' . $slug, 'priority' => str_starts_with($slug, 'blog/') ? '0.7' : '0.8']; }
+foreach ($static as $slug) { $urls[] = ['loc' => $baseUrl . '/' . $slug, 'priority' => '0.8']; }
 try {
     $db = new PDO('sqlite:__DB_PATH__', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
     $pageColumns = array_column($db->query('PRAGMA table_info(public_pages)')->fetchAll(), 'name');
@@ -1580,7 +1580,7 @@ try {
     $ticketsData = [];
     for ($ticketNo = 1; $ticketNo <= $tickets; $ticketNo++) {
         $token = bin2hex(random_bytes(16));
-        $qrPayload = str_starts_with($validationBaseUrl, 'http')
+        $qrPayload = substr($validationBaseUrl, 0, 4) === 'http'
             ? $validationBaseUrl . urlencode($token)
             : ('RESERVA:' . $token);
         $ticketInsert->execute([
