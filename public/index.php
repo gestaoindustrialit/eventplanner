@@ -58,6 +58,7 @@ $map = [
     'reservation' => ReservationController::class,
     'publicsite' => PublicSiteController::class,
     'publicpage' => PublicPageController::class,
+    'blogpost' => BlogPostController::class,
     'comedianarea' => ComedianAreaController::class,
     'newsletter' => NewsletterController::class,
     'presscontact' => PressContactController::class,

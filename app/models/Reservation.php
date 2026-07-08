@@ -287,7 +287,7 @@ class Reservation
             }
         }
 
-        if (str_starts_with($value, 'RESERVA:')) {
+        if (substr($value, 0, 8) === 'RESERVA:') {
             return trim(substr($value, 8));
         }
 
