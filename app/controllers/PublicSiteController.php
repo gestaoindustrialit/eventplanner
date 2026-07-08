@@ -74,6 +74,15 @@ class PublicSiteController extends BaseController
             if (file_put_contents($targetPath . '/contact.php', $this->buildContactHandler($dbPath, $recaptchaSecretKey)) === false) {
                 throw new RuntimeException('Falha ao escrever contact.php no destino.');
             }
+            if (file_put_contents($targetPath . '/sitemap.php', $this->buildSitemapGenerator($dbPath)) === false) {
+                throw new RuntimeException('Falha ao escrever sitemap.php no destino.');
+            }
+            if (file_put_contents($targetPath . '/robots.txt', $this->buildRobotsTxt()) === false) {
+                throw new RuntimeException('Falha ao escrever robots.txt no destino.');
+            }
+            if (file_put_contents($targetPath . '/.htaccess', $this->buildHtaccess()) === false) {
+                throw new RuntimeException('Falha ao escrever .htaccess no destino.');
+            }
 
             $logoSource = dirname(__DIR__, 2) . '/assets/branding/chorarderir-logo.svg';
             if (is_file($logoSource)) {
@@ -183,6 +192,33 @@ if ($heroBackgroundUrl === '') {
     $heroBackgroundUrl = $defaultHomeCopy['background_url'];
 }
 
+$baseUrl = 'https://chorarderir.com';
+$currentPath = trim(parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/', '/');
+
+function seo_slug(string $value): string {
+    $value = trim(function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value));
+    $map = ['á'=>'a','à'=>'a','ã'=>'a','â'=>'a','ä'=>'a','é'=>'e','è'=>'e','ê'=>'e','ë'=>'e','í'=>'i','ì'=>'i','î'=>'i','ï'=>'i','ó'=>'o','ò'=>'o','õ'=>'o','ô'=>'o','ö'=>'o','ú'=>'u','ù'=>'u','û'=>'u','ü'=>'u','ç'=>'c','ñ'=>'n'];
+    $value = strtr($value, $map);
+    $value = preg_replace('/[^a-z0-9]+/', '-', $value) ?: '';
+    return trim($value, '-') ?: 'pagina';
+}
+
+function absolute_url(string $path = ''): string {
+    $base = 'https://chorarderir.com';
+    $path = trim($path);
+    if ($path === '' || $path === '/') { return $base . '/'; }
+    if (preg_match('#^https?://#i', $path)) { return $path; }
+    return $base . '/' . ltrim($path, '/');
+}
+
+function truncate_text(string $value, int $limit = 155): string {
+    $value = trim(preg_replace('/\s+/', ' ', strip_tags($value)) ?: '');
+    if ((function_exists('mb_strlen') ? mb_strlen($value, 'UTF-8') : strlen($value)) <= $limit) { return $value; }
+    return rtrim(function_exists('mb_substr') ? mb_substr($value, 0, $limit - 1, 'UTF-8') : substr($value, 0, $limit - 1)) . '…';
+}
+
+function seo_page_url(string $slug): string { return absolute_url($slug); }
+
 function safe_content(?string $html): string {
     return strip_tags((string)$html, '<h1><h2><h3><h4><p><ul><ol><li><strong><em><a><blockquote><br><hr>');
 }
@@ -272,9 +308,7 @@ $eventSlugById = [];
 $eventIdBySlug = [];
 $usedSlugs = [];
 foreach ($events as $index => $event) {
-    $baseSlug = strtolower(trim((string)($event['title'] ?? '')));
-    $baseSlug = preg_replace('/[^\p{L}\p{N}]+/u', '-', $baseSlug ?? '');
-    $baseSlug = trim((string)$baseSlug, '-');
+    $baseSlug = seo_slug((string)($event['title'] ?? ''));
     if ($baseSlug === '') {
         $baseSlug = 'evento-' . (int)($event['id'] ?? ($index + 1));
     }
@@ -313,6 +347,29 @@ foreach ($events as $event) {
     }
 }
 
+$servicePages = [
+    'stand-up-comedy' => ['title' => 'Stand Up Comedy em Portugal', 'type' => 'service', 'description' => 'Espetáculos de stand up comedy para teatros, bares, empresas e eventos privados, com humoristas selecionados e produção completa.'],
+    'eventos-de-humor' => ['title' => 'Eventos de Humor', 'type' => 'service', 'description' => 'Criação e produção de eventos de humor ao vivo, da curadoria de artistas à operação no dia do espetáculo.'],
+    'eventos-corporativos' => ['title' => 'Eventos Corporativos de Humor', 'type' => 'service', 'description' => 'Humor para empresas, convenções, festas de equipa e ativações internas com linguagem adaptada à marca.'],
+    'team-building-com-humor' => ['title' => 'Team Building com Humor', 'type' => 'service', 'description' => 'Dinâmicas de team building com humor para aproximar equipas, aumentar energia e criar memórias positivas.'],
+    'booking-de-humoristas' => ['title' => 'Booking de Humoristas', 'type' => 'service', 'description' => 'Contratar humorista ou contratar stand up comedy com acompanhamento profissional, briefing e gestão logística.'],
+    'producao-de-eventos' => ['title' => 'Produção de Eventos de Humor', 'type' => 'service', 'description' => 'Produção integral de espetáculos de humor: conceito, agenda, artistas, bilheteira, comunicação e experiência de público.'],
+];
+$localPages = [];
+foreach (['Portugal','Aveiro','Porto','Lisboa','Braga','Coimbra','Faro','Suíça','França','Luxemburgo'] as $place) {
+    $slug = 'stand-up-comedy-' . seo_slug($place);
+    $localPages[$slug] = ['title' => 'Stand Up Comedy e Eventos de Humor em ' . $place, 'type' => 'local', 'place' => $place, 'description' => 'Organização de stand up comedy, eventos de humor, humor ao vivo e booking de humoristas para ' . $place . '.'];
+}
+$blogPages = [
+    'blog' => ['title' => 'Blog de Stand Up Comedy e Eventos de Humor', 'type' => 'blog', 'description' => 'Guias, ideias e estratégias para eventos de humor, comédia ao vivo, humor para empresas e produção de espetáculos.'],
+    'blog/como-contratar-humorista' => ['title' => 'Como contratar um humorista para o teu evento', 'type' => 'article', 'description' => 'Checklist prático para contratar humorista, definir briefing, duração, logística, orçamento e promoção do evento.'],
+    'blog/team-building-com-humor' => ['title' => 'Team building com humor: como funciona', 'type' => 'article', 'description' => 'Ideias para usar comédia ao vivo e dinâmicas de humor para envolver equipas em eventos corporativos.'],
+];
+$virtualPages = $servicePages + $localPages + $blogPages;
+$activeVirtualSlug = $currentPath !== '' ? $currentPath : $pageSlug;
+$activeVirtualPage = $virtualPages[$activeVirtualSlug] ?? null;
+if ($activeVirtualPage !== null) { $isStandaloneView = false; $isEventView = false; }
+
 function render_partners_section(array $partners): void {
     if (count($partners) === 0) {
         return;
@@ -350,8 +407,64 @@ function render_partners_section(array $partners): void {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?php echo htmlspecialchars($siteTitle); ?></title>
-  <link rel="icon" type="image/svg+xml" href="chorarderir-logo.svg">
+  <?php
+    $seoTitle = 'Stand Up Comedy e Eventos de Humor em Portugal | Chorar de Rir';
+    $seoDescription = truncate_text((string)($homeCopy['description'] ?? 'Eventos de stand up comedy, humor ao vivo, eventos corporativos de humor, booking de humoristas e produção de eventos em Portugal.'), 158);
+    $canonicalUrl = absolute_url('/');
+    $ogImage = absolute_url((string)$heroBackgroundUrl);
+    $schemaType = 'WebPage';
+    if ($isEventView && $selectedEvent) {
+        $seoTitle = truncate_text((string)$selectedEvent['title'] . ' | Evento de Stand Up Comedy | Chorar de Rir', 62);
+        $seoDescription = truncate_text((string)($selectedEvent['notes'] ?: 'Espetáculo de humor ao vivo com reservas e informação do evento.'), 158);
+        $canonicalUrl = absolute_url('eventos/' . $selectedEventSlug);
+        $ogImage = !empty($selectedEvent['poster_url']) ? absolute_url((string)$selectedEvent['poster_url']) : $ogImage;
+        $schemaType = 'Event';
+    } elseif ($activeStandalonePage) {
+        $seoTitle = truncate_text((string)$activeStandalonePage['title'] . ' | Chorar de Rir', 62);
+        $seoDescription = truncate_text((string)($activeStandalonePage['excerpt'] ?: $activeStandalonePage['content'] ?: $seoDescription), 158);
+        $canonicalUrl = absolute_url((string)$activeStandalonePage['slug']);
+        $ogImage = !empty($activeStandalonePage['hero_image_url']) ? absolute_url((string)$activeStandalonePage['hero_image_url']) : $ogImage;
+    } elseif ($activeVirtualPage) {
+        $seoTitle = truncate_text((string)$activeVirtualPage['title'] . ' | Chorar de Rir', 62);
+        $seoDescription = truncate_text((string)$activeVirtualPage['description'], 158);
+        $canonicalUrl = absolute_url($activeVirtualSlug);
+        $schemaType = $activeVirtualPage['type'] === 'article' ? 'Article' : 'WebPage';
+    }
+  ?>
+  <title><?php echo htmlspecialchars($seoTitle); ?></title>
+  <meta name="description" content="<?php echo htmlspecialchars($seoDescription); ?>">
+  <link rel="canonical" href="<?php echo htmlspecialchars($canonicalUrl); ?>">
+  <meta property="og:type" content="<?php echo $schemaType === 'Article' ? 'article' : 'website'; ?>">
+  <meta property="og:site_name" content="Chorar de Rir">
+  <meta property="og:title" content="<?php echo htmlspecialchars($seoTitle); ?>">
+  <meta property="og:description" content="<?php echo htmlspecialchars($seoDescription); ?>">
+  <meta property="og:url" content="<?php echo htmlspecialchars($canonicalUrl); ?>">
+  <meta property="og:image" content="<?php echo htmlspecialchars($ogImage); ?>">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="<?php echo htmlspecialchars($seoTitle); ?>">
+  <meta name="twitter:description" content="<?php echo htmlspecialchars($seoDescription); ?>">
+  <meta name="twitter:image" content="<?php echo htmlspecialchars($ogImage); ?>">
+  <link rel="icon" type="image/svg+xml" href="/chorarderir-logo.svg">
+  <?php
+    $jsonLd = [
+      ['@context'=>'https://schema.org','@type'=>'Organization','name'=>'Chorar de Rir','url'=>absolute_url('/'),'logo'=>absolute_url('/chorarderir-logo.svg'),'sameAs'=>[]],
+      ['@context'=>'https://schema.org','@type'=>'LocalBusiness','name'=>'Chorar de Rir','url'=>absolute_url('/'),'image'=>$ogImage,'areaServed'=>['Portugal','Suíça','França','Luxemburgo'],'priceRange'=>'€€','description'=>$seoDescription],
+      ['@context'=>'https://schema.org','@type'=>'WebSite','name'=>'Chorar de Rir','url'=>absolute_url('/'),'inLanguage'=>'pt-PT'],
+    ];
+    $breadcrumbs = [['@type'=>'ListItem','position'=>1,'name'=>'Início','item'=>absolute_url('/')]];
+    if ($activeVirtualPage) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>$activeVirtualPage['title'],'item'=>$canonicalUrl]; }
+    if ($activeStandalonePage) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>$activeStandalonePage['title'],'item'=>$canonicalUrl]; }
+    if ($isEventView && $selectedEvent) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>'Eventos','item'=>absolute_url('/#agenda')]; $breadcrumbs[] = ['@type'=>'ListItem','position'=>3,'name'=>$selectedEvent['title'],'item'=>$canonicalUrl]; }
+    $jsonLd[] = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>$breadcrumbs];
+    if ($activeVirtualPage) {
+      $jsonLd[] = ['@context'=>'https://schema.org','@type'=>'FAQPage','mainEntity'=>[
+        ['@type'=>'Question','name'=>'Como pedir orçamento para eventos de humor?','acceptedAnswer'=>['@type'=>'Answer','text'=>'Envia cidade, data, público, objetivo e formato pretendido através dos contactos.']],
+        ['@type'=>'Question','name'=>'A Chorar de Rir trabalha fora de Portugal?','acceptedAnswer'=>['@type'=>'Answer','text'=>'Sim. O website está preparado para Portugal, Suíça, França e Luxemburgo.']]
+      ]];
+      if ($activeVirtualPage['type'] === 'article') { $jsonLd[] = ['@context'=>'https://schema.org','@type'=>'Article','headline'=>$activeVirtualPage['title'],'description'=>$activeVirtualPage['description'],'author'=>['@type'=>'Organization','name'=>'Chorar de Rir'],'publisher'=>['@type'=>'Organization','name'=>'Chorar de Rir','logo'=>['@type'=>'ImageObject','url'=>absolute_url('/chorarderir-logo.svg')]],'mainEntityOfPage'=>$canonicalUrl]; }
+    }
+  ?>
+  <?php foreach ($jsonLd as $schema): ?><script type="application/ld+json"><?php echo json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?></script><?php endforeach; ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -622,7 +735,7 @@ function render_partners_section(array $partners): void {
       <a class="navbar-brand" href="index.php#inicio">
         <img src="chorarderir-logo.svg" alt="Chorar de Rir">
       </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPublico">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPublico" aria-controls="menuPublico" aria-expanded="false" aria-label="Abrir menu de navegação">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="menuPublico">
@@ -633,6 +746,13 @@ function render_partners_section(array $partners): void {
             <?php if ($menuSlug === '' || ($menuSlug === 'agenda' && !$hasAgendaEvents)) { continue; } ?>
             <li class="nav-item"><a class="nav-link" href="index.php#<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
           <?php endforeach; ?>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Serviços</a>
+            <ul class="dropdown-menu dropdown-menu-dark">
+              <?php foreach ($servicePages as $slug => $service): ?><li><a class="dropdown-item" href="/<?php echo htmlspecialchars($slug); ?>"><?php echo htmlspecialchars($service['title']); ?></a></li><?php endforeach; ?>
+            </ul>
+          </li>
+          <li class="nav-item"><a class="nav-link" href="/blog">Blog</a></li>
           <?php if ($hasPartners): ?>
             <li class="nav-item"><a class="nav-link" href="index.php#parceiros">Parceiros</a></li>
           <?php endif; ?>
@@ -642,7 +762,31 @@ function render_partners_section(array $partners): void {
   </nav>
 
   <main class="site-main">
-    <?php if (!$isStandaloneView && !$isEventView): ?>
+    <?php if ($activeVirtualPage !== null): ?>
+      <section class="section-block">
+        <div class="container">
+          <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Início</a></li><li class="breadcrumb-item active" aria-current="page"><?php echo htmlspecialchars($activeVirtualPage['title']); ?></li></ol></nav>
+          <article class="surface-card p-4 p-lg-5 fade-in show">
+            <h1 class="section-heading mb-3"><?php echo htmlspecialchars($activeVirtualPage['title']); ?></h1>
+            <p class="lead text-secondary"><?php echo htmlspecialchars($activeVirtualPage['description']); ?></p>
+            <?php if ($activeVirtualPage['type'] === 'service'): ?>
+              <h2>Serviço de humor ao vivo sem duplicação</h2><p class="page-content">Planeamos stand up comedy, eventos de humor, espetáculo de humor, comédia ao vivo e humor para empresas com curadoria de artistas, briefing, produção técnica e acompanhamento até ao fim do evento.</p>
+              <h2>O que está incluído</h2><div class="row g-3"><div class="col-md-4"><h3>Curadoria</h3><p class="text-secondary">Seleção de humoristas adequada ao público.</p></div><div class="col-md-4"><h3>Produção</h3><p class="text-secondary">Coordenação de palco, horários e comunicação.</p></div><div class="col-md-4"><h3>Conversão</h3><p class="text-secondary">Ligações para agenda, contactos e reservas.</p></div></div>
+            <?php elseif ($activeVirtualPage['type'] === 'local'): ?>
+              <h2>Eventos de stand up comedy em <?php echo htmlspecialchars($activeVirtualPage['place']); ?></h2><p class="page-content">Criamos propostas locais para espetáculos de stand up, eventos corporativos de humor, team building com humor e booking de humoristas em <?php echo htmlspecialchars($activeVirtualPage['place']); ?>, mantendo conteúdos únicos por mercado.</p>
+              <h2>Formatos recomendados</h2><h3>Empresas</h3><p class="text-secondary">Humor para empresas com tom alinhado à cultura interna.</p><h3>Salas e teatros</h3><p class="text-secondary">Comédia ao vivo com comunicação otimizada para pesquisa local.</p>
+            <?php elseif ($activeVirtualPage['type'] === 'blog'): ?>
+              <h2>Categorias</h2><p><a href="/blog/como-contratar-humorista">Contratar humorista</a> · <a href="/blog/team-building-com-humor">Team building com humor</a></p>
+              <h2>Artigos recentes</h2><ul><li><a href="/blog/como-contratar-humorista">Como contratar um humorista para o teu evento</a></li><li><a href="/blog/team-building-com-humor">Team building com humor: como funciona</a></li></ul>
+            <?php else: ?>
+              <h2>Guia prático</h2><p class="page-content"><?php echo htmlspecialchars($activeVirtualPage['description']); ?> A Chorar de Rir ajuda a definir objetivo, público, formato, duração, necessidades técnicas e ligações internas para agenda e contactos.</p>
+            <?php endif; ?>
+            <h2>Perguntas frequentes</h2><div class="accordion" id="faqSeo"><div class="accordion-item bg-dark text-white"><h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">Como pedir orçamento?</button></h3><div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqSeo"><div class="accordion-body">Usa a página de contactos e indica cidade, data, público e objetivo.</div></div></div></div>
+            <p class="mt-4"><a class="btn btn-brand" href="/#contactos">Pedir proposta</a> <a class="btn btn-outline-brand" href="/#agenda">Ver eventos</a></p>
+          </article>
+        </div>
+      </section>
+    <?php elseif (!$isStandaloneView && !$isEventView): ?>
       <section id="inicio" class="hero" style="background-image: url('<?php echo htmlspecialchars((string)$heroBackgroundUrl); ?>');">
         <div class="container">
           <div class="hero-panel p-4 p-lg-5 col-12 fade-in show">
@@ -870,7 +1014,7 @@ function render_partners_section(array $partners): void {
           <div class="modal-content bg-dark text-white border border-light border-opacity-10">
             <div class="modal-header border-secondary border-opacity-25">
               <h5 class="modal-title">Reservar evento</h5>
-              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
               <p class="small text-secondary mb-3" id="reserveEventInfo">Preenche os dados para concluir a tua reserva.</p>
@@ -902,12 +1046,19 @@ function render_partners_section(array $partners): void {
             <?php if (!empty($selectedEvent['poster_url'])): ?>
               <img src="<?php echo htmlspecialchars((string)$selectedEvent['poster_url']); ?>" alt="Cartaz de <?php echo htmlspecialchars((string)$selectedEvent['title']); ?>" class="img-fluid rounded mb-3" style="max-height: 360px; width: 100%; object-fit: cover;">
             <?php endif; ?>
-            <h2><?php echo htmlspecialchars((string)$selectedEvent['title']); ?></h2>
+            <h1><?php echo htmlspecialchars((string)$selectedEvent['title']); ?></h1>
             <p class="mb-1"><span class="event-meta-label">Data:</span> <?php echo htmlspecialchars((string)$selectedEvent['date']); ?> às <?php echo htmlspecialchars(substr((string)$selectedEvent['time'], 0, 5)); ?></p>
             <p class="mb-3"><span class="event-meta-label">Local:</span> <?php echo htmlspecialchars((string)$selectedEvent['location']); ?></p>
             <?php if (!empty($selectedEvent['notes'])): ?>
               <p class="text-secondary mb-3"><?php echo nl2br(htmlspecialchars((string)$selectedEvent['notes'])); ?></p>
             <?php endif; ?>
+            <div class="row g-4 mt-2 mb-3">
+              <div class="col-md-4"><h2 class="h4">Artistas</h2><p class="text-secondary"><?php echo htmlspecialchars((string)($selectedEvent['artist_details'] ?: 'Line-up de humoristas confirmado pela produção.')); ?></p></div>
+              <div class="col-md-4"><h2 class="h4">Mapa e local</h2><p class="text-secondary"><?php echo htmlspecialchars((string)$selectedEvent['location']); ?></p><?php if (!empty($selectedEvent['artist_map_link'])): ?><a class="btn btn-sm btn-outline-light" href="<?php echo htmlspecialchars((string)$selectedEvent['artist_map_link']); ?>" target="_blank" rel="noopener noreferrer">Abrir mapa</a><?php endif; ?></div>
+              <div class="col-md-4"><h2 class="h4">Galeria</h2><p class="text-secondary">Cartaz, imagens e conteúdos do espetáculo serão atualizados nesta página para reforçar a pesquisa orgânica.</p></div>
+            </div>
+            <h2 class="h4">Perguntas frequentes sobre o evento</h2>
+            <div class="page-content mb-3"><h3>Como reservar?</h3><p>Usa o botão de reserva ou compra de bilhetes nesta página.</p><h3>Quando devo chegar?</h3><p>Recomendamos chegar com antecedência para garantir a melhor experiência de humor ao vivo.</p></div>
             <?php
               $selectedCapacity = (int)($selectedEvent['reservation_capacity'] ?? 0);
               $selectedActiveTickets = (int)($selectedEvent['active_tickets'] ?? 0);
@@ -951,7 +1102,7 @@ function render_partners_section(array $partners): void {
           <div class="modal-content bg-dark text-white border border-light border-opacity-10">
             <div class="modal-header border-secondary border-opacity-25">
               <h5 class="modal-title">Reservar evento</h5>
-              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
               <p class="small text-secondary mb-3" id="reserveEventInfo">Preenche os dados para concluir a tua reserva.</p>
@@ -1140,6 +1291,77 @@ PHP;
 </body>
 </html>
 HTML;
+    }
+
+    private function buildHtaccess(): string
+    {
+        return <<<'HTACCESS'
+RewriteEngine On
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+RewriteRule ^eventos/([^/]+)/?$ index.php?evento=$1 [L,QSA]
+RewriteRule ^(stand-up-comedy|eventos-de-humor|eventos-corporativos|team-building-com-humor|booking-de-humoristas|producao-de-eventos|stand-up-comedy-portugal|stand-up-comedy-aveiro|stand-up-comedy-porto|stand-up-comedy-lisboa|stand-up-comedy-braga|stand-up-comedy-coimbra|stand-up-comedy-faro|stand-up-comedy-suica|stand-up-comedy-franca|stand-up-comedy-luxemburgo|blog|blog/como-contratar-humorista|blog/team-building-com-humor)/?$ index.php?page=$1 [L,QSA]
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/xml image/svg+xml
+</IfModule>
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+</IfModule>
+HTACCESS;
+    }
+
+    private function buildRobotsTxt(): string
+    {
+        return "User-agent: *\nAllow: /\nSitemap: https://chorarderir.com/sitemap.xml\n";
+    }
+
+    private function buildSitemapGenerator(string $dbPath): string
+    {
+        $template = <<<'PHP'
+<?php
+header('Content-Type: application/xml; charset=UTF-8');
+$baseUrl = 'https://chorarderir.com';
+function sitemap_slug(string $value): string {
+    $value = trim(function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value));
+    $value = strtr($value, ['á'=>'a','à'=>'a','ã'=>'a','â'=>'a','ä'=>'a','é'=>'e','è'=>'e','ê'=>'e','ë'=>'e','í'=>'i','ì'=>'i','î'=>'i','ï'=>'i','ó'=>'o','ò'=>'o','õ'=>'o','ô'=>'o','ö'=>'o','ú'=>'u','ù'=>'u','û'=>'u','ü'=>'u','ç'=>'c','ñ'=>'n']);
+    $value = preg_replace('/[^a-z0-9]+/', '-', $value) ?: '';
+    return trim($value, '-') ?: 'pagina';
+}
+$urls = [['loc' => $baseUrl . '/', 'priority' => '1.0']];
+$static = ['stand-up-comedy','eventos-de-humor','eventos-corporativos','team-building-com-humor','booking-de-humoristas','producao-de-eventos','stand-up-comedy-portugal','stand-up-comedy-aveiro','stand-up-comedy-porto','stand-up-comedy-lisboa','stand-up-comedy-braga','stand-up-comedy-coimbra','stand-up-comedy-faro','stand-up-comedy-suica','stand-up-comedy-franca','stand-up-comedy-luxemburgo','blog','blog/como-contratar-humorista','blog/team-building-com-humor'];
+foreach ($static as $slug) { $urls[] = ['loc' => $baseUrl . '/' . $slug, 'priority' => str_starts_with($slug, 'blog/') ? '0.7' : '0.8']; }
+try {
+    $db = new PDO('sqlite:__DB_PATH__', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+    $pageColumns = array_column($db->query('PRAGMA table_info(public_pages)')->fetchAll(), 'name');
+    if ($pageColumns) {
+        $where = in_array('is_published', $pageColumns, true) ? ' WHERE is_published = 1' : '';
+        foreach (($db->query('SELECT slug FROM public_pages' . $where)->fetchAll() ?: []) as $page) {
+            $slug = trim((string)($page['slug'] ?? ''));
+            if ($slug !== '') { $urls[] = ['loc' => $baseUrl . '/' . sitemap_slug($slug), 'priority' => '0.7']; }
+        }
+    }
+    $eventColumns = array_column($db->query('PRAGMA table_info(events)')->fetchAll(), 'name');
+    if ($eventColumns) {
+        $where = in_array('is_visible', $eventColumns, true) ? ' AND is_visible = 1' : '';
+        foreach (($db->query("SELECT id, title, date FROM events WHERE date >= date('now')" . $where . " ORDER BY date ASC")->fetchAll() ?: []) as $event) {
+            $urls[] = ['loc' => $baseUrl . '/eventos/' . sitemap_slug((string)$event['title']), 'priority' => '0.9', 'lastmod' => (string)$event['date']];
+        }
+    }
+} catch (Throwable $e) {}
+echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n";
+$seen = [];
+foreach ($urls as $url) {
+    if (isset($seen[$url['loc']])) { continue; }
+    $seen[$url['loc']] = true;
+    echo "  <url><loc>" . htmlspecialchars($url['loc'], ENT_XML1) . "</loc>";
+    if (!empty($url['lastmod'])) { echo "<lastmod>" . htmlspecialchars($url['lastmod'], ENT_XML1) . "</lastmod>"; }
+    echo "<changefreq>weekly</changefreq><priority>" . htmlspecialchars($url['priority'], ENT_XML1) . "</priority></url>\n";
+}
+echo "</urlset>\n";
+PHP;
+        return str_replace('__DB_PATH__', addslashes($dbPath), $template);
     }
 
     private function buildReserveHandler(string $dbPath, string $recaptchaSecretKey): string
