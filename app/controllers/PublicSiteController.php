@@ -106,6 +106,7 @@ class PublicSiteController extends BaseController
 $events = [];
 $pages = [];
 $partners = [];
+$blogPosts = [];
 $homeCopy = json_decode('__HOME_COPY_JSON__', true) ?: [];
 $msg = $_GET['msg'] ?? '';
 $pageSlug = trim((string)($_GET['page'] ?? ''));
@@ -156,6 +157,12 @@ try {
         $partners = $db->query($partnerSql)->fetchAll() ?: [];
     }
 
+    $blogColumns = array_column($db->query('PRAGMA table_info(blog_posts)')->fetchAll(), 'name');
+    if (count($blogColumns) > 0) {
+        $blogSql = 'SELECT * FROM blog_posts WHERE is_published = 1 ORDER BY sort_order ASC, published_at DESC, created_at DESC';
+        $blogPosts = $db->query($blogSql)->fetchAll() ?: [];
+    }
+
     if (!$hasReservationsOpen) {
         foreach ($events as &$legacyEvent) {
             $legacyEvent['reservations_open'] = 1;
@@ -172,6 +179,7 @@ try {
     $events = [];
     $pages = [];
     $partners = [];
+    $blogPosts = [];
 }
 
 $siteTitle = 'Chorar de Rir';
@@ -360,15 +368,21 @@ foreach (['Portugal','Aveiro','Porto','Lisboa','Braga','Coimbra','Faro','Suíça
     $slug = 'stand-up-comedy-' . seo_slug($place);
     $localPages[$slug] = ['title' => 'Stand Up Comedy e Eventos de Humor em ' . $place, 'type' => 'local', 'place' => $place, 'description' => 'Organização de stand up comedy, eventos de humor, humor ao vivo e booking de humoristas para ' . $place . '.'];
 }
-$blogPages = [
-    'blog' => ['title' => 'Blog de Stand Up Comedy e Eventos de Humor', 'type' => 'blog', 'description' => 'Guias, ideias e estratégias para eventos de humor, comédia ao vivo, humor para empresas e produção de espetáculos.'],
-    'blog/como-contratar-humorista' => ['title' => 'Como contratar um humorista para o teu evento', 'type' => 'article', 'description' => 'Checklist prático para contratar humorista, definir briefing, duração, logística, orçamento e promoção do evento.'],
-    'blog/team-building-com-humor' => ['title' => 'Team building com humor: como funciona', 'type' => 'article', 'description' => 'Ideias para usar comédia ao vivo e dinâmicas de humor para envolver equipas em eventos corporativos.'],
-];
-$virtualPages = $servicePages + $localPages + $blogPages;
+$virtualPages = $servicePages + $localPages;
 $activeVirtualSlug = $currentPath !== '' ? $currentPath : $pageSlug;
 $activeVirtualPage = $virtualPages[$activeVirtualSlug] ?? null;
-if ($activeVirtualPage !== null) { $isStandaloneView = false; $isEventView = false; }
+$activeBlogIndex = $activeVirtualSlug === 'blog' && count($blogPosts) > 0;
+$activeBlogPost = null;
+if (str_starts_with($activeVirtualSlug, 'blog/')) {
+    $postSlug = substr($activeVirtualSlug, 5);
+    foreach ($blogPosts as $post) {
+        if ((string)($post['slug'] ?? '') === $postSlug) {
+            $activeBlogPost = $post;
+            break;
+        }
+    }
+}
+if ($activeVirtualPage !== null || $activeBlogIndex || $activeBlogPost !== null) { $isStandaloneView = false; $isEventView = false; }
 
 function render_partners_section(array $partners): void {
     if (count($partners) === 0) {
@@ -428,7 +442,16 @@ function render_partners_section(array $partners): void {
         $seoTitle = truncate_text((string)$activeVirtualPage['title'] . ' | Chorar de Rir', 62);
         $seoDescription = truncate_text((string)$activeVirtualPage['description'], 158);
         $canonicalUrl = absolute_url($activeVirtualSlug);
-        $schemaType = $activeVirtualPage['type'] === 'article' ? 'Article' : 'WebPage';
+    } elseif ($activeBlogPost) {
+        $seoTitle = truncate_text((string)($activeBlogPost['meta_title'] ?: $activeBlogPost['title'] . ' | Blog Chorar de Rir'), 62);
+        $seoDescription = truncate_text((string)($activeBlogPost['meta_description'] ?: $activeBlogPost['excerpt'] ?: $activeBlogPost['content']), 158);
+        $canonicalUrl = absolute_url('blog/' . (string)$activeBlogPost['slug']);
+        $ogImage = !empty($activeBlogPost['hero_image_url']) ? absolute_url((string)$activeBlogPost['hero_image_url']) : $ogImage;
+        $schemaType = 'Article';
+    } elseif ($activeBlogIndex) {
+        $seoTitle = 'Blog de Humor, Stand Up Comedy e Eventos | Chorar de Rir';
+        $seoDescription = 'Artigos sobre stand up comedy, eventos de humor, humor para empresas e produção de espetáculos ao vivo.';
+        $canonicalUrl = absolute_url('blog');
     }
   ?>
   <title><?php echo htmlspecialchars($seoTitle); ?></title>
@@ -453,6 +476,8 @@ function render_partners_section(array $partners): void {
     ];
     $breadcrumbs = [['@type'=>'ListItem','position'=>1,'name'=>'Início','item'=>absolute_url('/')]];
     if ($activeVirtualPage) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>$activeVirtualPage['title'],'item'=>$canonicalUrl]; }
+    if ($activeBlogIndex) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>'Blog','item'=>$canonicalUrl]; }
+    if ($activeBlogPost) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>'Blog','item'=>absolute_url('blog')]; $breadcrumbs[] = ['@type'=>'ListItem','position'=>3,'name'=>$activeBlogPost['title'],'item'=>$canonicalUrl]; }
     if ($activeStandalonePage) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>$activeStandalonePage['title'],'item'=>$canonicalUrl]; }
     if ($isEventView && $selectedEvent) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>'Eventos','item'=>absolute_url('/#agenda')]; $breadcrumbs[] = ['@type'=>'ListItem','position'=>3,'name'=>$selectedEvent['title'],'item'=>$canonicalUrl]; }
     $jsonLd[] = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>$breadcrumbs];
@@ -461,7 +486,9 @@ function render_partners_section(array $partners): void {
         ['@type'=>'Question','name'=>'Como pedir orçamento para eventos de humor?','acceptedAnswer'=>['@type'=>'Answer','text'=>'Envia cidade, data, público, objetivo e formato pretendido através dos contactos.']],
         ['@type'=>'Question','name'=>'A Chorar de Rir trabalha fora de Portugal?','acceptedAnswer'=>['@type'=>'Answer','text'=>'Sim. O website está preparado para Portugal, Suíça, França e Luxemburgo.']]
       ]];
-      if ($activeVirtualPage['type'] === 'article') { $jsonLd[] = ['@context'=>'https://schema.org','@type'=>'Article','headline'=>$activeVirtualPage['title'],'description'=>$activeVirtualPage['description'],'author'=>['@type'=>'Organization','name'=>'Chorar de Rir'],'publisher'=>['@type'=>'Organization','name'=>'Chorar de Rir','logo'=>['@type'=>'ImageObject','url'=>absolute_url('/chorarderir-logo.svg')]],'mainEntityOfPage'=>$canonicalUrl]; }
+    }
+    if ($activeBlogPost) {
+      $jsonLd[] = ['@context'=>'https://schema.org','@type'=>'Article','headline'=>$activeBlogPost['title'],'description'=>$seoDescription,'datePublished'=>(string)($activeBlogPost['published_at'] ?? ''),'author'=>['@type'=>'Organization','name'=>'Chorar de Rir'],'publisher'=>['@type'=>'Organization','name'=>'Chorar de Rir','logo'=>['@type'=>'ImageObject','url'=>absolute_url('/chorarderir-logo.svg')]],'mainEntityOfPage'=>$canonicalUrl];
     }
   ?>
   <?php foreach ($jsonLd as $schema): ?><script type="application/ld+json"><?php echo json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?></script><?php endforeach; ?>
@@ -714,6 +741,32 @@ function render_partners_section(array $partners): void {
     footer a:hover { color: #fff; }
     .fade-in { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s ease; }
     .fade-in.show { opacity: 1; transform: translateY(0); }
+
+    .seo-landing { padding-top: clamp(5rem, 9vw, 7rem); }
+    .seo-breadcrumb a { color: #fff; text-decoration-color: rgba(225,6,0,.8); }
+    .seo-breadcrumb .active { color: var(--text-secondary); }
+    .eyebrow { display:inline-flex; align-items:center; gap:.45rem; color:#fff; font-weight:800; text-transform:uppercase; letter-spacing:.08em; font-size:.78rem; margin-bottom:.85rem; }
+    .seo-hero-card { border:1px solid rgba(255,255,255,.11); border-radius:1.25rem; padding:clamp(2rem,5vw,4rem); background:linear-gradient(135deg, rgba(11,11,13,.94), rgba(42,15,46,.72) 48%, rgba(225,6,0,.24)); box-shadow:0 28px 72px rgba(0,0,0,.46); overflow:hidden; position:relative; }
+    .seo-hero-card::after { content:''; position:absolute; inset:auto -12% -42% 42%; height:260px; background:radial-gradient(circle, rgba(255,42,31,.32), transparent 62%); pointer-events:none; }
+    .seo-hero-card h1, .blog-article h1 { font-weight:900; letter-spacing:-.035em; font-size:clamp(2.35rem,5vw,4.85rem); line-height:1.02; }
+    .seo-hero-card .lead { color:rgba(255,255,255,.78); max-width:760px; }
+    .seo-feature-panel { min-height:280px; border-radius:1rem; padding:2rem; background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.1); display:flex; flex-direction:column; justify-content:end; }
+    .seo-feature-panel i { font-size:3rem; color:var(--accent); margin-bottom:1rem; }
+    .seo-feature-panel h2 { font-size:1.45rem; font-weight:800; }
+    .seo-content-card h2 { font-weight:850; letter-spacing:-.02em; }
+    .seo-mini-grid > div > div { height:100%; padding:1.25rem; border-radius:.95rem; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.08); }
+    .seo-mini-grid i { color:var(--primary-hover); font-size:1.65rem; }
+    .seo-mini-grid h3 { font-size:1.08rem; margin-top:.8rem; }
+    .seo-mini-grid p, .seo-link-list { color:var(--text-secondary); }
+    .seo-link-list { list-style:none; padding:0; margin:0; display:grid; gap:.7rem; }
+    .seo-link-list a, .blog-card a { color:#fff; text-decoration:none; }
+    .seo-link-list a:hover, .blog-card a:hover { color:var(--primary-hover); }
+    .blog-card { overflow:hidden; transition:transform .22s ease, border-color .22s ease; }
+    .blog-card:hover { transform:translateY(-4px); border-color:rgba(225,6,0,.45); }
+    .blog-card img { width:100%; height:210px; object-fit:cover; display:block; }
+    .blog-article { max-width:980px; margin-inline:auto; }
+    .blog-article-cover { width:100%; max-height:420px; object-fit:cover; border-radius:1rem; margin-bottom:1.5rem; }
+
     @media (max-width: 767.98px) {
       .navbar-brand img { height: 14px; max-height: 14px; }
       .navbar { padding-top: .45rem; padding-bottom: .45rem; }
@@ -746,13 +799,9 @@ function render_partners_section(array $partners): void {
             <?php if ($menuSlug === '' || ($menuSlug === 'agenda' && !$hasAgendaEvents)) { continue; } ?>
             <li class="nav-item"><a class="nav-link" href="index.php#<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
           <?php endforeach; ?>
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Serviços</a>
-            <ul class="dropdown-menu dropdown-menu-dark">
-              <?php foreach ($servicePages as $slug => $service): ?><li><a class="dropdown-item" href="/<?php echo htmlspecialchars($slug); ?>"><?php echo htmlspecialchars($service['title']); ?></a></li><?php endforeach; ?>
-            </ul>
-          </li>
-          <li class="nav-item"><a class="nav-link" href="/blog">Blog</a></li>
+          <?php if (count($blogPosts) > 0): ?>
+            <li class="nav-item"><a class="nav-link" href="/blog">Blog</a></li>
+          <?php endif; ?>
           <?php if ($hasPartners): ?>
             <li class="nav-item"><a class="nav-link" href="index.php#parceiros">Parceiros</a></li>
           <?php endif; ?>
@@ -763,26 +812,50 @@ function render_partners_section(array $partners): void {
 
   <main class="site-main">
     <?php if ($activeVirtualPage !== null): ?>
-      <section class="section-block">
+      <section class="section-block seo-landing">
         <div class="container">
-          <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Início</a></li><li class="breadcrumb-item active" aria-current="page"><?php echo htmlspecialchars($activeVirtualPage['title']); ?></li></ol></nav>
-          <article class="surface-card p-4 p-lg-5 fade-in show">
-            <h1 class="section-heading mb-3"><?php echo htmlspecialchars($activeVirtualPage['title']); ?></h1>
-            <p class="lead text-secondary"><?php echo htmlspecialchars($activeVirtualPage['description']); ?></p>
-            <?php if ($activeVirtualPage['type'] === 'service'): ?>
-              <h2>Serviço de humor ao vivo sem duplicação</h2><p class="page-content">Planeamos stand up comedy, eventos de humor, espetáculo de humor, comédia ao vivo e humor para empresas com curadoria de artistas, briefing, produção técnica e acompanhamento até ao fim do evento.</p>
-              <h2>O que está incluído</h2><div class="row g-3"><div class="col-md-4"><h3>Curadoria</h3><p class="text-secondary">Seleção de humoristas adequada ao público.</p></div><div class="col-md-4"><h3>Produção</h3><p class="text-secondary">Coordenação de palco, horários e comunicação.</p></div><div class="col-md-4"><h3>Conversão</h3><p class="text-secondary">Ligações para agenda, contactos e reservas.</p></div></div>
-            <?php elseif ($activeVirtualPage['type'] === 'local'): ?>
-              <h2>Eventos de stand up comedy em <?php echo htmlspecialchars($activeVirtualPage['place']); ?></h2><p class="page-content">Criamos propostas locais para espetáculos de stand up, eventos corporativos de humor, team building com humor e booking de humoristas em <?php echo htmlspecialchars($activeVirtualPage['place']); ?>, mantendo conteúdos únicos por mercado.</p>
-              <h2>Formatos recomendados</h2><h3>Empresas</h3><p class="text-secondary">Humor para empresas com tom alinhado à cultura interna.</p><h3>Salas e teatros</h3><p class="text-secondary">Comédia ao vivo com comunicação otimizada para pesquisa local.</p>
-            <?php elseif ($activeVirtualPage['type'] === 'blog'): ?>
-              <h2>Categorias</h2><p><a href="/blog/como-contratar-humorista">Contratar humorista</a> · <a href="/blog/team-building-com-humor">Team building com humor</a></p>
-              <h2>Artigos recentes</h2><ul><li><a href="/blog/como-contratar-humorista">Como contratar um humorista para o teu evento</a></li><li><a href="/blog/team-building-com-humor">Team building com humor: como funciona</a></li></ul>
-            <?php else: ?>
-              <h2>Guia prático</h2><p class="page-content"><?php echo htmlspecialchars($activeVirtualPage['description']); ?> A Chorar de Rir ajuda a definir objetivo, público, formato, duração, necessidades técnicas e ligações internas para agenda e contactos.</p>
-            <?php endif; ?>
-            <h2>Perguntas frequentes</h2><div class="accordion" id="faqSeo"><div class="accordion-item bg-dark text-white"><h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">Como pedir orçamento?</button></h3><div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqSeo"><div class="accordion-body">Usa a página de contactos e indica cidade, data, público e objetivo.</div></div></div></div>
-            <p class="mt-4"><a class="btn btn-brand" href="/#contactos">Pedir proposta</a> <a class="btn btn-outline-brand" href="/#agenda">Ver eventos</a></p>
+          <nav aria-label="breadcrumb" class="mb-4"><ol class="breadcrumb seo-breadcrumb"><li class="breadcrumb-item"><a href="/">Início</a></li><li class="breadcrumb-item active" aria-current="page"><?php echo htmlspecialchars($activeVirtualPage['title']); ?></li></ol></nav>
+          <article class="seo-hero-card fade-in show">
+            <div class="row g-4 align-items-center">
+              <div class="col-lg-7">
+                <span class="eyebrow"><i class="bi bi-mic-fill"></i> Humor ao vivo • Produção • Booking</span>
+                <h1><?php echo htmlspecialchars($activeVirtualPage['title']); ?></h1>
+                <p class="lead"><?php echo htmlspecialchars($activeVirtualPage['description']); ?></p>
+                <div class="d-flex flex-wrap gap-2 mt-4"><a class="btn btn-brand" href="/#contactos">Pedir proposta</a><a class="btn btn-outline-brand" href="/#agenda">Ver agenda</a></div>
+              </div>
+              <div class="col-lg-5">
+                <div class="seo-feature-panel"><i class="bi bi-stars"></i><h2>Estratégia feita à medida</h2><p>Conteúdo otimizado para pesquisa sem duplicar texto, mantendo o visual escuro, vermelho e premium da Chorar de Rir.</p></div>
+              </div>
+            </div>
+          </article>
+          <div class="row g-4 mt-1">
+            <div class="col-lg-8"><section class="surface-card seo-content-card p-4 p-lg-5 fade-in"><h2><?php echo $activeVirtualPage['type'] === 'local' ? 'Eventos de stand up comedy em ' . htmlspecialchars($activeVirtualPage['place']) : 'Soluções de humor ao vivo'; ?></h2><p class="page-content">Planeamos stand up comedy, eventos de humor, espetáculo de humor, comédia ao vivo, team building com humor e humor para empresas com curadoria de artistas, briefing, produção técnica e acompanhamento até ao fim do evento.</p><h2>O que torna a experiência diferente</h2><div class="row g-3 seo-mini-grid"><div class="col-md-4"><div><i class="bi bi-person-check"></i><h3>Curadoria</h3><p>Humoristas adequados ao público, contexto e objetivo.</p></div></div><div class="col-md-4"><div><i class="bi bi-calendar2-check"></i><h3>Produção</h3><p>Coordenação de palco, horários, comunicação e operação.</p></div></div><div class="col-md-4"><div><i class="bi bi-geo-alt"></i><h3>Local</h3><p>Conteúdo preparado para Portugal e expansão internacional.</p></div></div></div></section></div>
+            <div class="col-lg-4"><aside class="surface-card seo-content-card p-4 fade-in"><h2 class="h4">Ligações úteis</h2><ul class="seo-link-list"><li><a href="/#servicos">Serviços na homepage</a></li><li><a href="/#agenda">Eventos próximos</a></li><li><a href="/#contactos">Contactos e propostas</a></li><?php if (count($blogPosts) > 0): ?><li><a href="/blog">Artigos do blog</a></li><?php endif; ?></ul><h2 class="h4 mt-4">Perguntas frequentes</h2><h3>Como pedir orçamento?</h3><p>Indica cidade, data, público, objetivo e formato pretendido.</p><h3>Trabalham fora de Portugal?</h3><p>Sim, com páginas e conteúdo preparados para Portugal, Suíça, França e Luxemburgo.</p></aside></div>
+          </div>
+        </div>
+      </section>
+    <?php elseif ($activeBlogIndex): ?>
+      <section class="section-block seo-landing">
+        <div class="container">
+          <article class="seo-hero-card fade-in show mb-4"><span class="eyebrow"><i class="bi bi-journal-richtext"></i> Blog</span><h1>Blog de Stand Up Comedy e Eventos de Humor</h1><p class="lead">Guias, ideias e estratégias para criar eventos de humor, contratar humoristas e produzir experiências memoráveis.</p></article>
+          <div class="row g-4">
+            <?php foreach ($blogPosts as $post): ?>
+              <div class="col-md-6 col-xl-4"><article class="blog-card surface-card h-100 fade-in"><?php if (!empty($post['hero_image_url'])): ?><img src="<?php echo htmlspecialchars((string)$post['hero_image_url']); ?>" alt="Imagem do artigo <?php echo htmlspecialchars((string)$post['title']); ?>"><?php endif; ?><div class="p-4"><span class="eyebrow"><?php echo htmlspecialchars((string)($post['category'] ?: 'Blog')); ?></span><h2 class="h4"><a href="/blog/<?php echo htmlspecialchars((string)$post['slug']); ?>"><?php echo htmlspecialchars((string)$post['title']); ?></a></h2><p class="text-secondary"><?php echo htmlspecialchars(truncate_text((string)($post['excerpt'] ?: $post['content']), 130)); ?></p><a class="btn btn-sm btn-outline-brand" href="/blog/<?php echo htmlspecialchars((string)$post['slug']); ?>">Ler artigo</a></div></article></div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </section>
+    <?php elseif ($activeBlogPost !== null): ?>
+      <section class="section-block seo-landing">
+        <div class="container">
+          <nav aria-label="breadcrumb" class="mb-4"><ol class="breadcrumb seo-breadcrumb"><li class="breadcrumb-item"><a href="/">Início</a></li><li class="breadcrumb-item"><a href="/blog">Blog</a></li><li class="breadcrumb-item active" aria-current="page"><?php echo htmlspecialchars((string)$activeBlogPost['title']); ?></li></ol></nav>
+          <article class="surface-card blog-article p-4 p-lg-5 fade-in show">
+            <?php if (!empty($activeBlogPost['hero_image_url'])): ?><img class="blog-article-cover" src="<?php echo htmlspecialchars((string)$activeBlogPost['hero_image_url']); ?>" alt="Imagem do artigo <?php echo htmlspecialchars((string)$activeBlogPost['title']); ?>"><?php endif; ?>
+            <span class="eyebrow"><?php echo htmlspecialchars((string)($activeBlogPost['category'] ?: 'Blog')); ?><?php if (!empty($activeBlogPost['published_at'])): ?> • <?php echo htmlspecialchars((string)$activeBlogPost['published_at']); ?><?php endif; ?></span>
+            <h1><?php echo htmlspecialchars((string)$activeBlogPost['title']); ?></h1>
+            <?php if (!empty($activeBlogPost['excerpt'])): ?><p class="lead text-secondary"><?php echo htmlspecialchars((string)$activeBlogPost['excerpt']); ?></p><?php endif; ?>
+            <div class="page-content"><?php echo safe_content($activeBlogPost['content'] ?? ''); ?></div>
+            <div class="d-flex flex-wrap gap-2 mt-4"><a class="btn btn-brand" href="/#contactos">Pedir proposta</a><a class="btn btn-outline-brand" href="/blog">Voltar ao blog</a></div>
           </article>
         </div>
       </section>
@@ -1299,7 +1372,9 @@ HTML;
 RewriteEngine On
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 RewriteRule ^eventos/([^/]+)/?$ index.php?evento=$1 [L,QSA]
-RewriteRule ^(stand-up-comedy|eventos-de-humor|eventos-corporativos|team-building-com-humor|booking-de-humoristas|producao-de-eventos|stand-up-comedy-portugal|stand-up-comedy-aveiro|stand-up-comedy-porto|stand-up-comedy-lisboa|stand-up-comedy-braga|stand-up-comedy-coimbra|stand-up-comedy-faro|stand-up-comedy-suica|stand-up-comedy-franca|stand-up-comedy-luxemburgo|blog|blog/como-contratar-humorista|blog/team-building-com-humor)/?$ index.php?page=$1 [L,QSA]
+RewriteRule ^blog/?$ index.php?page=blog [L,QSA]
+RewriteRule ^blog/([^/]+)/?$ index.php?page=blog/$1 [L,QSA]
+RewriteRule ^(stand-up-comedy|eventos-de-humor|eventos-corporativos|team-building-com-humor|booking-de-humoristas|producao-de-eventos|stand-up-comedy-portugal|stand-up-comedy-aveiro|stand-up-comedy-porto|stand-up-comedy-lisboa|stand-up-comedy-braga|stand-up-comedy-coimbra|stand-up-comedy-faro|stand-up-comedy-suica|stand-up-comedy-franca|stand-up-comedy-luxemburgo)/?$ index.php?page=$1 [L,QSA]
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/xml image/svg+xml
 </IfModule>
@@ -1330,7 +1405,7 @@ function sitemap_slug(string $value): string {
     return trim($value, '-') ?: 'pagina';
 }
 $urls = [['loc' => $baseUrl . '/', 'priority' => '1.0']];
-$static = ['stand-up-comedy','eventos-de-humor','eventos-corporativos','team-building-com-humor','booking-de-humoristas','producao-de-eventos','stand-up-comedy-portugal','stand-up-comedy-aveiro','stand-up-comedy-porto','stand-up-comedy-lisboa','stand-up-comedy-braga','stand-up-comedy-coimbra','stand-up-comedy-faro','stand-up-comedy-suica','stand-up-comedy-franca','stand-up-comedy-luxemburgo','blog','blog/como-contratar-humorista','blog/team-building-com-humor'];
+$static = ['stand-up-comedy','eventos-de-humor','eventos-corporativos','team-building-com-humor','booking-de-humoristas','producao-de-eventos','stand-up-comedy-portugal','stand-up-comedy-aveiro','stand-up-comedy-porto','stand-up-comedy-lisboa','stand-up-comedy-braga','stand-up-comedy-coimbra','stand-up-comedy-faro','stand-up-comedy-suica','stand-up-comedy-franca','stand-up-comedy-luxemburgo'];
 foreach ($static as $slug) { $urls[] = ['loc' => $baseUrl . '/' . $slug, 'priority' => str_starts_with($slug, 'blog/') ? '0.7' : '0.8']; }
 try {
     $db = new PDO('sqlite:__DB_PATH__', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
@@ -1342,6 +1417,15 @@ try {
             if ($slug !== '') { $urls[] = ['loc' => $baseUrl . '/' . sitemap_slug($slug), 'priority' => '0.7']; }
         }
     }
+    $blogColumns = array_column($db->query('PRAGMA table_info(blog_posts)')->fetchAll(), 'name');
+    if ($blogColumns) {
+        $publishedPosts = $db->query('SELECT slug, published_at FROM blog_posts WHERE is_published = 1 ORDER BY sort_order ASC, published_at DESC')->fetchAll() ?: [];
+        if (count($publishedPosts) > 0) { $urls[] = ['loc' => $baseUrl . '/blog', 'priority' => '0.8']; }
+        foreach ($publishedPosts as $post) {
+            $urls[] = ['loc' => $baseUrl . '/blog/' . sitemap_slug((string)$post['slug']), 'priority' => '0.7', 'lastmod' => (string)($post['published_at'] ?? '')];
+        }
+    }
+
     $eventColumns = array_column($db->query('PRAGMA table_info(events)')->fetchAll(), 'name');
     if ($eventColumns) {
         $where = in_array('is_visible', $eventColumns, true) ? ' AND is_visible = 1' : '';
