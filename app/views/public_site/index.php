@@ -28,6 +28,30 @@
                 <input type="text" name="home_background_url" class="form-control" value="<?= htmlspecialchars($homeBackgroundUrl ?? '') ?>" placeholder="https://... ou /imagens/hero.jpg">
                 <div class="form-text">Aceita URL absoluta ou caminho relativo para definir a imagem de fundo do header/hero.</div>
             </div>
+
+            <div class="col-12">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="site_banner_enabled" name="site_banner_enabled" value="1" <?= ($siteBannerEnabled ?? '0') === '1' ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="site_banner_enabled">Mostrar banner no website público</label>
+                </div>
+                <div class="form-text">Útil para parceiros, patrocínios ou uma chamada rápida para ver eventos.</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Texto do banner</label>
+                <input type="text" name="site_banner_text" class="form-control" value="<?= htmlspecialchars($siteBannerText ?? '') ?>" placeholder="Ex.: Próximos espetáculos já disponíveis">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Texto do botão do banner</label>
+                <input type="text" name="site_banner_button_text" class="form-control" value="<?= htmlspecialchars($siteBannerButtonText ?? 'Ver eventos') ?>" placeholder="Ver eventos">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Link do banner</label>
+                <input type="text" name="site_banner_url" class="form-control" value="<?= htmlspecialchars($siteBannerUrl ?? '/#agenda') ?>" placeholder="/#agenda ou https://...">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Imagem do banner (URL/caminho)</label>
+                <input type="text" name="site_banner_image_url" class="form-control" value="<?= htmlspecialchars($siteBannerImageUrl ?? '') ?>" placeholder="https://... ou /imagens/parceiro.png">
+            </div>
             <div class="col-12">
                 <label class="form-label">Texto de consentimento RGPD (newsletter)</label>
                 <textarea name="newsletter_consent_text" class="form-control" rows="2" required><?= htmlspecialchars($newsletterConsentText ?? '') ?></textarea>
