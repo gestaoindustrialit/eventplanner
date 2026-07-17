@@ -568,7 +568,7 @@ function render_partners_section(array $partners): void {
     }
     .navbar.scrolled { box-shadow: 0 16px 44px rgba(0, 0, 0, .48); }
     .navbar-brand { display: inline-flex; align-items: center; line-height: 1; padding-top: .2rem; padding-bottom: .2rem; }
-    .navbar-brand img { height: 40px; max-height: 40px; width: auto; display: block; filter: brightness(0) invert(1); }
+    .navbar-brand img { height: 28px; max-height: 28px; width: auto; display: block; filter: brightness(0) invert(1); }
     .nav-link {
       color: var(--text-secondary);
       position: relative;
@@ -798,7 +798,7 @@ function render_partners_section(array $partners): void {
     .blog-article-cover { width:100%; max-height:420px; object-fit:cover; border-radius:1rem; margin-bottom:1.5rem; }
 
     @media (max-width: 767.98px) {
-      .navbar-brand img { height: 34px; max-height: 34px; }
+      .navbar-brand img { height: 24px; max-height: 24px; }
       .navbar { padding-top: .45rem; padding-bottom: .45rem; }
       .navbar .navbar-toggler { padding: .3rem .45rem; }
       .navbar .navbar-collapse {
