@@ -16,8 +16,13 @@ class PublicSiteController extends BaseController
         $newsletterConsentText = $settings->get('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.');
         $recaptchaSiteKey = $settings->get('recaptcha_site_key', '6LcrsLOsAAAAAB9NZ-X2s7ugJ7LsNAamg4VXW0wt');
         $recaptchaSecretKey = $settings->get('recaptcha_secret_key', '6LcrsLOsAAAAAJniWgy3I-C6PPXk_yTlfFc2U-Hi');
+        $siteBannerEnabled = $settings->get('site_banner_enabled', '0');
+        $siteBannerText = $settings->get('site_banner_text', '');
+        $siteBannerButtonText = $settings->get('site_banner_button_text', 'Ver eventos');
+        $siteBannerUrl = $settings->get('site_banner_url', '/#agenda');
+        $siteBannerImageUrl = $settings->get('site_banner_image_url', '');
 
-        $this->render('public_site/index', compact('defaultPath', 'pages', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText', 'recaptchaSiteKey', 'recaptchaSecretKey'));
+        $this->render('public_site/index', compact('defaultPath', 'pages', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText', 'recaptchaSiteKey', 'recaptchaSecretKey', 'siteBannerEnabled', 'siteBannerText', 'siteBannerButtonText', 'siteBannerUrl', 'siteBannerImageUrl'));
     }
 
     public function publish(): void
@@ -47,6 +52,11 @@ class PublicSiteController extends BaseController
             $settings->set('newsletter_consent_text', trim((string)($_POST['newsletter_consent_text'] ?? '')));
             $settings->set('recaptcha_site_key', trim((string)($_POST['recaptcha_site_key'] ?? '')));
             $settings->set('recaptcha_secret_key', trim((string)($_POST['recaptcha_secret_key'] ?? '')));
+            $settings->set('site_banner_enabled', isset($_POST['site_banner_enabled']) ? '1' : '0');
+            $settings->set('site_banner_text', trim((string)($_POST['site_banner_text'] ?? '')));
+            $settings->set('site_banner_button_text', trim((string)($_POST['site_banner_button_text'] ?? '')));
+            $settings->set('site_banner_url', trim((string)($_POST['site_banner_url'] ?? '')));
+            $settings->set('site_banner_image_url', trim((string)($_POST['site_banner_image_url'] ?? '')));
 
             $dbPath = (new Database())->getSqlitePath();
             $homeCopy = [
@@ -58,8 +68,15 @@ class PublicSiteController extends BaseController
             $newsletterConsentText = $settings->get('newsletter_consent_text', '');
             $recaptchaSiteKey = $settings->get('recaptcha_site_key', '6LcrsLOsAAAAAB9NZ-X2s7ugJ7LsNAamg4VXW0wt');
             $recaptchaSecretKey = $settings->get('recaptcha_secret_key', '6LcrsLOsAAAAAJniWgy3I-C6PPXk_yTlfFc2U-Hi');
+            $siteBanner = [
+                'enabled' => $settings->get('site_banner_enabled', '0') === '1',
+                'text' => $settings->get('site_banner_text', ''),
+                'button_text' => $settings->get('site_banner_button_text', 'Ver eventos'),
+                'url' => $settings->get('site_banner_url', '/#agenda'),
+                'image_url' => $settings->get('site_banner_image_url', ''),
+            ];
 
-            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($dbPath, $homeCopy, $newsletterConsentText, $recaptchaSiteKey)) === false) {
+            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($dbPath, $homeCopy, $siteBanner, $newsletterConsentText, $recaptchaSiteKey)) === false) {
                 throw new RuntimeException('Falha ao escrever index.php no destino.');
             }
             if (file_put_contents($targetPath . '/index.html', $this->buildIndexHtmlRedirect()) === false) {
@@ -97,9 +114,10 @@ class PublicSiteController extends BaseController
         $this->redirect(BASE_URL . '?controller=publicsite&action=index');
     }
 
-    private function buildPublicIndex(string $dbPath, array $homeCopy, string $newsletterConsentText, string $recaptchaSiteKey): string
+    private function buildPublicIndex(string $dbPath, array $homeCopy, array $siteBanner, string $newsletterConsentText, string $recaptchaSiteKey): string
     {
         $homeCopyJson = json_encode($homeCopy, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $siteBannerJson = json_encode($siteBanner, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
         $template = <<<'PHP'
 <?php
@@ -108,6 +126,7 @@ $pages = [];
 $partners = [];
 $blogPosts = [];
 $homeCopy = json_decode('__HOME_COPY_JSON__', true) ?: [];
+$siteBanner = json_decode('__SITE_BANNER_JSON__', true) ?: [];
 $msg = $_GET['msg'] ?? '';
 $pageSlug = trim((string)($_GET['page'] ?? ''));
 $eventSlug = trim((string)($_GET['evento'] ?? ''));
@@ -196,6 +215,13 @@ $homeCopy = [
     'background_url' => trim((string)($homeCopy['background_url'] ?? '')) !== '' ? (string)$homeCopy['background_url'] : $defaultHomeCopy['background_url'],
 ];
 $heroBackgroundUrl = trim((string)($homeCopy['background_url'] ?? ''));
+$siteBanner = [
+    'enabled' => !empty($siteBanner['enabled']),
+    'text' => trim((string)($siteBanner['text'] ?? '')),
+    'button_text' => trim((string)($siteBanner['button_text'] ?? '')) !== '' ? trim((string)$siteBanner['button_text']) : 'Ver eventos',
+    'url' => trim((string)($siteBanner['url'] ?? '')) !== '' ? trim((string)$siteBanner['url']) : '/#agenda',
+    'image_url' => trim((string)($siteBanner['image_url'] ?? '')),
+];
 if ($heroBackgroundUrl === '') {
     $heroBackgroundUrl = $defaultHomeCopy['background_url'];
 }
@@ -542,7 +568,7 @@ function render_partners_section(array $partners): void {
     }
     .navbar.scrolled { box-shadow: 0 16px 44px rgba(0, 0, 0, .48); }
     .navbar-brand { display: inline-flex; align-items: center; line-height: 1; padding-top: .2rem; padding-bottom: .2rem; }
-    .navbar-brand img { height: 16px; max-height: 16px; width: auto; display: block; filter: brightness(0) invert(1); }
+    .navbar-brand img { height: 28px; max-height: 28px; width: auto; display: block; filter: brightness(0) invert(1); }
     .nav-link {
       color: var(--text-secondary);
       position: relative;
@@ -725,6 +751,10 @@ function render_partners_section(array $partners): void {
       margin-left: 0;
       margin-right: 0;
     }
+    .site-banner { position: relative; z-index: 20; background: linear-gradient(90deg, rgba(225,6,0,.95), rgba(42,15,46,.96)); border-bottom: 1px solid rgba(255,255,255,.16); }
+    .site-banner a { color: #fff; text-decoration: none; }
+    .site-banner-img { max-height: 86px; width: auto; max-width: 100%; object-fit: contain; }
+    .site-banner-text { color: #fff; font-weight: 800; letter-spacing: -.01em; }
     .final-cta {
       background: linear-gradient(120deg, rgba(225,6,0,.22), rgba(42,15,46,.72));
       border-top: 1px solid rgba(225,6,0,.38);
@@ -768,7 +798,7 @@ function render_partners_section(array $partners): void {
     .blog-article-cover { width:100%; max-height:420px; object-fit:cover; border-radius:1rem; margin-bottom:1.5rem; }
 
     @media (max-width: 767.98px) {
-      .navbar-brand img { height: 14px; max-height: 14px; }
+      .navbar-brand img { height: 24px; max-height: 24px; }
       .navbar { padding-top: .45rem; padding-bottom: .45rem; }
       .navbar .navbar-toggler { padding: .3rem .45rem; }
       .navbar .navbar-collapse {
@@ -786,7 +816,7 @@ function render_partners_section(array $partners): void {
   <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container">
       <a class="navbar-brand" href="index.php#inicio">
-        <img src="chorarderir-logo.svg" alt="Chorar de Rir">
+        <img src="/chorarderir-logo.svg" alt="Chorar de Rir">
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPublico" aria-controls="menuPublico" aria-expanded="false" aria-label="Abrir menu de navegação">
         <span class="navbar-toggler-icon"></span>
@@ -809,6 +839,20 @@ function render_partners_section(array $partners): void {
       </div>
     </div>
   </nav>
+
+  <?php if (!empty($siteBanner['enabled']) && ($siteBanner['text'] !== '' || $siteBanner['image_url'] !== '')): ?>
+    <aside class="site-banner py-3" aria-label="Destaque">
+      <div class="container d-flex flex-column flex-md-row align-items-center justify-content-center gap-3 text-center text-md-start">
+        <?php if ($siteBanner['image_url'] !== ''): ?>
+          <a href="<?php echo htmlspecialchars(absolute_url((string)$siteBanner['url'])); ?>"><img class="site-banner-img" src="<?php echo htmlspecialchars((string)$siteBanner['image_url']); ?>" alt="Banner Chorar de Rir"></a>
+        <?php endif; ?>
+        <?php if ($siteBanner['text'] !== ''): ?>
+          <div class="site-banner-text flex-grow-1"><?php echo htmlspecialchars((string)$siteBanner['text']); ?></div>
+        <?php endif; ?>
+        <a class="btn btn-light fw-bold px-4" href="<?php echo htmlspecialchars(absolute_url((string)$siteBanner['url'])); ?>"><?php echo htmlspecialchars((string)$siteBanner['button_text']); ?></a>
+      </div>
+    </aside>
+  <?php endif; ?>
 
   <main class="site-main">
     <?php if ($activeVirtualPage !== null): ?>
@@ -1334,6 +1378,7 @@ function render_partners_section(array $partners): void {
 </html>
 PHP;
 
+        $template = str_replace('__SITE_BANNER_JSON__', addslashes($siteBannerJson), $template);
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
         $template = str_replace('__HOME_COPY_JSON__', addslashes((string)$homeCopyJson), $template);
         $template = str_replace('__NEWSLETTER_CONSENT__', addslashes($newsletterConsentText), $template);
@@ -1349,7 +1394,7 @@ PHP;
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chorar de Rir</title>
-  <link rel="icon" type="image/svg+xml" href="chorarderir-logo.svg">
+  <link rel="icon" type="image/svg+xml" href="/chorarderir-logo.svg">
   <meta http-equiv="refresh" content="0; url=index.php">
   <script>
     (function () {
