@@ -788,6 +788,10 @@ function render_partners_section(array $partners): void {
     .seo-mini-grid i { color:var(--primary-hover); font-size:1.65rem; }
     .seo-mini-grid h3 { font-size:1.08rem; margin-top:.8rem; }
     .seo-mini-grid p, .seo-link-list { color:var(--text-secondary); }
+    .proposal-form-card .form-label { color:var(--text-primary); font-weight:700; }
+    .proposal-form-card .form-control, .proposal-form-card .form-select { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.16); color:var(--text-primary); }
+    .proposal-form-card .form-control::placeholder { color:rgba(255,255,255,.55); }
+    .proposal-form-card .form-text, .proposal-form-card .form-check-label { color:var(--text-secondary); }
     .seo-link-list { list-style:none; padding:0; margin:0; display:grid; gap:.7rem; }
     .seo-link-list a, .blog-card a { color:#fff; text-decoration:none; }
     .seo-link-list a:hover, .blog-card a:hover { color:var(--primary-hover); }
@@ -865,7 +869,7 @@ function render_partners_section(array $partners): void {
                 <span class="eyebrow"><i class="bi bi-mic-fill"></i> Humor ao vivo • Produção • Booking</span>
                 <h1><?php echo htmlspecialchars($activeVirtualPage['title']); ?></h1>
                 <p class="lead"><?php echo htmlspecialchars($activeVirtualPage['description']); ?></p>
-                <div class="d-flex flex-wrap gap-2 mt-4"><a class="btn btn-brand" href="/#contactos">Pedir proposta</a><a class="btn btn-outline-brand" href="/#agenda">Ver agenda</a></div>
+                <div class="d-flex flex-wrap gap-2 mt-4"><a class="btn btn-brand" href="<?php echo $activeVirtualSlug === 'eventos-corporativos' ? '#pedido-proposta' : '/#contactos'; ?>">Pedir proposta</a><a class="btn btn-outline-brand" href="/#agenda">Ver agenda</a></div>
               </div>
               <div class="col-lg-5">
                 <div class="seo-feature-panel"><i class="bi bi-stars"></i><h2>Estratégia feita à medida</h2><p>Conteúdo otimizado para pesquisa sem duplicar texto, mantendo o visual escuro, vermelho e premium da Chorar de Rir.</p></div>
@@ -874,8 +878,35 @@ function render_partners_section(array $partners): void {
           </article>
           <div class="row g-4 mt-1">
             <div class="col-lg-8"><section class="surface-card seo-content-card p-4 p-lg-5 fade-in"><h2><?php echo $activeVirtualPage['type'] === 'local' ? 'Eventos de stand up comedy em ' . htmlspecialchars($activeVirtualPage['place']) : 'Soluções de humor ao vivo'; ?></h2><p class="page-content">Planeamos stand up comedy, eventos de humor, espetáculo de humor, comédia ao vivo, team building com humor e humor para empresas com curadoria de artistas, briefing, produção técnica e acompanhamento até ao fim do evento.</p><h2>O que torna a experiência diferente</h2><div class="row g-3 seo-mini-grid"><div class="col-md-4"><div><i class="bi bi-person-check"></i><h3>Curadoria</h3><p>Humoristas adequados ao público, contexto e objetivo.</p></div></div><div class="col-md-4"><div><i class="bi bi-calendar2-check"></i><h3>Produção</h3><p>Coordenação de palco, horários, comunicação e operação.</p></div></div><div class="col-md-4"><div><i class="bi bi-geo-alt"></i><h3>Local</h3><p>Conteúdo preparado para Portugal e expansão internacional.</p></div></div></div></section></div>
-            <div class="col-lg-4"><aside class="surface-card seo-content-card p-4 fade-in"><h2 class="h4">Ligações úteis</h2><ul class="seo-link-list"><li><a href="/#servicos">Serviços na homepage</a></li><li><a href="/#agenda">Eventos próximos</a></li><li><a href="/#contactos">Contactos e propostas</a></li><?php if (count($blogPosts) > 0): ?><li><a href="/blog">Artigos do blog</a></li><?php endif; ?></ul><h2 class="h4 mt-4">Perguntas frequentes</h2><h3>Como pedir orçamento?</h3><p>Indica cidade, data, público, objetivo e formato pretendido.</p><h3>Trabalham fora de Portugal?</h3><p>Sim, com páginas e conteúdo preparados para Portugal, Suíça, França e Luxemburgo.</p></aside></div>
+            <div class="col-lg-4"><aside class="surface-card seo-content-card p-4 fade-in"><h2 class="h4">Ligações úteis</h2><ul class="seo-link-list"><li><a href="/#servicos">Serviços na homepage</a></li><li><a href="/#agenda">Eventos próximos</a></li><li><a href="<?php echo $activeVirtualSlug === 'eventos-corporativos' ? '#pedido-proposta' : '/#contactos'; ?>">Contactos e propostas</a></li><?php if (count($blogPosts) > 0): ?><li><a href="/blog">Artigos do blog</a></li><?php endif; ?></ul><h2 class="h4 mt-4">Perguntas frequentes</h2><h3>Como pedir orçamento?</h3><p>Indica cidade, data, público, objetivo e formato pretendido.</p><h3>Trabalham fora de Portugal?</h3><p>Sim, com páginas e conteúdo preparados para Portugal, Suíça, França e Luxemburgo.</p></aside></div>
           </div>
+          <?php if ($activeVirtualSlug === 'eventos-corporativos'): ?>
+            <section id="pedido-proposta" class="surface-card seo-content-card proposal-form-card p-4 p-lg-5 mt-4 fade-in">
+              <span class="eyebrow"><i class="bi bi-send-check"></i> Pedido de proposta</span>
+              <h2>Conta-nos o briefing do teu evento corporativo</h2>
+              <p class="text-secondary">Partilha os detalhes essenciais para receberes uma proposta ajustada ao objetivo, público e contexto da tua empresa.</p>
+              <?php if ($msg === 'contact_ok'): ?>
+                <div class="alert alert-success">Pedido enviado com sucesso. Vamos responder brevemente.</div>
+              <?php elseif ($msg === 'contact_error' || $msg === 'contact_captcha'): ?>
+                <div class="alert alert-danger">Não foi possível enviar o pedido. Confirma os dados e tenta novamente.</div>
+              <?php endif; ?>
+              <form method="post" action="contact.php" class="row g-3">
+                <input type="hidden" name="page_slug" value="eventos-corporativos">
+                <input type="hidden" name="subject" value="Pedido de proposta - eventos corporativos">
+                <div class="col-md-6"><label class="form-label" for="proposal_name">Nome</label><input id="proposal_name" class="form-control form-control-lg" name="name" autocomplete="name" required></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_company">Empresa</label><input id="proposal_company" class="form-control form-control-lg" name="company" autocomplete="organization" required></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_email">Email</label><input id="proposal_email" type="email" class="form-control form-control-lg" name="email" autocomplete="email" required></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_phone">Telefone</label><input id="proposal_phone" class="form-control form-control-lg" name="phone" autocomplete="tel"></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_date">Data prevista</label><input id="proposal_date" type="date" class="form-control form-control-lg" name="event_date"></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_location">Local / cidade</label><input id="proposal_location" class="form-control form-control-lg" name="event_location" placeholder="Ex.: Lisboa, Porto, online"></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_audience">Nº de participantes</label><input id="proposal_audience" type="number" min="1" class="form-control form-control-lg" name="audience_size" placeholder="Ex.: 120"></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_format">Formato pretendido</label><select id="proposal_format" class="form-select form-select-lg" name="event_format"><option value="">Selecionar formato</option><option>Stand up comedy</option><option>Apresentação / hosting</option><option>Team building com humor</option><option>Ativação de marca</option><option>Outro formato</option></select></div>
+                <div class="col-12"><label class="form-label" for="proposal_message">Objetivo e briefing</label><textarea id="proposal_message" class="form-control form-control-lg" name="message" rows="5" placeholder="Objetivo do evento, perfil do público, timings, orçamento indicativo ou notas relevantes." required></textarea></div>
+                <?php if ($hasRecaptcha): ?><div class="col-12"><div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div></div><?php endif; ?>
+                <div class="col-12"><button class="btn btn-brand btn-lg px-5">Enviar pedido de proposta</button></div>
+              </form>
+            </section>
+          <?php endif; ?>
         </div>
       </section>
     <?php elseif ($activeBlogIndex): ?>
@@ -1828,6 +1859,20 @@ $email = trim((string)($_POST['email'] ?? ''));
 $phone = trim((string)($_POST['phone'] ?? ''));
 $subject = trim((string)($_POST['subject'] ?? ''));
 $message = trim((string)($_POST['message'] ?? ''));
+$proposalFields = [
+    'company' => 'Empresa',
+    'event_date' => 'Data prevista',
+    'event_location' => 'Local / cidade',
+    'audience_size' => 'Nº de participantes',
+    'event_format' => 'Formato pretendido',
+];
+$proposalDetails = [];
+foreach ($proposalFields as $fieldName => $fieldLabel) {
+    $fieldValue = trim((string)($_POST[$fieldName] ?? ''));
+    if ($fieldValue !== '') {
+        $proposalDetails[] = $fieldLabel . ': ' . $fieldValue;
+    }
+}
 
 if ($email === '' || $message === '') {
     header('Location: index.php?msg=contact_error#' . rawurlencode($anchor));
@@ -1861,8 +1906,9 @@ try {
         . "Nome: " . ($name !== '' ? $name : '-') . "\n"
         . "Email: " . $email . "\n"
         . "Telefone: " . ($phone !== '' ? $phone : '-') . "\n"
-        . "Assunto: " . ($subject !== '' ? $subject : '-') . "\n\n"
-        . "Mensagem:\n" . $message . "\n";
+        . "Assunto: " . ($subject !== '' ? $subject : '-') . "\n"
+        . (count($proposalDetails) > 0 ? "\nDetalhes do pedido de proposta:\n" . implode("\n", $proposalDetails) . "\n" : "")
+        . "\nMensagem:\n" . $message . "\n";
 
     $headers = [
         'MIME-Version: 1.0',
