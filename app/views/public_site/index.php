@@ -52,6 +52,71 @@
                 <label class="form-label">Imagem do banner (URL/caminho)</label>
                 <input type="text" name="site_banner_image_url" class="form-control" value="<?= htmlspecialchars($siteBannerImageUrl ?? '') ?>" placeholder="https://... ou /imagens/parceiro.png">
             </div>
+            <?php
+                $corporateDefaults = [
+                    'enabled' => true,
+                    'title' => 'Eventos Corporativos de Humor',
+                    'description' => 'Humor para empresas, convenções, festas de equipa e ativações internas com linguagem adaptada à marca.',
+                    'image_url' => 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1400&q=80',
+                    'heading' => 'Eventos corporativos que aproximam equipas e marcas',
+                    'content' => 'Criamos momentos de humor para convenções, jantares de empresa, kick-offs, festas de equipa, ativações internas e apresentações com anfitrião. A proposta inclui curadoria de humoristas, alinhamento do tom com a marca, logística e acompanhamento de produção.',
+                    'form_title' => 'Conta-nos o briefing do teu evento corporativo',
+                    'form_intro' => 'Partilha os detalhes essenciais para receberes uma proposta ajustada ao objetivo, público e contexto da tua empresa.',
+                    'contact_email_to' => 'booking@chorarderir.com',
+                ];
+                $corporate = is_array($corporateEventsPage ?? null) ? array_merge($corporateDefaults, $corporateEventsPage) : $corporateDefaults;
+            ?>
+            <div class="col-12">
+                <div class="card border-primary-subtle bg-light mt-2">
+                    <div class="card-body">
+                        <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
+                            <div>
+                                <h5 class="mb-1">Página /eventos-corporativos</h5>
+                                <p class="text-muted mb-0">Edita a landing page de vendas para empresas e controla se fica visível no website público.</p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="corporate_events_enabled" name="corporate_events_enabled" value="1" <?= !empty($corporate['enabled']) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="corporate_events_enabled">Página visível</label>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Título SEO/H1</label>
+                                <input type="text" name="corporate_events_title" class="form-control" value="<?= htmlspecialchars((string)$corporate['title']) ?>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email para pedidos de proposta</label>
+                                <input type="email" name="corporate_events_contact_email_to" class="form-control" value="<?= htmlspecialchars((string)$corporate['contact_email_to']) ?>" placeholder="booking@chorarderir.com">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Descrição SEO</label>
+                                <textarea name="corporate_events_description" class="form-control" rows="2" required><?= htmlspecialchars((string)$corporate['description']) ?></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Imagem da página (URL)</label>
+                                <input type="text" name="corporate_events_image_url" class="form-control" value="<?= htmlspecialchars((string)$corporate['image_url']) ?>" placeholder="https://...">
+                                <div class="form-text">Usada no cartão visual da página e nas meta tags de partilha (OG image).</div>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">Título do bloco comercial</label>
+                                <input type="text" name="corporate_events_heading" class="form-control" value="<?= htmlspecialchars((string)$corporate['heading']) ?>" required>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label">Texto introdutório/comercial</label>
+                                <textarea name="corporate_events_content" class="form-control" rows="3" required><?= htmlspecialchars((string)$corporate['content']) ?></textarea>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">Título do formulário</label>
+                                <input type="text" name="corporate_events_form_title" class="form-control" value="<?= htmlspecialchars((string)$corporate['form_title']) ?>" required>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label">Texto de apoio do formulário</label>
+                                <textarea name="corporate_events_form_intro" class="form-control" rows="2" required><?= htmlspecialchars((string)$corporate['form_intro']) ?></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="col-12">
                 <label class="form-label">Texto de consentimento RGPD (newsletter)</label>
                 <textarea name="newsletter_consent_text" class="form-control" rows="2" required><?= htmlspecialchars($newsletterConsentText ?? '') ?></textarea>
