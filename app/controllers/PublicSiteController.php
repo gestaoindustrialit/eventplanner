@@ -21,8 +21,9 @@ class PublicSiteController extends BaseController
         $siteBannerButtonText = $settings->get('site_banner_button_text', 'Ver eventos');
         $siteBannerUrl = $settings->get('site_banner_url', '/#agenda');
         $siteBannerImageUrl = $settings->get('site_banner_image_url', '');
+        $corporateEventsPage = $this->corporateEventsPageSettings($settings);
 
-        $this->render('public_site/index', compact('defaultPath', 'pages', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText', 'recaptchaSiteKey', 'recaptchaSecretKey', 'siteBannerEnabled', 'siteBannerText', 'siteBannerButtonText', 'siteBannerUrl', 'siteBannerImageUrl'));
+        $this->render('public_site/index', compact('defaultPath', 'pages', 'corporateEventsPage', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText', 'recaptchaSiteKey', 'recaptchaSecretKey', 'siteBannerEnabled', 'siteBannerText', 'siteBannerButtonText', 'siteBannerUrl', 'siteBannerImageUrl'));
     }
 
     public function publish(): void
@@ -57,6 +58,15 @@ class PublicSiteController extends BaseController
             $settings->set('site_banner_button_text', trim((string)($_POST['site_banner_button_text'] ?? '')));
             $settings->set('site_banner_url', trim((string)($_POST['site_banner_url'] ?? '')));
             $settings->set('site_banner_image_url', trim((string)($_POST['site_banner_image_url'] ?? '')));
+            $settings->set('corporate_events_enabled', isset($_POST['corporate_events_enabled']) ? '1' : '0');
+            $settings->set('corporate_events_title', trim((string)($_POST['corporate_events_title'] ?? '')));
+            $settings->set('corporate_events_description', trim((string)($_POST['corporate_events_description'] ?? '')));
+            $settings->set('corporate_events_image_url', trim((string)($_POST['corporate_events_image_url'] ?? '')));
+            $settings->set('corporate_events_heading', trim((string)($_POST['corporate_events_heading'] ?? '')));
+            $settings->set('corporate_events_content', trim((string)($_POST['corporate_events_content'] ?? '')));
+            $settings->set('corporate_events_form_title', trim((string)($_POST['corporate_events_form_title'] ?? '')));
+            $settings->set('corporate_events_form_intro', trim((string)($_POST['corporate_events_form_intro'] ?? '')));
+            $settings->set('corporate_events_contact_email_to', trim((string)($_POST['corporate_events_contact_email_to'] ?? '')));
 
             $dbPath = (new Database())->getSqlitePath();
             $homeCopy = [
@@ -75,8 +85,9 @@ class PublicSiteController extends BaseController
                 'url' => $settings->get('site_banner_url', '/#agenda'),
                 'image_url' => $settings->get('site_banner_image_url', ''),
             ];
+            $corporateEventsPage = $this->corporateEventsPageSettings($settings);
 
-            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($dbPath, $homeCopy, $siteBanner, $newsletterConsentText, $recaptchaSiteKey)) === false) {
+            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($dbPath, $homeCopy, $siteBanner, $newsletterConsentText, $recaptchaSiteKey, $corporateEventsPage)) === false) {
                 throw new RuntimeException('Falha ao escrever index.php no destino.');
             }
             if (file_put_contents($targetPath . '/index.html', $this->buildIndexHtmlRedirect()) === false) {
@@ -91,7 +102,7 @@ class PublicSiteController extends BaseController
             if (file_put_contents($targetPath . '/contact.php', $this->buildContactHandler($dbPath, $recaptchaSecretKey)) === false) {
                 throw new RuntimeException('Falha ao escrever contact.php no destino.');
             }
-            if (file_put_contents($targetPath . '/sitemap.php', $this->buildSitemapGenerator($dbPath)) === false) {
+            if (file_put_contents($targetPath . '/sitemap.php', $this->buildSitemapGenerator($dbPath, $corporateEventsPage)) === false) {
                 throw new RuntimeException('Falha ao escrever sitemap.php no destino.');
             }
             if (file_put_contents($targetPath . '/robots.txt', $this->buildRobotsTxt()) === false) {
@@ -99,6 +110,17 @@ class PublicSiteController extends BaseController
             }
             if (file_put_contents($targetPath . '/.htaccess', $this->buildHtaccess()) === false) {
                 throw new RuntimeException('Falha ao escrever .htaccess no destino.');
+            }
+            $corporatePagePath = $targetPath . '/eventos-corporativos';
+            if (!empty($corporateEventsPage['enabled'])) {
+                if (!is_dir($corporatePagePath) && !mkdir($corporatePagePath, 0775, true) && !is_dir($corporatePagePath)) {
+                    throw new RuntimeException('Falha ao criar pasta eventos-corporativos no destino.');
+                }
+                if (file_put_contents($corporatePagePath . '/index.php', $this->buildCleanPageRouter('eventos-corporativos')) === false) {
+                    throw new RuntimeException('Falha ao escrever eventos-corporativos/index.php no destino.');
+                }
+            } elseif (is_file($corporatePagePath . '/index.php')) {
+                unlink($corporatePagePath . '/index.php');
             }
 
             $logoSource = dirname(__DIR__, 2) . '/assets/branding/chorarderir-logo.svg';
@@ -114,10 +136,42 @@ class PublicSiteController extends BaseController
         $this->redirect(BASE_URL . '?controller=publicsite&action=index');
     }
 
-    private function buildPublicIndex(string $dbPath, array $homeCopy, array $siteBanner, string $newsletterConsentText, string $recaptchaSiteKey): string
+    private function corporateEventsPageDefaults(): array
+    {
+        return [
+            'enabled' => true,
+            'title' => 'Eventos Corporativos de Humor',
+            'description' => 'Humor para empresas, convenções, festas de equipa e ativações internas com linguagem adaptada à marca.',
+            'image_url' => 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1400&q=80',
+            'heading' => 'Eventos corporativos que aproximam equipas e marcas',
+            'content' => 'Criamos momentos de humor para convenções, jantares de empresa, kick-offs, festas de equipa, ativações internas e apresentações com anfitrião. A proposta inclui curadoria de humoristas, alinhamento do tom com a marca, logística e acompanhamento de produção.',
+            'form_title' => 'Conta-nos o briefing do teu evento corporativo',
+            'form_intro' => 'Partilha os detalhes essenciais para receberes uma proposta ajustada ao objetivo, público e contexto da tua empresa.',
+            'contact_email_to' => 'booking@chorarderir.com',
+        ];
+    }
+
+    private function corporateEventsPageSettings(SiteSetting $settings): array
+    {
+        $defaults = $this->corporateEventsPageDefaults();
+        return [
+            'enabled' => $settings->get('corporate_events_enabled', $defaults['enabled'] ? '1' : '0') === '1',
+            'title' => $settings->get('corporate_events_title', $defaults['title']),
+            'description' => $settings->get('corporate_events_description', $defaults['description']),
+            'image_url' => $settings->get('corporate_events_image_url', $defaults['image_url']),
+            'heading' => $settings->get('corporate_events_heading', $defaults['heading']),
+            'content' => $settings->get('corporate_events_content', $defaults['content']),
+            'form_title' => $settings->get('corporate_events_form_title', $defaults['form_title']),
+            'form_intro' => $settings->get('corporate_events_form_intro', $defaults['form_intro']),
+            'contact_email_to' => $settings->get('corporate_events_contact_email_to', $defaults['contact_email_to']),
+        ];
+    }
+
+    private function buildPublicIndex(string $dbPath, array $homeCopy, array $siteBanner, string $newsletterConsentText, string $recaptchaSiteKey, array $corporateEventsPage): string
     {
         $homeCopyJson = json_encode($homeCopy, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $siteBannerJson = json_encode($siteBanner, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $corporateEventsPageJson = json_encode($corporateEventsPage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
         $template = <<<'PHP'
 <?php
@@ -127,6 +181,7 @@ $partners = [];
 $blogPosts = [];
 $homeCopy = json_decode('__HOME_COPY_JSON__', true) ?: [];
 $siteBanner = json_decode('__SITE_BANNER_JSON__', true) ?: [];
+$corporateEventsPage = json_decode('__CORPORATE_EVENTS_PAGE_JSON__', true) ?: [];
 $msg = $_GET['msg'] ?? '';
 $pageSlug = trim((string)($_GET['page'] ?? ''));
 $eventSlug = trim((string)($_GET['evento'] ?? ''));
@@ -226,6 +281,29 @@ if ($heroBackgroundUrl === '') {
     $heroBackgroundUrl = $defaultHomeCopy['background_url'];
 }
 
+$defaultCorporateEventsPage = [
+    'enabled' => true,
+    'title' => 'Eventos Corporativos de Humor',
+    'description' => 'Humor para empresas, convenções, festas de equipa e ativações internas com linguagem adaptada à marca.',
+    'image_url' => 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1400&q=80',
+    'heading' => 'Eventos corporativos que aproximam equipas e marcas',
+    'content' => 'Criamos momentos de humor para convenções, jantares de empresa, kick-offs, festas de equipa, ativações internas e apresentações com anfitrião. A proposta inclui curadoria de humoristas, alinhamento do tom com a marca, logística e acompanhamento de produção.',
+    'form_title' => 'Conta-nos o briefing do teu evento corporativo',
+    'form_intro' => 'Partilha os detalhes essenciais para receberes uma proposta ajustada ao objetivo, público e contexto da tua empresa.',
+    'contact_email_to' => 'booking@chorarderir.com',
+];
+$corporateEventsPage = [
+    'enabled' => !array_key_exists('enabled', $corporateEventsPage) || !empty($corporateEventsPage['enabled']),
+    'title' => trim((string)($corporateEventsPage['title'] ?? '')) !== '' ? trim((string)$corporateEventsPage['title']) : $defaultCorporateEventsPage['title'],
+    'description' => trim((string)($corporateEventsPage['description'] ?? '')) !== '' ? trim((string)$corporateEventsPage['description']) : $defaultCorporateEventsPage['description'],
+    'image_url' => trim((string)($corporateEventsPage['image_url'] ?? '')) !== '' ? trim((string)$corporateEventsPage['image_url']) : $defaultCorporateEventsPage['image_url'],
+    'heading' => trim((string)($corporateEventsPage['heading'] ?? '')) !== '' ? trim((string)$corporateEventsPage['heading']) : $defaultCorporateEventsPage['heading'],
+    'content' => trim((string)($corporateEventsPage['content'] ?? '')) !== '' ? trim((string)$corporateEventsPage['content']) : $defaultCorporateEventsPage['content'],
+    'form_title' => trim((string)($corporateEventsPage['form_title'] ?? '')) !== '' ? trim((string)$corporateEventsPage['form_title']) : $defaultCorporateEventsPage['form_title'],
+    'form_intro' => trim((string)($corporateEventsPage['form_intro'] ?? '')) !== '' ? trim((string)$corporateEventsPage['form_intro']) : $defaultCorporateEventsPage['form_intro'],
+    'contact_email_to' => trim((string)($corporateEventsPage['contact_email_to'] ?? '')) !== '' ? trim((string)$corporateEventsPage['contact_email_to']) : $defaultCorporateEventsPage['contact_email_to'],
+];
+
 $baseUrl = 'https://chorarderir.com';
 $currentPath = trim(parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/', '/');
 
@@ -276,9 +354,9 @@ function build_event_schema_payload(array $event): array {
 function event_public_url(array $event, array $eventSlugById): string {
     $id = (int)($event['id'] ?? 0);
     if ($id <= 0 || !isset($eventSlugById[$id])) {
-        return 'index.php#agenda';
+        return '/#agenda';
     }
-    return 'index.php?evento=' . rawurlencode((string)$eventSlugById[$id]);
+    return '/eventos/' . rawurlencode((string)$eventSlugById[$id]);
 }
 
 function page_mode(array $page): string {
@@ -384,7 +462,7 @@ foreach ($events as $event) {
 $servicePages = [
     'stand-up-comedy' => ['title' => 'Stand Up Comedy em Portugal', 'type' => 'service', 'description' => 'Espetáculos de stand up comedy para teatros, bares, empresas e eventos privados, com humoristas selecionados e produção completa.'],
     'eventos-de-humor' => ['title' => 'Eventos de Humor', 'type' => 'service', 'description' => 'Criação e produção de eventos de humor ao vivo, da curadoria de artistas à operação no dia do espetáculo.'],
-    'eventos-corporativos' => ['title' => 'Eventos Corporativos de Humor', 'type' => 'service', 'description' => 'Humor para empresas, convenções, festas de equipa e ativações internas com linguagem adaptada à marca.'],
+    'eventos-corporativos' => ['title' => $corporateEventsPage['title'], 'type' => 'service', 'description' => $corporateEventsPage['description']],
     'team-building-com-humor' => ['title' => 'Team Building com Humor', 'type' => 'service', 'description' => 'Dinâmicas de team building com humor para aproximar equipas, aumentar energia e criar memórias positivas.'],
     'booking-de-humoristas' => ['title' => 'Booking de Humoristas', 'type' => 'service', 'description' => 'Contratar humorista ou contratar stand up comedy com acompanhamento profissional, briefing e gestão logística.'],
     'producao-de-eventos' => ['title' => 'Produção de Eventos de Humor', 'type' => 'service', 'description' => 'Produção integral de espetáculos de humor: conceito, agenda, artistas, bilheteira, comunicação e experiência de público.'],
@@ -394,9 +472,13 @@ foreach (['Portugal','Aveiro','Porto','Lisboa','Braga','Coimbra','Faro','Suíça
     $slug = 'stand-up-comedy-' . seo_slug($place);
     $localPages[$slug] = ['title' => 'Stand Up Comedy e Eventos de Humor em ' . $place, 'type' => 'local', 'place' => $place, 'description' => 'Organização de stand up comedy, eventos de humor, humor ao vivo e booking de humoristas para ' . $place . '.'];
 }
+if (!$corporateEventsPage['enabled']) {
+    unset($servicePages['eventos-corporativos']);
+}
 $virtualPages = $servicePages + $localPages;
 $activeVirtualSlug = $currentPath !== '' ? $currentPath : $pageSlug;
 $activeVirtualPage = $virtualPages[$activeVirtualSlug] ?? null;
+$corporateEventsImageUrl = $corporateEventsPage['image_url'];
 $activeBlogIndex = $activeVirtualSlug === 'blog' && count($blogPosts) > 0;
 $activeBlogPost = null;
 if (substr($activeVirtualSlug, 0, 5) === 'blog/') {
@@ -468,6 +550,9 @@ function render_partners_section(array $partners): void {
         $seoTitle = truncate_text((string)$activeVirtualPage['title'] . ' | Chorar de Rir', 62);
         $seoDescription = truncate_text((string)$activeVirtualPage['description'], 158);
         $canonicalUrl = absolute_url($activeVirtualSlug);
+        if ($activeVirtualSlug === 'eventos-corporativos') {
+            $ogImage = absolute_url($corporateEventsImageUrl);
+        }
     } elseif ($activeBlogPost) {
         $seoTitle = truncate_text((string)($activeBlogPost['meta_title'] ?: $activeBlogPost['title'] . ' | Blog Chorar de Rir'), 62);
         $seoDescription = truncate_text((string)($activeBlogPost['meta_description'] ?: $activeBlogPost['excerpt'] ?: $activeBlogPost['content']), 158);
@@ -788,6 +873,10 @@ function render_partners_section(array $partners): void {
     .seo-mini-grid i { color:var(--primary-hover); font-size:1.65rem; }
     .seo-mini-grid h3 { font-size:1.08rem; margin-top:.8rem; }
     .seo-mini-grid p, .seo-link-list { color:var(--text-secondary); }
+    .proposal-form-card .form-label { color:var(--text-primary); font-weight:700; }
+    .proposal-form-card .form-control, .proposal-form-card .form-select { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.16); color:var(--text-primary); }
+    .proposal-form-card .form-control::placeholder { color:rgba(255,255,255,.55); }
+    .proposal-form-card .form-text, .proposal-form-card .form-check-label { color:var(--text-secondary); }
     .seo-link-list { list-style:none; padding:0; margin:0; display:grid; gap:.7rem; }
     .seo-link-list a, .blog-card a { color:#fff; text-decoration:none; }
     .seo-link-list a:hover, .blog-card a:hover { color:var(--primary-hover); }
@@ -815,7 +904,7 @@ function render_partners_section(array $partners): void {
   <body>
   <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container">
-      <a class="navbar-brand" href="index.php#inicio">
+      <a class="navbar-brand" href="/#inicio">
         <img src="/chorarderir-logo.svg" alt="Chorar de Rir">
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPublico" aria-controls="menuPublico" aria-expanded="false" aria-label="Abrir menu de navegação">
@@ -823,17 +912,17 @@ function render_partners_section(array $partners): void {
       </button>
       <div class="collapse navbar-collapse" id="menuPublico">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link <?php echo (!$isStandaloneView && !$isEventView) ? 'active' : ''; ?>" href="index.php#inicio">Início</a></li>
+          <li class="nav-item"><a class="nav-link <?php echo (!$isStandaloneView && !$isEventView) ? 'active' : ''; ?>" href="/#inicio">Início</a></li>
           <?php foreach ($sectionPages as $page): ?>
             <?php $menuSlug = trim((string)($page['slug'] ?? '')); ?>
             <?php if ($menuSlug === '' || ($menuSlug === 'agenda' && !$hasAgendaEvents)) { continue; } ?>
-            <li class="nav-item"><a class="nav-link" href="index.php#<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
+            <li class="nav-item"><a class="nav-link" href="/#<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
           <?php endforeach; ?>
           <?php if (count($blogPosts) > 0): ?>
             <li class="nav-item"><a class="nav-link" href="/blog">Blog</a></li>
           <?php endif; ?>
           <?php if ($hasPartners): ?>
-            <li class="nav-item"><a class="nav-link" href="index.php#parceiros">Parceiros</a></li>
+            <li class="nav-item"><a class="nav-link" href="/#parceiros">Parceiros</a></li>
           <?php endif; ?>
         </ul>
       </div>
@@ -865,17 +954,44 @@ function render_partners_section(array $partners): void {
                 <span class="eyebrow"><i class="bi bi-mic-fill"></i> Humor ao vivo • Produção • Booking</span>
                 <h1><?php echo htmlspecialchars($activeVirtualPage['title']); ?></h1>
                 <p class="lead"><?php echo htmlspecialchars($activeVirtualPage['description']); ?></p>
-                <div class="d-flex flex-wrap gap-2 mt-4"><a class="btn btn-brand" href="/#contactos">Pedir proposta</a><a class="btn btn-outline-brand" href="/#agenda">Ver agenda</a></div>
+                <div class="d-flex flex-wrap gap-2 mt-4"><a class="btn btn-brand" href="<?php echo $activeVirtualSlug === 'eventos-corporativos' ? '#pedido-proposta' : '/#contactos'; ?>">Pedir proposta</a><a class="btn btn-outline-brand" href="/#agenda">Ver agenda</a></div>
               </div>
               <div class="col-lg-5">
-                <div class="seo-feature-panel"><i class="bi bi-stars"></i><h2>Estratégia feita à medida</h2><p>Conteúdo otimizado para pesquisa sem duplicar texto, mantendo o visual escuro, vermelho e premium da Chorar de Rir.</p></div>
+                <?php if ($activeVirtualSlug === 'eventos-corporativos'): ?><div class="seo-feature-panel overflow-hidden p-0"><img src="<?php echo htmlspecialchars($corporateEventsImageUrl); ?>" alt="Equipa numa conferência corporativa com apresentação em palco" class="w-100" style="height:260px;object-fit:cover;"><div class="p-4"><i class="bi bi-building-check"></i><h2>Humor para empresas</h2><p><?php echo htmlspecialchars($corporateEventsPage['description']); ?></p></div></div><?php else: ?><div class="seo-feature-panel"><i class="bi bi-stars"></i><h2>Estratégia feita à medida</h2><p>Conteúdo otimizado para pesquisa sem duplicar texto, mantendo o visual escuro, vermelho e premium da Chorar de Rir.</p></div><?php endif; ?>
               </div>
             </div>
           </article>
           <div class="row g-4 mt-1">
-            <div class="col-lg-8"><section class="surface-card seo-content-card p-4 p-lg-5 fade-in"><h2><?php echo $activeVirtualPage['type'] === 'local' ? 'Eventos de stand up comedy em ' . htmlspecialchars($activeVirtualPage['place']) : 'Soluções de humor ao vivo'; ?></h2><p class="page-content">Planeamos stand up comedy, eventos de humor, espetáculo de humor, comédia ao vivo, team building com humor e humor para empresas com curadoria de artistas, briefing, produção técnica e acompanhamento até ao fim do evento.</p><h2>O que torna a experiência diferente</h2><div class="row g-3 seo-mini-grid"><div class="col-md-4"><div><i class="bi bi-person-check"></i><h3>Curadoria</h3><p>Humoristas adequados ao público, contexto e objetivo.</p></div></div><div class="col-md-4"><div><i class="bi bi-calendar2-check"></i><h3>Produção</h3><p>Coordenação de palco, horários, comunicação e operação.</p></div></div><div class="col-md-4"><div><i class="bi bi-geo-alt"></i><h3>Local</h3><p>Conteúdo preparado para Portugal e expansão internacional.</p></div></div></div></section></div>
-            <div class="col-lg-4"><aside class="surface-card seo-content-card p-4 fade-in"><h2 class="h4">Ligações úteis</h2><ul class="seo-link-list"><li><a href="/#servicos">Serviços na homepage</a></li><li><a href="/#agenda">Eventos próximos</a></li><li><a href="/#contactos">Contactos e propostas</a></li><?php if (count($blogPosts) > 0): ?><li><a href="/blog">Artigos do blog</a></li><?php endif; ?></ul><h2 class="h4 mt-4">Perguntas frequentes</h2><h3>Como pedir orçamento?</h3><p>Indica cidade, data, público, objetivo e formato pretendido.</p><h3>Trabalham fora de Portugal?</h3><p>Sim, com páginas e conteúdo preparados para Portugal, Suíça, França e Luxemburgo.</p></aside></div>
+            <div class="col-lg-8"><section class="surface-card seo-content-card p-4 p-lg-5 fade-in"><h2><?php echo $activeVirtualSlug === 'eventos-corporativos' ? htmlspecialchars($corporateEventsPage['heading']) : ($activeVirtualPage['type'] === 'local' ? 'Eventos de stand up comedy em ' . htmlspecialchars($activeVirtualPage['place']) : 'Soluções de humor ao vivo'); ?></h2><p class="page-content"><?php echo $activeVirtualSlug === 'eventos-corporativos' ? nl2br(htmlspecialchars($corporateEventsPage['content'])) : 'Planeamos stand up comedy, eventos de humor, espetáculo de humor, comédia ao vivo, team building com humor e humor para empresas com curadoria de artistas, briefing, produção técnica e acompanhamento até ao fim do evento.'; ?></p><h2>O que torna a experiência diferente</h2><div class="row g-3 seo-mini-grid"><div class="col-md-4"><div><i class="bi bi-person-check"></i><h3>Curadoria</h3><p>Humoristas adequados ao público, contexto e objetivo.</p></div></div><div class="col-md-4"><div><i class="bi bi-calendar2-check"></i><h3>Produção</h3><p>Coordenação de palco, horários, comunicação e operação.</p></div></div><div class="col-md-4"><div><i class="bi bi-geo-alt"></i><h3>Local</h3><p>Conteúdo preparado para Portugal e expansão internacional.</p></div></div></div></section></div>
+            <div class="col-lg-4"><aside class="surface-card seo-content-card p-4 fade-in"><h2 class="h4">Ligações úteis</h2><ul class="seo-link-list"><li><a href="/#servicos">Serviços na homepage</a></li><li><a href="/#agenda">Eventos próximos</a></li><li><a href="<?php echo $activeVirtualSlug === 'eventos-corporativos' ? '#pedido-proposta' : '/#contactos'; ?>">Contactos e propostas</a></li><?php if (count($blogPosts) > 0): ?><li><a href="/blog">Artigos do blog</a></li><?php endif; ?></ul><h2 class="h4 mt-4">Perguntas frequentes</h2><h3>Como pedir orçamento?</h3><p>Indica cidade, data, público, objetivo e formato pretendido.</p><h3>Trabalham fora de Portugal?</h3><p>Sim, com páginas e conteúdo preparados para Portugal, Suíça, França e Luxemburgo.</p></aside></div>
           </div>
+          <?php if ($activeVirtualSlug === 'eventos-corporativos'): ?>
+            <section id="pedido-proposta" class="surface-card seo-content-card proposal-form-card p-4 p-lg-5 mt-4 fade-in">
+              <span class="eyebrow"><i class="bi bi-send-check"></i> Pedido de proposta</span>
+              <h2><?php echo htmlspecialchars($corporateEventsPage['form_title']); ?></h2>
+              <p class="text-secondary"><?php echo htmlspecialchars($corporateEventsPage['form_intro']); ?></p>
+              <?php if ($msg === 'contact_ok'): ?>
+                <div class="alert alert-success">Pedido enviado com sucesso. Vamos responder brevemente.</div>
+              <?php elseif ($msg === 'contact_error' || $msg === 'contact_captcha'): ?>
+                <div class="alert alert-danger">Não foi possível enviar o pedido. Confirma os dados e tenta novamente.</div>
+              <?php endif; ?>
+              <form method="post" action="/contact.php" class="row g-3">
+                <input type="hidden" name="page_slug" value="eventos-corporativos">
+                <input type="hidden" name="subject" value="Pedido de proposta - eventos corporativos">
+                <div class="col-md-6"><label class="form-label" for="proposal_name">Nome</label><input id="proposal_name" class="form-control form-control-lg" name="name" autocomplete="name" required></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_company">Empresa</label><input id="proposal_company" class="form-control form-control-lg" name="company" autocomplete="organization" required></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_email">Email</label><input id="proposal_email" type="email" class="form-control form-control-lg" name="email" autocomplete="email" required></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_phone">Telefone</label><input id="proposal_phone" class="form-control form-control-lg" name="phone" autocomplete="tel"></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_date">Data prevista</label><input id="proposal_date" type="date" class="form-control form-control-lg" name="event_date"></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_location">Local / cidade</label><input id="proposal_location" class="form-control form-control-lg" name="event_location" placeholder="Ex.: Lisboa, Porto, online"></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_audience">Nº de participantes</label><input id="proposal_audience" type="number" min="1" class="form-control form-control-lg" name="audience_size" placeholder="Ex.: 120"></div>
+                <div class="col-md-6"><label class="form-label" for="proposal_format">Formato pretendido</label><select id="proposal_format" class="form-select form-select-lg" name="event_format"><option value="">Selecionar formato</option><option>Stand up comedy</option><option>Apresentação / hosting</option><option>Team building com humor</option><option>Ativação de marca</option><option>Outro formato</option></select></div>
+                <div class="col-12"><label class="form-label" for="proposal_message">Objetivo e briefing</label><textarea id="proposal_message" class="form-control form-control-lg" name="message" rows="5" placeholder="Objetivo do evento, perfil do público, timings, orçamento indicativo ou notas relevantes." required></textarea></div>
+                <?php if ($hasRecaptcha): ?><div class="col-12"><div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div></div><?php endif; ?>
+                <div class="col-12"><button class="btn btn-brand btn-lg px-5">Enviar pedido de proposta</button></div>
+              </form>
+            </section>
+          <?php endif; ?>
         </div>
       </section>
     <?php elseif ($activeBlogIndex): ?>
@@ -1081,7 +1197,7 @@ function render_partners_section(array $partners): void {
                   <?php elseif ($msg === 'contact_error' || $msg === 'contact_captcha'): ?>
                     <div class="alert alert-danger col-md-8 mx-auto">Não foi possível enviar o contacto. Confirma os dados e tenta novamente.</div>
                   <?php endif; ?>
-                  <form method="post" action="contact.php" class="row g-3 justify-content-center">
+                  <form method="post" action="/contact.php" class="row g-3 justify-content-center">
                     <input type="hidden" name="page_slug" value="<?php echo htmlspecialchars($sectionId); ?>">
                     <?php if (in_array('name', $contactFields, true)): ?><div class="col-md-8"><input class="form-control form-control-lg" name="name" placeholder="*Nome" required></div><?php endif; ?>
                     <?php if (in_array('email', $contactFields, true)): ?><div class="col-md-8"><input type="email" class="form-control form-control-lg" name="email" placeholder="*Email" required></div><?php endif; ?>
@@ -1135,7 +1251,7 @@ function render_partners_section(array $partners): void {
             </div>
             <div class="modal-body">
               <p class="small text-secondary mb-3" id="reserveEventInfo">Preenche os dados para concluir a tua reserva.</p>
-              <form method="post" action="reserve.php" class="row g-2" id="reserveModalForm">
+              <form method="post" action="/reserve.php" class="row g-2" id="reserveModalForm">
                 <input type="hidden" name="event_id" id="reserveEventId">
                 <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
                 <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
@@ -1157,7 +1273,7 @@ function render_partners_section(array $partners): void {
       <section class="section-block agenda-section pt-5">
         <div class="container">
           <div class="mb-4">
-            <a class="btn btn-sm btn-outline-light" href="index.php#agenda">← Voltar à agenda</a>
+            <a class="btn btn-sm btn-outline-light" href="/#agenda">← Voltar à agenda</a>
           </div>
           <div class="event-card surface-card fade-in show mb-4">
             <?php if (!empty($selectedEvent['poster_url'])): ?>
@@ -1223,7 +1339,7 @@ function render_partners_section(array $partners): void {
             </div>
             <div class="modal-body">
               <p class="small text-secondary mb-3" id="reserveEventInfo">Preenche os dados para concluir a tua reserva.</p>
-              <form method="post" action="reserve.php" class="row g-2" id="reserveModalForm">
+              <form method="post" action="/reserve.php" class="row g-2" id="reserveModalForm">
                 <input type="hidden" name="event_id" id="reserveEventId">
                 <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
                 <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
@@ -1379,10 +1495,21 @@ function render_partners_section(array $partners): void {
 PHP;
 
         $template = str_replace('__SITE_BANNER_JSON__', addslashes($siteBannerJson), $template);
+        $template = str_replace('__CORPORATE_EVENTS_PAGE_JSON__', str_replace("'", "\\'", (string)$corporateEventsPageJson), $template);
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
         $template = str_replace('__HOME_COPY_JSON__', addslashes((string)$homeCopyJson), $template);
         $template = str_replace('__NEWSLETTER_CONSENT__', addslashes($newsletterConsentText), $template);
         return str_replace('__RECAPTCHA_SITE_KEY__', addslashes(trim($recaptchaSiteKey)), $template);
+    }
+
+    private function buildCleanPageRouter(string $slug): string
+    {
+        $safeSlug = var_export($slug, true);
+        return <<<PHP
+<?php
+\$_GET['page'] = {$safeSlug};
+require dirname(__DIR__) . '/index.php';
+PHP;
     }
 
     private function buildIndexHtmlRedirect(): string
@@ -1395,17 +1522,17 @@ PHP;
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chorar de Rir</title>
   <link rel="icon" type="image/svg+xml" href="/chorarderir-logo.svg">
-  <meta http-equiv="refresh" content="0; url=index.php">
+  <meta http-equiv="refresh" content="0; url=/">
   <script>
     (function () {
       var query = window.location.search || '';
       var hash = window.location.hash || '';
-      window.location.replace('index.php' + query + hash);
+      window.location.replace('/' + query + hash);
     })();
   </script>
 </head>
 <body>
-  <p>A redirecionar para <a href="index.php">index.php</a>…</p>
+  <p>A redirecionar para <a href="/">/</a>…</p>
 </body>
 </html>
 HTML;
@@ -1437,8 +1564,9 @@ HTACCESS;
         return "User-agent: *\nAllow: /\nSitemap: https://chorarderir.com/sitemap.xml\n";
     }
 
-    private function buildSitemapGenerator(string $dbPath): string
+    private function buildSitemapGenerator(string $dbPath, array $corporateEventsPage): string
     {
+        $includeCorporateEventsPage = !empty($corporateEventsPage['enabled']) ? '1' : '0';
         $template = <<<'PHP'
 <?php
 header('Content-Type: application/xml; charset=UTF-8');
@@ -1451,6 +1579,9 @@ function sitemap_slug(string $value): string {
 }
 $urls = [['loc' => $baseUrl . '/', 'priority' => '1.0']];
 $static = ['stand-up-comedy','eventos-de-humor','eventos-corporativos','team-building-com-humor','booking-de-humoristas','producao-de-eventos','stand-up-comedy-portugal','stand-up-comedy-aveiro','stand-up-comedy-porto','stand-up-comedy-lisboa','stand-up-comedy-braga','stand-up-comedy-coimbra','stand-up-comedy-faro','stand-up-comedy-suica','stand-up-comedy-franca','stand-up-comedy-luxemburgo'];
+if ('__INCLUDE_CORPORATE_EVENTS_PAGE__' !== '1') {
+    $static = array_values(array_diff($static, ['eventos-corporativos']));
+}
 foreach ($static as $slug) { $urls[] = ['loc' => $baseUrl . '/' . $slug, 'priority' => '0.8']; }
 try {
     $db = new PDO('sqlite:__DB_PATH__', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
@@ -1490,6 +1621,7 @@ foreach ($urls as $url) {
 }
 echo "</urlset>\n";
 PHP;
+        $template = str_replace('__INCLUDE_CORPORATE_EVENTS_PAGE__', $includeCorporateEventsPage, $template);
         return str_replace('__DB_PATH__', addslashes($dbPath), $template);
     }
 
@@ -1498,7 +1630,7 @@ PHP;
         $template = <<<'PHP'
 <?php
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: index.php');
+    header('Location: /');
     exit;
 }
 
@@ -1506,7 +1638,7 @@ $captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
 if ($captchaSecret !== '') {
     $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));
     if ($captchaToken === '') {
-        header('Location: index.php?msg=captcha#eventos');
+        header('Location: /?msg=captcha#eventos');
         exit;
     }
 
@@ -1524,7 +1656,7 @@ if ($captchaSecret !== '') {
     ]));
     $captchaResult = is_string($captchaCheck) ? json_decode($captchaCheck, true) : null;
     if (!is_array($captchaResult) || empty($captchaResult['success'])) {
-        header('Location: index.php?msg=captcha#eventos');
+        header('Location: /?msg=captcha#eventos');
         exit;
     }
 }
@@ -1543,14 +1675,14 @@ try {
     $event = $eventStmt->fetch();
 
     if (!$event || (int)$event['reservations_open'] !== 1) {
-        header('Location: index.php?msg=closed#eventos');
+        header('Location: /?msg=closed#eventos');
         exit;
     }
 
     $capacity = (int)($event['reservation_capacity'] ?? 0);
     $activeTickets = (int)($event['active_tickets'] ?? 0);
     if ($capacity > 0 && ($activeTickets + $tickets) > $capacity) {
-        header('Location: index.php?msg=soldout#eventos');
+        header('Location: /?msg=soldout#eventos');
         exit;
     }
 
@@ -1678,10 +1810,10 @@ try {
         @mail($customerEmail, $subject, $htmlBody, implode("\r\n", $headers));
     }
 
-    header('Location: index.php?msg=ok#eventos');
+    header('Location: /?msg=ok#eventos');
     exit;
 } catch (Throwable $e) {
-    header('Location: index.php?msg=error#eventos');
+    header('Location: /?msg=error#eventos');
     exit;
 }
 PHP;
@@ -1695,7 +1827,7 @@ PHP;
         $template = <<<'PHP'
 <?php
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: index.php');
+    header('Location: /');
     exit;
 }
 
@@ -1703,7 +1835,7 @@ $captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
 if ($captchaSecret !== '') {
     $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));
     if ($captchaToken === '') {
-        header('Location: index.php?msg=captcha#newsletter');
+        header('Location: /?msg=captcha#newsletter');
         exit;
     }
 
@@ -1721,7 +1853,7 @@ if ($captchaSecret !== '') {
     ]));
     $captchaResult = is_string($captchaCheck) ? json_decode($captchaCheck, true) : null;
     if (!is_array($captchaResult) || empty($captchaResult['success'])) {
-        header('Location: index.php?msg=captcha#newsletter');
+        header('Location: /?msg=captcha#newsletter');
         exit;
     }
 }
@@ -1731,7 +1863,7 @@ $name = trim((string)($_POST['name'] ?? ''));
 $consent = (int)($_POST['gdpr_consent'] ?? 0);
 
 if ($email === '' || $consent !== 1) {
-    header('Location: index.php?msg=consent#newsletter');
+    header('Location: /?msg=consent#newsletter');
     exit;
 }
 
@@ -1766,16 +1898,16 @@ try {
         'status' => 'active',
     ]);
 
-    header('Location: index.php?msg=subscribed#newsletter');
+    header('Location: /?msg=subscribed#newsletter');
     exit;
 } catch (Throwable $e) {
     $code = (string)$e->getCode();
     if ($code === '23000') {
-        header('Location: index.php?msg=duplicate#newsletter');
+        header('Location: /?msg=duplicate#newsletter');
         exit;
     }
 
-    header('Location: index.php?msg=error#newsletter');
+    header('Location: /?msg=error#newsletter');
     exit;
 }
 PHP;
@@ -1790,17 +1922,18 @@ PHP;
         $template = <<<'PHP'
 <?php
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: index.php');
+    header('Location: /');
     exit;
 }
 
 $pageSlug = trim((string)($_POST['page_slug'] ?? 'contactos'));
-$anchor = $pageSlug !== '' ? $pageSlug : 'contactos';
+$anchor = $pageSlug === 'eventos-corporativos' ? 'pedido-proposta' : ($pageSlug !== '' ? $pageSlug : 'contactos');
+$returnBase = $pageSlug === 'eventos-corporativos' ? '/eventos-corporativos' : '/';
 $captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
 if ($captchaSecret !== '') {
     $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));
     if ($captchaToken === '') {
-        header('Location: index.php?msg=contact_captcha#' . rawurlencode($anchor));
+        header('Location: ' . $returnBase . '?msg=contact_captcha#' . rawurlencode($anchor));
         exit;
     }
 
@@ -1818,7 +1951,7 @@ if ($captchaSecret !== '') {
     ]));
     $captchaResult = is_string($captchaCheck) ? json_decode($captchaCheck, true) : null;
     if (!is_array($captchaResult) || empty($captchaResult['success'])) {
-        header('Location: index.php?msg=contact_captcha#' . rawurlencode($anchor));
+        header('Location: ' . $returnBase . '?msg=contact_captcha#' . rawurlencode($anchor));
         exit;
     }
 }
@@ -1828,9 +1961,23 @@ $email = trim((string)($_POST['email'] ?? ''));
 $phone = trim((string)($_POST['phone'] ?? ''));
 $subject = trim((string)($_POST['subject'] ?? ''));
 $message = trim((string)($_POST['message'] ?? ''));
+$proposalFields = [
+    'company' => 'Empresa',
+    'event_date' => 'Data prevista',
+    'event_location' => 'Local / cidade',
+    'audience_size' => 'Nº de participantes',
+    'event_format' => 'Formato pretendido',
+];
+$proposalDetails = [];
+foreach ($proposalFields as $fieldName => $fieldLabel) {
+    $fieldValue = trim((string)($_POST[$fieldName] ?? ''));
+    if ($fieldValue !== '') {
+        $proposalDetails[] = $fieldLabel . ': ' . $fieldValue;
+    }
+}
 
 if ($email === '' || $message === '') {
-    header('Location: index.php?msg=contact_error#' . rawurlencode($anchor));
+    header('Location: ' . $returnBase . '?msg=contact_error#' . rawurlencode($anchor));
     exit;
 }
 
@@ -1852,6 +1999,15 @@ try {
     }
 
     $emailTo = trim((string)($config['contact_email_to'] ?? ''));
+    if ($pageSlug === 'eventos-corporativos') {
+        $db->exec('CREATE TABLE IF NOT EXISTS site_settings (setting_key TEXT PRIMARY KEY, setting_value TEXT NOT NULL, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)');
+        $settingStmt = $db->prepare('SELECT setting_value FROM site_settings WHERE setting_key = :key LIMIT 1');
+        $settingStmt->execute(['key' => 'corporate_events_contact_email_to']);
+        $settingValue = $settingStmt->fetchColumn();
+        if (is_string($settingValue) && trim($settingValue) !== '') {
+            $emailTo = trim($settingValue);
+        }
+    }
     if ($emailTo === '') {
         $emailTo = 'booking@chorarderir.com';
     }
@@ -1861,8 +2017,9 @@ try {
         . "Nome: " . ($name !== '' ? $name : '-') . "\n"
         . "Email: " . $email . "\n"
         . "Telefone: " . ($phone !== '' ? $phone : '-') . "\n"
-        . "Assunto: " . ($subject !== '' ? $subject : '-') . "\n\n"
-        . "Mensagem:\n" . $message . "\n";
+        . "Assunto: " . ($subject !== '' ? $subject : '-') . "\n"
+        . (count($proposalDetails) > 0 ? "\nDetalhes do pedido de proposta:\n" . implode("\n", $proposalDetails) . "\n" : "")
+        . "\nMensagem:\n" . $message . "\n";
 
     $headers = [
         'MIME-Version: 1.0',
@@ -1873,10 +2030,10 @@ try {
 
     @mail($emailTo, $mailSubject, $mailBody, implode("\r\n", $headers));
 
-    header('Location: index.php?msg=contact_ok#' . rawurlencode($anchor));
+    header('Location: ' . $returnBase . '?msg=contact_ok#' . rawurlencode($anchor));
     exit;
 } catch (Throwable $e) {
-    header('Location: index.php?msg=contact_error#' . rawurlencode($anchor));
+    header('Location: ' . $returnBase . '?msg=contact_error#' . rawurlencode($anchor));
     exit;
 }
 PHP;
