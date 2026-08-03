@@ -26,6 +26,8 @@ CREATE TABLE users (
   email TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'comedian' CHECK (role IN ('admin', 'comedian')),
+  profile_type TEXT NOT NULL DEFAULT 'comedian',
+  permissions_json TEXT NOT NULL DEFAULT '[]',
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -66,4 +66,29 @@ class User
         $stmt = $this->db->query("SELECT id, name, email FROM users WHERE role = 'comedian' ORDER BY name");
         return $stmt->fetchAll();
     }
+
+    public function all(): array
+    {
+        return $this->db->query('SELECT id, name, email, role, profile_type, permissions_json, created_at FROM users ORDER BY name')->fetchAll();
+    }
+
+    public function createProfile(array $data): int
+    {
+        $stmt = $this->db->prepare('INSERT INTO users (name,email,password,role,profile_type,permissions_json) VALUES (:name,:email,:password,\'comedian\',:profile_type,:permissions_json)');
+        $stmt->execute(['name'=>$data['name'], 'email'=>$data['email'], 'password'=>password_hash($data['password'], PASSWORD_DEFAULT), 'profile_type'=>$data['profile_type'], 'permissions_json'=>json_encode($data['permissions'])]);
+        return (int)$this->db->lastInsertId();
+    }
+
+    public function updateProfile(int $id, array $data): bool
+    {
+        $params = ['id'=>$id, 'name'=>$data['name'], 'email'=>$data['email'], 'profile_type'=>$data['profile_type'], 'permissions_json'=>json_encode($data['permissions'])];
+        $passwordSql = '';
+        if ($data['password'] !== '') { $passwordSql = ', password=:password'; $params['password'] = password_hash($data['password'], PASSWORD_DEFAULT); }
+        return $this->db->prepare('UPDATE users SET name=:name,email=:email,profile_type=:profile_type,permissions_json=:permissions_json'.$passwordSql.' WHERE id=:id AND role<>\'admin\'')->execute($params);
+    }
+
+    public function deleteProfile(int $id): bool
+    {
+        return $this->db->prepare("DELETE FROM users WHERE id=:id AND role<>'admin'")->execute(['id'=>$id]);
+    }
 }

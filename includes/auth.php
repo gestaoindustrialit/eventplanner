@@ -15,6 +15,25 @@ function isAdmin(): bool
     return isLoggedIn() && ($_SESSION['user']['role'] ?? '') === 'admin';
 }
 
+function availablePermissions(): array
+{
+    return [
+        'dashboard' => 'Dashboard', 'comedian' => 'Comediantes', 'client' => 'Clientes',
+        'crm' => 'CRM', 'event' => 'Eventos e alinhamentos', 'checklist' => 'Checklists',
+        'reservation' => 'Reservas e admissões', 'publicpage' => 'Páginas públicas',
+        'blogpost' => 'Blog', 'partner' => 'Parceiros', 'publicsite' => 'Publicar website',
+        'newsletter' => 'Newsletter', 'presscontact' => 'Contactos Press',
+    ];
+}
+
+function can(string $permission): bool
+{
+    if (isAdmin()) {
+        return true;
+    }
+    return in_array($permission, currentUser()['permissions'] ?? [], true);
+}
+
 function requireLogin(): void
 {
     if (!isLoggedIn()) {
@@ -26,8 +45,8 @@ function requireLogin(): void
 function requireAdmin(): void
 {
     requireLogin();
-
-    if (!isAdmin()) {
+    $controller = strtolower((string)($_GET['controller'] ?? 'dashboard'));
+    if (!can($controller)) {
         http_response_code(403);
         echo 'Acesso negado.';
         exit;

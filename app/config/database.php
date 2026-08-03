@@ -40,6 +40,15 @@ class Database
 
     private function ensureSchema(PDO $db): void
     {
+        if ($this->tableExists($db, 'users')) {
+            $userColumns = array_column($db->query('PRAGMA table_info(users)')->fetchAll(), 'name');
+            if (!in_array('profile_type', $userColumns, true)) {
+                $db->exec("ALTER TABLE users ADD COLUMN profile_type TEXT NOT NULL DEFAULT 'comedian'");
+            }
+            if (!in_array('permissions_json', $userColumns, true)) {
+                $db->exec("ALTER TABLE users ADD COLUMN permissions_json TEXT NOT NULL DEFAULT '[]'");
+            }
+        }
         $db->exec(
             'CREATE TABLE IF NOT EXISTS public_pages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
