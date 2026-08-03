@@ -34,6 +34,8 @@ class AuthController extends BaseController
             'name' => $user['name'],
             'email' => $user['email'],
             'role' => $user['role'],
+            'profile_type' => $user['profile_type'] ?? $user['role'],
+            'permissions' => json_decode($user['permissions_json'] ?? '[]', true) ?: [],
         ];
 
         flash('success', 'Sessão iniciada com sucesso.');

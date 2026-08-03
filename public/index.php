@@ -42,7 +42,7 @@ $controllerName = strtolower($_GET['controller'] ?? 'dashboard');
 $actionName = $_GET['action'] ?? 'index';
 
 
-if ($controllerName === 'presscontact' && !isAdmin()) {
+if ($controllerName === 'presscontact' && !can('presscontact')) {
     http_response_code(404);
     echo 'Página não encontrada.';
     exit;
@@ -64,6 +64,7 @@ $map = [
     'presscontact' => PressContactController::class,
     'partner' => PartnerController::class,
     'checklist' => ChecklistController::class,
+    'user' => UserController::class,
 ];
 
 if (!isset($map[$controllerName])) {
