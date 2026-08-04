@@ -463,8 +463,15 @@ $servicePages = [
     'stand-up-comedy' => ['title' => 'Stand Up Comedy em Portugal', 'type' => 'service', 'description' => 'Espetáculos de stand up comedy para teatros, bares, empresas e eventos privados, com humoristas selecionados e produção completa.'],
     'eventos-de-humor' => ['title' => 'Eventos de Humor', 'type' => 'service', 'description' => 'Criação e produção de eventos de humor ao vivo, da curadoria de artistas à operação no dia do espetáculo.'],
     'eventos-corporativos' => ['title' => $corporateEventsPage['title'], 'type' => 'service', 'description' => $corporateEventsPage['description']],
-    'team-building-com-humor' => ['title' => 'Team Building com Humor', 'type' => 'service', 'description' => 'Dinâmicas de team building com humor para aproximar equipas, aumentar energia e criar memórias positivas.'],
-    'booking-de-humoristas' => ['title' => 'Booking de Humoristas', 'type' => 'service', 'description' => 'Contratar humorista ou contratar stand up comedy com acompanhamento profissional, briefing e gestão logística.'],
+    'humoristas-para-eventos-empresas' => ['title' => 'Humoristas para Eventos de Empresas', 'type' => 'service', 'description' => 'Humoristas para eventos de empresa, convenções, festas e encontros de equipa, escolhidos de acordo com o público e a cultura da organização.', 'heading' => 'O humorista certo para o seu evento de empresa', 'content' => 'Tratamos da seleção do humorista, briefing, contratação e acompanhamento. Adaptamos o formato ao número de convidados, ao espaço e aos objetivos da empresa, com uma proposta clara e produção profissional.'],
+    'humorista-jantar-natal-empresa' => ['title' => 'Humorista para Jantar de Natal da Empresa', 'type' => 'service', 'description' => 'Animação para jantar de empresa com humor e stand-up comedy adaptados à equipa, ao espaço e ao ambiente da celebração.', 'heading' => 'Animação com humor para o jantar de Natal', 'content' => 'Criamos um momento de comédia que envolve colaboradores e convidados sem comprometer o tom da celebração. A solução pode incluir atuação de stand-up, apresentação da noite e conteúdos preparados a partir do briefing da empresa.'],
+    'team-building-com-humor' => ['title' => 'Team Building com Humor', 'type' => 'service', 'description' => 'Dinâmicas de team building com humor para aproximar equipas, aumentar a energia e criar memórias positivas.', 'heading' => 'Team building com humor feito para a sua equipa', 'content' => 'Desenhamos experiências participativas que usam o humor para estimular comunicação, criatividade e ligação entre colegas. Ajustamos duração, nível de participação e linguagem à cultura e aos objetivos da organização.'],
+    'stand-up-comedy-para-empresas' => ['title' => 'Stand-up Comedy para Empresas', 'type' => 'service', 'description' => 'Espetáculos de stand-up comedy para empresas, convenções, kick-offs, festas internas e eventos para clientes.', 'heading' => 'Stand-up comedy pensado para contexto empresarial', 'content' => 'Selecionamos humoristas com o registo adequado, alinhamos temas e limites no briefing e coordenamos todos os detalhes da atuação. O resultado é um espetáculo profissional, relevante e confortável para o público da empresa.'],
+    'booking-humoristas' => ['title' => 'Booking de Humoristas', 'type' => 'service', 'description' => 'Booking de humoristas para eventos empresariais, privados e culturais, com curadoria, contratação e gestão logística.', 'heading' => 'Booking profissional de humoristas', 'content' => 'Centralizamos disponibilidade, proposta, contratação, deslocações e necessidades técnicas. A nossa curadoria considera o perfil do público, o objetivo, a duração, o local e o orçamento do evento.'],
+    'mestre-cerimonias-com-humor' => ['title' => 'Mestre de Cerimónias com Humor', 'type' => 'service', 'description' => 'Mestre de cerimónias com humor para apresentar galas, convenções, prémios, conferências e festas de empresa.', 'heading' => 'Ritmo, ligação e humor em palco', 'content' => 'Um apresentador com experiência em comédia conduz o alinhamento, apresenta intervenientes e mantém a energia da sala. Preparamos guiões, transições e momentos de interação em articulação com a produção.'],
+    'comedy-club-para-bares-restaurantes' => ['title' => 'Comedy Club para Bares e Restaurantes', 'type' => 'service', 'description' => 'Noites de comedy club para bares, restaurantes e hotéis que querem atrair público com programação regular de humor.', 'heading' => 'Uma noite de comedy club no seu espaço', 'content' => 'Criamos um conceito adequado ao local, selecionamos o elenco e apoiamos calendário, comunicação, bilheteira e operação. É possível desenvolver uma sessão única ou uma programação recorrente.'],
+    'producao-eventos-stand-up-comedy' => ['title' => 'Produção de Eventos de Stand-up Comedy', 'type' => 'service', 'description' => 'Produção de eventos de stand-up comedy, do conceito e booking à técnica, comunicação, bilheteira e operação de sala.', 'heading' => 'Produção completa de eventos de stand-up comedy', 'content' => 'Coordenamos conceito, espaço, artistas, rider técnico, cronograma, promoção, bilheteira e equipa no terreno. Cada etapa é planeada para oferecer uma experiência consistente ao cliente, aos humoristas e ao público.'],
+    'booking-de-humoristas' => ['title' => 'Booking de Humoristas', 'type' => 'service', 'description' => 'Contratar humorista ou stand-up comedy com acompanhamento profissional, briefing e gestão logística.'],
     'producao-de-eventos' => ['title' => 'Produção de Eventos de Humor', 'type' => 'service', 'description' => 'Produção integral de espetáculos de humor: conceito, agenda, artistas, bilheteira, comunicação e experiência de público.'],
 ];
 $localPages = [];
@@ -479,7 +486,7 @@ $virtualPages = $servicePages + $localPages;
 $activeVirtualSlug = $currentPath !== '' ? $currentPath : $pageSlug;
 $activeVirtualPage = $virtualPages[$activeVirtualSlug] ?? null;
 $corporateEventsImageUrl = $corporateEventsPage['image_url'];
-$activeBlogIndex = $activeVirtualSlug === 'blog' && count($blogPosts) > 0;
+$activeBlogIndex = $activeVirtualSlug === 'blog';
 $activeBlogPost = null;
 if (substr($activeVirtualSlug, 0, 5) === 'blog/') {
     $postSlug = substr($activeVirtualSlug, 5);
@@ -918,9 +925,7 @@ function render_partners_section(array $partners): void {
             <?php if ($menuSlug === '' || ($menuSlug === 'agenda' && !$hasAgendaEvents)) { continue; } ?>
             <li class="nav-item"><a class="nav-link" href="/#<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
           <?php endforeach; ?>
-          <?php if (count($blogPosts) > 0): ?>
-            <li class="nav-item"><a class="nav-link" href="/blog">Blog</a></li>
-          <?php endif; ?>
+          <li class="nav-item"><a class="nav-link" href="/blog">Blog</a></li>
           <?php if ($hasPartners): ?>
             <li class="nav-item"><a class="nav-link" href="/#parceiros">Parceiros</a></li>
           <?php endif; ?>
@@ -962,8 +967,8 @@ function render_partners_section(array $partners): void {
             </div>
           </article>
           <div class="row g-4 mt-1">
-            <div class="col-lg-8"><section class="surface-card seo-content-card p-4 p-lg-5 fade-in"><h2><?php echo $activeVirtualSlug === 'eventos-corporativos' ? htmlspecialchars($corporateEventsPage['heading']) : ($activeVirtualPage['type'] === 'local' ? 'Eventos de stand up comedy em ' . htmlspecialchars($activeVirtualPage['place']) : 'Soluções de humor ao vivo'); ?></h2><p class="page-content"><?php echo $activeVirtualSlug === 'eventos-corporativos' ? nl2br(htmlspecialchars($corporateEventsPage['content'])) : 'Planeamos stand up comedy, eventos de humor, espetáculo de humor, comédia ao vivo, team building com humor e humor para empresas com curadoria de artistas, briefing, produção técnica e acompanhamento até ao fim do evento.'; ?></p><h2>O que torna a experiência diferente</h2><div class="row g-3 seo-mini-grid"><div class="col-md-4"><div><i class="bi bi-person-check"></i><h3>Curadoria</h3><p>Humoristas adequados ao público, contexto e objetivo.</p></div></div><div class="col-md-4"><div><i class="bi bi-calendar2-check"></i><h3>Produção</h3><p>Coordenação de palco, horários, comunicação e operação.</p></div></div><div class="col-md-4"><div><i class="bi bi-geo-alt"></i><h3>Local</h3><p>Conteúdo preparado para Portugal e expansão internacional.</p></div></div></div></section></div>
-            <div class="col-lg-4"><aside class="surface-card seo-content-card p-4 fade-in"><h2 class="h4">Ligações úteis</h2><ul class="seo-link-list"><li><a href="/#servicos">Serviços na homepage</a></li><li><a href="/#agenda">Eventos próximos</a></li><li><a href="<?php echo $activeVirtualSlug === 'eventos-corporativos' ? '#pedido-proposta' : '/#contactos'; ?>">Contactos e propostas</a></li><?php if (count($blogPosts) > 0): ?><li><a href="/blog">Artigos do blog</a></li><?php endif; ?></ul><h2 class="h4 mt-4">Perguntas frequentes</h2><h3>Como pedir orçamento?</h3><p>Indica cidade, data, público, objetivo e formato pretendido.</p><h3>Trabalham fora de Portugal?</h3><p>Sim, com páginas e conteúdo preparados para Portugal, Suíça, França e Luxemburgo.</p></aside></div>
+            <div class="col-lg-8"><section class="surface-card seo-content-card p-4 p-lg-5 fade-in"><h2><?php echo $activeVirtualSlug === 'eventos-corporativos' ? htmlspecialchars($corporateEventsPage['heading']) : htmlspecialchars((string)($activeVirtualPage['heading'] ?? ($activeVirtualPage['type'] === 'local' ? 'Eventos de stand up comedy em ' . $activeVirtualPage['place'] : 'Soluções de humor ao vivo'))); ?></h2><p class="page-content"><?php echo $activeVirtualSlug === 'eventos-corporativos' ? nl2br(htmlspecialchars($corporateEventsPage['content'])) : nl2br(htmlspecialchars((string)($activeVirtualPage['content'] ?? 'Planeamos stand-up comedy, eventos de humor e experiências para empresas com curadoria de artistas, briefing, produção técnica e acompanhamento até ao fim do evento.'))); ?></p><h2>O que torna a experiência diferente</h2><div class="row g-3 seo-mini-grid"><div class="col-md-4"><div><i class="bi bi-person-check"></i><h3>Curadoria</h3><p>Humoristas adequados ao público, contexto e objetivo.</p></div></div><div class="col-md-4"><div><i class="bi bi-calendar2-check"></i><h3>Produção</h3><p>Coordenação de palco, horários, comunicação e operação.</p></div></div><div class="col-md-4"><div><i class="bi bi-geo-alt"></i><h3>Local</h3><p>Conteúdo preparado para Portugal e expansão internacional.</p></div></div></div></section></div>
+            <div class="col-lg-4"><aside class="surface-card seo-content-card p-4 fade-in"><h2 class="h4">Ligações úteis</h2><ul class="seo-link-list"><li><a href="/#servicos">Serviços na homepage</a></li><li><a href="/#agenda">Eventos próximos</a></li><li><a href="<?php echo $activeVirtualSlug === 'eventos-corporativos' ? '#pedido-proposta' : '/#contactos'; ?>">Contactos e propostas</a></li><li><a href="/blog">Artigos e recursos do blog</a></li></ul><h2 class="h4 mt-4">Soluções para empresas</h2><ul class="seo-link-list"><li><a href="/humoristas-para-eventos-empresas">Humoristas para eventos de empresas</a></li><li><a href="/stand-up-comedy-para-empresas">Stand-up comedy para empresas</a></li><li><a href="/humorista-jantar-natal-empresa">Humor para jantares de Natal</a></li><li><a href="/team-building-com-humor">Team building com humor</a></li><li><a href="/booking-humoristas">Booking de humoristas</a></li><li><a href="/mestre-cerimonias-com-humor">Mestre de cerimónias com humor</a></li><li><a href="/comedy-club-para-bares-restaurantes">Comedy club para espaços</a></li><li><a href="/producao-eventos-stand-up-comedy">Produção de stand-up comedy</a></li></ul><h2 class="h4 mt-4">Perguntas frequentes</h2><h3>Como pedir orçamento?</h3><p>Indica cidade, data, público, objetivo e formato pretendido.</p><h3>Trabalham fora de Portugal?</h3><p>Sim, com páginas e conteúdo preparados para Portugal, Suíça, França e Luxemburgo.</p></aside></div>
           </div>
           <?php if ($activeVirtualSlug === 'eventos-corporativos'): ?>
             <section id="pedido-proposta" class="surface-card seo-content-card proposal-form-card p-4 p-lg-5 mt-4 fade-in">
@@ -999,6 +1004,7 @@ function render_partners_section(array $partners): void {
         <div class="container">
           <article class="seo-hero-card fade-in show mb-4"><span class="eyebrow"><i class="bi bi-journal-richtext"></i> Blog</span><h1>Blog de Stand Up Comedy e Eventos de Humor</h1><p class="lead">Guias, ideias e estratégias para criar eventos de humor, contratar humoristas e produzir experiências memoráveis.</p></article>
           <div class="row g-4">
+            <?php if (count($blogPosts) === 0): ?><div class="col-12"><div class="surface-card p-4"><h2 class="h4">Novos artigos em preparação</h2><p class="text-secondary mb-0">Em breve encontra aqui guias sobre contratação de humoristas, eventos para empresas e produção de stand-up comedy.</p></div></div><?php endif; ?>
             <?php foreach ($blogPosts as $post): ?>
               <div class="col-md-6 col-xl-4"><article class="blog-card surface-card h-100 fade-in"><?php if (!empty($post['hero_image_url'])): ?><img src="<?php echo htmlspecialchars((string)$post['hero_image_url']); ?>" alt="Imagem do artigo <?php echo htmlspecialchars((string)$post['title']); ?>"><?php endif; ?><div class="p-4"><span class="eyebrow"><?php echo htmlspecialchars((string)($post['category'] ?: 'Blog')); ?></span><h2 class="h4"><a href="/blog/<?php echo htmlspecialchars((string)$post['slug']); ?>"><?php echo htmlspecialchars((string)$post['title']); ?></a></h2><p class="text-secondary"><?php echo htmlspecialchars(truncate_text((string)($post['excerpt'] ?: $post['content']), 130)); ?></p><a class="btn btn-sm btn-outline-brand" href="/blog/<?php echo htmlspecialchars((string)$post['slug']); ?>">Ler artigo</a></div></article></div>
             <?php endforeach; ?>
@@ -1040,6 +1046,10 @@ function render_partners_section(array $partners): void {
       </section>
 
       <?php $partnersRendered = false; ?>
+      <section id="recursos" class="section-block pt-0">
+        <div class="container"><div class="surface-card p-4 p-lg-5 fade-in"><div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3"><div><span class="eyebrow"><i class="bi bi-journal-richtext"></i> Recursos</span><h2 class="section-heading mb-2">Ideias para eventos que ficam na memória</h2><p class="text-secondary mb-0">Guias sobre humoristas, stand-up comedy, eventos de empresa e produção.</p></div><a class="btn btn-outline-brand" href="/blog">Explorar o blog</a></div></div></div>
+      </section>
+
       <?php foreach ($sectionPages as $page): ?>
         <?php $sectionId = trim((string)($page['slug'] ?? '')); ?>
         <?php if ($sectionId === '') { continue; } ?>
@@ -1385,8 +1395,9 @@ function render_partners_section(array $partners): void {
       <div class="small d-flex gap-3">
         <?php if ($hasAgendaEvents): ?><a href="#agenda">Agenda</a><?php endif; ?>
         <?php if ($hasPartners): ?><a href="#parceiros">Parceiros</a><?php endif; ?>
-        <a href="#servicos">Serviços</a>
-        <a href="#contactos">Contactos</a>
+        <a href="/#servicos">Serviços</a>
+        <a href="/blog">Blog</a>
+        <a href="/#contactos">Contactos</a>
       </div>
     </div>
   </footer>
@@ -1546,7 +1557,7 @@ RewriteRule ^sitemap\.xml$ sitemap.php [L]
 RewriteRule ^eventos/([^/]+)/?$ index.php?evento=$1 [L,QSA]
 RewriteRule ^blog/?$ index.php?page=blog [L,QSA]
 RewriteRule ^blog/([^/]+)/?$ index.php?page=blog/$1 [L,QSA]
-RewriteRule ^(stand-up-comedy|eventos-de-humor|eventos-corporativos|team-building-com-humor|booking-de-humoristas|producao-de-eventos|stand-up-comedy-portugal|stand-up-comedy-aveiro|stand-up-comedy-porto|stand-up-comedy-lisboa|stand-up-comedy-braga|stand-up-comedy-coimbra|stand-up-comedy-faro|stand-up-comedy-suica|stand-up-comedy-franca|stand-up-comedy-luxemburgo)/?$ index.php?page=$1 [L,QSA]
+RewriteRule ^(stand-up-comedy|eventos-de-humor|eventos-corporativos|humoristas-para-eventos-empresas|humorista-jantar-natal-empresa|team-building-com-humor|stand-up-comedy-para-empresas|booking-humoristas|mestre-cerimonias-com-humor|comedy-club-para-bares-restaurantes|producao-eventos-stand-up-comedy|booking-de-humoristas|producao-de-eventos|stand-up-comedy-portugal|stand-up-comedy-aveiro|stand-up-comedy-porto|stand-up-comedy-lisboa|stand-up-comedy-braga|stand-up-comedy-coimbra|stand-up-comedy-faro|stand-up-comedy-suica|stand-up-comedy-franca|stand-up-comedy-luxemburgo)/?$ index.php?page=$1 [L,QSA]
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/xml image/svg+xml
 </IfModule>
@@ -1578,7 +1589,7 @@ function sitemap_slug(string $value): string {
     return trim($value, '-') ?: 'pagina';
 }
 $urls = [['loc' => $baseUrl . '/', 'priority' => '1.0']];
-$static = ['stand-up-comedy','eventos-de-humor','eventos-corporativos','team-building-com-humor','booking-de-humoristas','producao-de-eventos','stand-up-comedy-portugal','stand-up-comedy-aveiro','stand-up-comedy-porto','stand-up-comedy-lisboa','stand-up-comedy-braga','stand-up-comedy-coimbra','stand-up-comedy-faro','stand-up-comedy-suica','stand-up-comedy-franca','stand-up-comedy-luxemburgo'];
+$static = ['stand-up-comedy','eventos-de-humor','eventos-corporativos','humoristas-para-eventos-empresas','humorista-jantar-natal-empresa','team-building-com-humor','stand-up-comedy-para-empresas','booking-humoristas','mestre-cerimonias-com-humor','comedy-club-para-bares-restaurantes','producao-eventos-stand-up-comedy','booking-de-humoristas','producao-de-eventos','stand-up-comedy-portugal','stand-up-comedy-aveiro','stand-up-comedy-porto','stand-up-comedy-lisboa','stand-up-comedy-braga','stand-up-comedy-coimbra','stand-up-comedy-faro','stand-up-comedy-suica','stand-up-comedy-franca','stand-up-comedy-luxemburgo'];
 if ('__INCLUDE_CORPORATE_EVENTS_PAGE__' !== '1') {
     $static = array_values(array_diff($static, ['eventos-corporativos']));
 }
@@ -1596,7 +1607,7 @@ try {
     $blogColumns = array_column($db->query('PRAGMA table_info(blog_posts)')->fetchAll(), 'name');
     if ($blogColumns) {
         $publishedPosts = $db->query('SELECT slug, published_at FROM blog_posts WHERE is_published = 1 ORDER BY sort_order ASC, published_at DESC')->fetchAll() ?: [];
-        if (count($publishedPosts) > 0) { $urls[] = ['loc' => $baseUrl . '/blog', 'priority' => '0.8']; }
+        $urls[] = ['loc' => $baseUrl . '/blog', 'priority' => '0.8'];
         foreach ($publishedPosts as $post) {
             $urls[] = ['loc' => $baseUrl . '/blog/' . sitemap_slug((string)$post['slug']), 'priority' => '0.7', 'lastmod' => (string)($post['published_at'] ?? '')];
         }
