@@ -536,6 +536,15 @@ function render_partners_section(array $partners): void {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-TPWEL0LHMH"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-TPWEL0LHMH');
+  </script>
   <?php
     $seoTitle = 'Stand Up Comedy e Eventos de Humor em Portugal | Chorar de Rir';
     $seoDescription = truncate_text((string)($homeCopy['description'] ?? 'Eventos de stand up comedy, humor ao vivo, eventos corporativos de humor, booking de humoristas e produção de eventos em Portugal.'), 158);
@@ -1531,6 +1540,15 @@ PHP;
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-TPWEL0LHMH"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-TPWEL0LHMH');
+  </script>
   <title>Chorar de Rir</title>
   <link rel="icon" type="image/svg+xml" href="/chorarderir-logo.svg">
   <meta http-equiv="refresh" content="0; url=/">
