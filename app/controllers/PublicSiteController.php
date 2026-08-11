@@ -147,7 +147,7 @@ class PublicSiteController extends BaseController
             'content' => 'Criamos momentos de humor para convenções, jantares de empresa, kick-offs, festas de equipa, ativações internas e apresentações com anfitrião. A proposta inclui curadoria de humoristas, alinhamento do tom com a marca, logística e acompanhamento de produção.',
             'form_title' => 'Conta-nos o briefing do teu evento corporativo',
             'form_intro' => 'Partilha os detalhes essenciais para receberes uma proposta ajustada ao objetivo, público e contexto da tua empresa.',
-            'contact_email_to' => 'booking@chorarderir.com',
+            'contact_email_to' => 'info@chorarderir.com',
         ];
     }
 
@@ -290,7 +290,7 @@ $defaultCorporateEventsPage = [
     'content' => 'Criamos momentos de humor para convenções, jantares de empresa, kick-offs, festas de equipa, ativações internas e apresentações com anfitrião. A proposta inclui curadoria de humoristas, alinhamento do tom com a marca, logística e acompanhamento de produção.',
     'form_title' => 'Conta-nos o briefing do teu evento corporativo',
     'form_intro' => 'Partilha os detalhes essenciais para receberes uma proposta ajustada ao objetivo, público e contexto da tua empresa.',
-    'contact_email_to' => 'booking@chorarderir.com',
+    'contact_email_to' => 'info@chorarderir.com',
 ];
 $corporateEventsPage = [
     'enabled' => !array_key_exists('enabled', $corporateEventsPage) || !empty($corporateEventsPage['enabled']),
@@ -2064,7 +2064,7 @@ try {
         }
     }
     if ($emailTo === '') {
-        $emailTo = 'booking@chorarderir.com';
+        $emailTo = 'info@chorarderir.com';
     }
 
     $mailSubject = $subject !== '' ? 'Novo contacto: ' . $subject : 'Novo contacto do website';
