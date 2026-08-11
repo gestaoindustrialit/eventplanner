@@ -12,6 +12,7 @@
         <tr>
             <th>ID</th>
             <th>Empresa</th>
+            <th>Ramo</th>
             <th>Início</th>
             <th>Expira em</th>
             <th>Estado</th>
@@ -35,6 +36,7 @@
                         <img src="<?= htmlspecialchars($partner['logo_url']) ?>" alt="<?= htmlspecialchars($partner['company_name']) ?>" style="height: 34px; width: auto;">
                     <?php endif; ?>
                 </td>
+                <td><?= htmlspecialchars($partner['partnership_type'] ?? 'Parceiro') ?></td>
                 <td><?= htmlspecialchars($startDate) ?></td>
                 <td><?= htmlspecialchars($expiresAt) ?></td>
                 <td>
@@ -55,7 +57,7 @@
             </tr>
         <?php endforeach; ?>
         <?php if (count($partners) === 0): ?>
-            <tr><td colspan="8" class="text-muted">Ainda não existem parceiros.</td></tr>
+            <tr><td colspan="9" class="text-muted">Ainda não existem parceiros.</td></tr>
         <?php endif; ?>
         </tbody>
     </table>

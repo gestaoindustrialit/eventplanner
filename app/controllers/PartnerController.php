@@ -53,6 +53,7 @@ class PartnerController extends BaseController
     {
         return [
             'company_name' => trim((string)($_POST['company_name'] ?? '')),
+            'partnership_type' => trim((string)($_POST['partnership_type'] ?? '')) ?: 'Parceiro',
             'logo_url' => trim((string)($_POST['logo_url'] ?? '')),
             'company_url' => trim((string)($_POST['company_url'] ?? '')),
             'partnership_start_date' => trim((string)($_POST['partnership_start_date'] ?? '')),
