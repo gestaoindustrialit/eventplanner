@@ -536,8 +536,6 @@ function render_partners_section(array $partners): void {
 <!doctype html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-TPWEL0LHMH"></script>
   <script>
@@ -547,6 +545,8 @@ function render_partners_section(array $partners): void {
 
     gtag('config', 'G-TPWEL0LHMH');
   </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php
     $seoTitle = 'Stand Up Comedy e Eventos de Humor em Portugal | Chorar de Rir';
     $seoDescription = truncate_text((string)($homeCopy['description'] ?? 'Eventos de stand up comedy, humor ao vivo, eventos corporativos de humor, booking de humoristas e produção de eventos em Portugal.'), 158);
@@ -1562,8 +1562,6 @@ PHP;
 <!doctype html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-TPWEL0LHMH"></script>
   <script>
@@ -1573,6 +1571,8 @@ PHP;
 
     gtag('config', 'G-TPWEL0LHMH');
   </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chorar de Rir</title>
   <link rel="icon" type="image/svg+xml" href="/chorarderir-logo.svg">
   <meta http-equiv="refresh" content="0; url=/">
@@ -1594,6 +1594,8 @@ HTML;
     private function buildHtaccess(): string
     {
         return <<<'HTACCESS'
+DirectoryIndex index.php
+
 RewriteEngine On
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 RewriteRule ^eventos/([^/]+)/?$ index.php?evento=$1 [L,QSA]
