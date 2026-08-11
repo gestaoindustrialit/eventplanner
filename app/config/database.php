@@ -238,6 +238,7 @@ class Database
             'CREATE TABLE IF NOT EXISTS partners (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 company_name TEXT NOT NULL,
+                partnership_type TEXT NOT NULL DEFAULT \'Parceiro\',
                 logo_url TEXT NOT NULL,
                 company_url TEXT DEFAULT NULL,
                 partnership_start_date TEXT NOT NULL,
@@ -245,6 +246,11 @@ class Database
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )'
         );
+
+        $partnerColumns = array_column($db->query('PRAGMA table_info(partners)')->fetchAll(), 'name');
+        if (!in_array('partnership_type', $partnerColumns, true)) {
+            $db->exec("ALTER TABLE partners ADD COLUMN partnership_type TEXT NOT NULL DEFAULT 'Parceiro'");
+        }
 
         if ($this->tableExists($db, 'comedians')) {
             $columns = $db->query('PRAGMA table_info(comedians)')->fetchAll();

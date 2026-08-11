@@ -514,9 +514,11 @@ function render_partners_section(array $partners): void {
                 <div class="carousel-item <?php echo $chunkIndex === 0 ? 'active' : ''; ?>">
                   <div class="row g-3 justify-content-center align-items-center">
                     <?php foreach ($partnersChunk as $partner): ?>
-                      <div class="col-6 col-md-3 text-center">
-                        <a href="<?php echo htmlspecialchars((string)($partner['company_url'] ?? '#')); ?>" target="_blank" rel="noopener noreferrer" class="d-inline-flex align-items-center justify-content-center p-3 w-100" style="min-height: 110px;">
-                          <img src="<?php echo htmlspecialchars((string)$partner['logo_url']); ?>" alt="<?php echo htmlspecialchars((string)$partner['company_name']); ?>" style="max-height:64px;max-width:100%;object-fit:contain;filter:grayscale(100%);opacity:.92;">
+                      <div class="col-12 col-sm-6 col-lg-3 text-center">
+                        <a href="<?php echo htmlspecialchars((string)($partner['company_url'] ?? '#')); ?>" target="_blank" rel="noopener noreferrer" class="partner-card">
+                          <span class="partner-logo"><img src="<?php echo htmlspecialchars((string)$partner['logo_url']); ?>" alt="Logótipo de <?php echo htmlspecialchars((string)$partner['company_name']); ?>"></span>
+                          <strong><?php echo htmlspecialchars((string)$partner['company_name']); ?></strong>
+                          <span class="partner-type"><?php echo htmlspecialchars((string)($partner['partnership_type'] ?? 'Parceiro')); ?></span>
                         </a>
                       </div>
                     <?php endforeach; ?>
@@ -742,6 +744,28 @@ function render_partners_section(array $partners): void {
     }
     .section-block:nth-of-type(even) { background: var(--background-secondary); }
     .section-heading { font-weight: 800; margin-bottom: 1.2rem; color: var(--text-primary); letter-spacing: -.01em; }
+    .partner-card {
+      min-height: 190px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: .65rem;
+      padding: 1.25rem;
+      color: var(--text-primary);
+      text-decoration: none;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 1rem;
+      background: rgba(255, 255, 255, .025);
+      transition: transform .25s ease, border-color .25s ease, background .25s ease;
+    }
+    .partner-card:hover { color: #fff; transform: translateY(-4px); border-color: rgba(225, 6, 0, .65); background: rgba(225, 6, 0, .08); }
+    .partner-logo { min-height: 72px; display: flex; align-items: center; justify-content: center; width: 100%; }
+    .partner-logo img { max-height: 64px; max-width: 100%; object-fit: contain; filter: grayscale(100%); opacity: .92; transition: filter .25s ease, opacity .25s ease; }
+    .partner-card:hover .partner-logo img { filter: grayscale(0); opacity: 1; }
+    .partner-card strong { font-size: 1rem; line-height: 1.25; }
+    .partner-type { color: var(--text-secondary); font-size: .78rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
     .text-secondary { color: var(--text-secondary) !important; }
     .surface-card {
       border-radius: 1rem;

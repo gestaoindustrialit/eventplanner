@@ -34,8 +34,8 @@ class Partner
     public function create(array $data): bool
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO partners (company_name, logo_url, company_url, partnership_start_date, sort_order)
-             VALUES (:company_name, :logo_url, :company_url, :partnership_start_date, :sort_order)'
+            'INSERT INTO partners (company_name, partnership_type, logo_url, company_url, partnership_start_date, sort_order)
+             VALUES (:company_name, :partnership_type, :logo_url, :company_url, :partnership_start_date, :sort_order)'
         );
         return $stmt->execute($data);
     }
@@ -46,6 +46,7 @@ class Partner
         $stmt = $this->db->prepare(
             'UPDATE partners
              SET company_name = :company_name,
+                 partnership_type = :partnership_type,
                  logo_url = :logo_url,
                  company_url = :company_url,
                  partnership_start_date = :partnership_start_date,

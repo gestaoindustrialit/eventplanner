@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS partners (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   company_name TEXT NOT NULL,
+  partnership_type TEXT NOT NULL DEFAULT 'Parceiro',
   logo_url TEXT NOT NULL,
   company_url TEXT DEFAULT NULL,
   partnership_start_date TEXT NOT NULL,
