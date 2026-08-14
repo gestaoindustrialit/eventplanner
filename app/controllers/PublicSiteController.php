@@ -964,7 +964,7 @@ function render_partners_section(array $partners): void {
             <li class="nav-item"><a class="nav-link <?php echo $activeStandalonePage && (int)($activeStandalonePage['id'] ?? 0) === (int)($page['id'] ?? 0) ? 'active' : ''; ?>" href="/<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
           <?php endforeach; ?>
           <?php if (!empty($corporateEventsPage['enabled'])): ?>
-            <li class="nav-item"><a class="nav-link <?php echo $activeVirtualSlug === 'eventos-corporativos' ? 'active' : ''; ?>" href="/eventos-corporativos"><?php echo htmlspecialchars((string)$corporateEventsPage['title']); ?></a></li>
+            <li class="nav-item"><a class="nav-link <?php echo $activeVirtualSlug === 'eventos-corporativos' ? 'active' : ''; ?>" href="/eventos-corporativos">Corporativos</a></li>
           <?php endif; ?>
           <li class="nav-item"><a class="nav-link" href="/blog">Blog</a></li>
           <?php if ($hasPartners): ?>
