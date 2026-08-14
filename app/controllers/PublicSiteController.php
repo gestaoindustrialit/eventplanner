@@ -12,7 +12,7 @@ class PublicSiteController extends BaseController
         $homeTagline = $settings->get('home_tagline', 'Produção • Booking • Experiências');
         $homeTitle = $settings->get('home_title', 'Humor e espetáculos com um palco inesquecível.');
         $homeDescription = $settings->get('home_description', 'Layout inspirado no visual "Big Picture": imagem de fundo marcante, tipografia forte e conteúdo em cartões translúcidos para foco total no evento.');
-        $homeBackgroundUrl = $settings->get('home_background_url', 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80');
+        $homeBackgroundUrl = $settings->get('home_background_url', 'https://chorarderir.com/blog-img/cdr-stand-up-comedy-producao-booking.jpg');
         $newsletterConsentText = $settings->get('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.');
         $recaptchaSiteKey = $settings->get('recaptcha_site_key', '6LcrsLOsAAAAAB9NZ-X2s7ugJ7LsNAamg4VXW0wt');
         $recaptchaSecretKey = $settings->get('recaptcha_secret_key', '6LcrsLOsAAAAAJniWgy3I-C6PPXk_yTlfFc2U-Hi');
@@ -261,7 +261,7 @@ $defaultHomeCopy = [
     'tagline' => 'Produção • Booking • Experiências',
     'title' => 'Humor e espetáculos com um palco inesquecível.',
     'description' => 'Eventos únicos, noites memoráveis e talento nacional num ambiente vibrante.',
-    'background_url' => 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1800&q=80',
+    'background_url' => 'https://chorarderir.com/blog-img/cdr-stand-up-comedy-producao-booking.jpg',
 ];
 $homeCopy = [
     'tagline' => trim((string)($homeCopy['tagline'] ?? '')) !== '' ? (string)$homeCopy['tagline'] : $defaultHomeCopy['tagline'],
@@ -1115,10 +1115,6 @@ function render_partners_section(array $partners): void {
       </section>
 
       <?php $partnersRendered = false; ?>
-      <section id="recursos" class="section-block pt-0">
-        <div class="container"><div class="surface-card p-4 p-lg-5 fade-in"><div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3"><div><span class="eyebrow"><i class="bi bi-journal-richtext"></i> Recursos</span><h2 class="section-heading mb-2">Ideias para eventos que ficam na memória</h2><p class="text-secondary mb-0">Guias sobre humoristas, stand-up comedy, eventos de empresa e produção.</p></div><a class="btn btn-outline-brand" href="/blog">Explorar o blog</a></div></div></div>
-      </section>
-
       <?php foreach ($sectionPages as $page): ?>
         <?php $sectionId = trim((string)($page['slug'] ?? '')); ?>
         <?php if ($sectionId === '') { continue; } ?>
