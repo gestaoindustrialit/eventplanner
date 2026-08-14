@@ -147,7 +147,7 @@ class PublicSiteController extends BaseController
             'content' => 'Criamos momentos de humor para convenções, jantares de empresa, kick-offs, festas de equipa, ativações internas e apresentações com anfitrião. A proposta inclui curadoria de humoristas, alinhamento do tom com a marca, logística e acompanhamento de produção.',
             'form_title' => 'Conta-nos o briefing do teu evento corporativo',
             'form_intro' => 'Partilha os detalhes essenciais para receberes uma proposta ajustada ao objetivo, público e contexto da tua empresa.',
-            'contact_email_to' => 'booking@chorarderir.com',
+            'contact_email_to' => 'info@chorarderir.com',
         ];
     }
 
@@ -290,7 +290,7 @@ $defaultCorporateEventsPage = [
     'content' => 'Criamos momentos de humor para convenções, jantares de empresa, kick-offs, festas de equipa, ativações internas e apresentações com anfitrião. A proposta inclui curadoria de humoristas, alinhamento do tom com a marca, logística e acompanhamento de produção.',
     'form_title' => 'Conta-nos o briefing do teu evento corporativo',
     'form_intro' => 'Partilha os detalhes essenciais para receberes uma proposta ajustada ao objetivo, público e contexto da tua empresa.',
-    'contact_email_to' => 'booking@chorarderir.com',
+    'contact_email_to' => 'info@chorarderir.com',
 ];
 $corporateEventsPage = [
     'enabled' => !array_key_exists('enabled', $corporateEventsPage) || !empty($corporateEventsPage['enabled']),
@@ -536,8 +536,6 @@ function render_partners_section(array $partners): void {
 <!doctype html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-TPWEL0LHMH"></script>
   <script>
@@ -547,6 +545,8 @@ function render_partners_section(array $partners): void {
 
     gtag('config', 'G-TPWEL0LHMH');
   </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php
     $seoTitle = 'Stand Up Comedy e Eventos de Humor em Portugal | Chorar de Rir';
     $seoDescription = truncate_text((string)($homeCopy['description'] ?? 'Eventos de stand up comedy, humor ao vivo, eventos corporativos de humor, booking de humoristas e produção de eventos em Portugal.'), 158);
@@ -1570,8 +1570,6 @@ PHP;
 <!doctype html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-TPWEL0LHMH"></script>
   <script>
@@ -1581,6 +1579,8 @@ PHP;
 
     gtag('config', 'G-TPWEL0LHMH');
   </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chorar de Rir</title>
   <link rel="icon" type="image/svg+xml" href="/chorarderir-logo.svg">
   <meta http-equiv="refresh" content="0; url=/">
@@ -1602,6 +1602,8 @@ HTML;
     private function buildHtaccess(): string
     {
         return <<<'HTACCESS'
+DirectoryIndex index.php
+
 RewriteEngine On
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 RewriteRule ^eventos/([^/]+)/?$ index.php?evento=$1 [L,QSA]
@@ -2070,7 +2072,7 @@ try {
         }
     }
     if ($emailTo === '') {
-        $emailTo = 'booking@chorarderir.com';
+        $emailTo = 'info@chorarderir.com';
     }
 
     $mailSubject = $subject !== '' ? 'Novo contacto: ' . $subject : 'Novo contacto do website';
