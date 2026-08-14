@@ -958,6 +958,14 @@ function render_partners_section(array $partners): void {
             <?php if ($menuSlug === '' || ($menuSlug === 'agenda' && !$hasAgendaEvents)) { continue; } ?>
             <li class="nav-item"><a class="nav-link" href="/#<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
           <?php endforeach; ?>
+          <?php foreach ($standalonePages as $page): ?>
+            <?php $menuSlug = trim((string)($page['slug'] ?? '')); ?>
+            <?php if ($menuSlug === '' || $menuSlug === 'eventos-corporativos') { continue; } ?>
+            <li class="nav-item"><a class="nav-link <?php echo $activeStandalonePage && (int)($activeStandalonePage['id'] ?? 0) === (int)($page['id'] ?? 0) ? 'active' : ''; ?>" href="/<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
+          <?php endforeach; ?>
+          <?php if (!empty($corporateEventsPage['enabled'])): ?>
+            <li class="nav-item"><a class="nav-link <?php echo $activeVirtualSlug === 'eventos-corporativos' ? 'active' : ''; ?>" href="/eventos-corporativos"><?php echo htmlspecialchars((string)$corporateEventsPage['title']); ?></a></li>
+          <?php endif; ?>
           <li class="nav-item"><a class="nav-link" href="/blog">Blog</a></li>
           <?php if ($hasPartners): ?>
             <li class="nav-item"><a class="nav-link" href="/#parceiros">Parceiros</a></li>

@@ -67,7 +67,7 @@
                 $corporate = is_array($corporateEventsPage ?? null) ? array_merge($corporateDefaults, $corporateEventsPage) : $corporateDefaults;
             ?>
             <div class="col-12">
-                <div class="card border-primary-subtle bg-light mt-2">
+                <div class="card border-primary-subtle bg-light mt-2" id="eventos-corporativos">
                     <div class="card-body">
                         <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
                             <div>
@@ -141,9 +141,17 @@
 
 <div class="card shadow-sm">
     <div class="card-body">
-        <h5>Páginas prontas para publicação</h5>
-        <p class="text-muted mb-3">As páginas criadas serão incluídas no menu público após voltares a publicar o website.</p>
+        <h5>Páginas e secções do menu público</h5>
+        <p class="text-muted mb-3">Esta lista mostra tudo o que será incluído na navegação pública depois de voltares a publicar o website.</p>
         <ul class="mb-0">
+            <li>
+                <strong><?= htmlspecialchars((string)$corporate['title']) ?></strong>
+                (<code>eventos-corporativos</code>)
+                - Página própria
+                - landing page comercial
+                - <?= !empty($corporate['enabled']) ? 'Publicado' : 'Rascunho' ?>
+                <a class="ms-1" href="#eventos-corporativos">Configurar</a>
+            </li>
             <?php foreach ($pages as $page): ?>
                 <li>
                     <strong><?= htmlspecialchars($page['title']) ?></strong>
