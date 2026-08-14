@@ -954,7 +954,13 @@ function render_partners_section(array $partners): void {
     .blog-article-cover { width:100%; max-height:420px; object-fit:cover; border-radius:1rem; margin-bottom:1.5rem; }
 
     @media (max-width: 767.98px) {
-      .hero { min-height: clamp(260px, 72vw, 420px); background-position: 62% center; }
+      .hero {
+        min-height: 0;
+        aspect-ratio: 2.8 / 1;
+        background-color: #050505;
+        background-position: center;
+        background-size: contain;
+      }
       .hero-panel { background: rgba(11, 11, 13, .9); }
       .navbar-brand img { height: 24px; max-height: 24px; }
       .navbar { padding-top: .45rem; padding-bottom: .45rem; }
