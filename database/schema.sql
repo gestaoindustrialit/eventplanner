@@ -206,6 +206,7 @@ CREATE TABLE blog_posts (
   hero_image_url TEXT DEFAULT NULL,
   meta_title TEXT DEFAULT NULL,
   meta_description TEXT DEFAULT NULL,
+  show_corporate_form INTEGER NOT NULL DEFAULT 0,
   is_published INTEGER NOT NULL DEFAULT 0,
   published_at TEXT DEFAULT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0,

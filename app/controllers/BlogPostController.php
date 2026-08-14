@@ -68,6 +68,7 @@ class BlogPostController extends BaseController
             'hero_image_url' => trim((string)($_POST['hero_image_url'] ?? '')),
             'meta_title' => trim((string)($_POST['meta_title'] ?? '')),
             'meta_description' => trim((string)($_POST['meta_description'] ?? '')),
+            'show_corporate_form' => isset($_POST['show_corporate_form']) ? 1 : 0,
             'is_published' => isset($_POST['is_published']) ? 1 : 0,
             'published_at' => trim((string)($_POST['published_at'] ?? '')),
             'sort_order' => (int)($_POST['sort_order'] ?? 0),
