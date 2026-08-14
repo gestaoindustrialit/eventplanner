@@ -488,6 +488,7 @@ $activeVirtualPage = $virtualPages[$activeVirtualSlug] ?? null;
 $corporateEventsImageUrl = $corporateEventsPage['image_url'];
 $activeBlogIndex = $activeVirtualSlug === 'blog';
 $activeBlogPost = null;
+$relatedBlogPosts = [];
 if (substr($activeVirtualSlug, 0, 5) === 'blog/') {
     $postSlug = substr($activeVirtualSlug, 5);
     foreach ($blogPosts as $post) {
@@ -497,7 +498,49 @@ if (substr($activeVirtualSlug, 0, 5) === 'blog/') {
         }
     }
 }
+if ($activeBlogPost !== null) {
+    $sameCategoryPosts = [];
+    $otherCategoryPosts = [];
+    $activeCategory = trim((string)($activeBlogPost['category'] ?? ''));
+    foreach ($blogPosts as $post) {
+        if ((int)($post['id'] ?? 0) === (int)($activeBlogPost['id'] ?? 0)) {
+            continue;
+        }
+        if ($activeCategory !== '' && strcasecmp(trim((string)($post['category'] ?? '')), $activeCategory) === 0) {
+            $sameCategoryPosts[] = $post;
+        } else {
+            $otherCategoryPosts[] = $post;
+        }
+    }
+    $relatedBlogPosts = array_slice(array_merge($sameCategoryPosts, $otherCategoryPosts), 0, 3);
+}
 if ($activeVirtualPage !== null || $activeBlogIndex || $activeBlogPost !== null) { $isStandaloneView = false; $isEventView = false; }
+
+function render_corporate_proposal_form(array $corporateEventsPage, string $recaptchaSiteKey, bool $hasRecaptcha, string $msg, string $pageSlug = 'eventos-corporativos', string $subject = 'Pedido de proposta - eventos corporativos'): void {
+    ?>
+    <section id="pedido-proposta" class="surface-card seo-content-card proposal-form-card p-4 p-lg-5 mt-4 fade-in">
+      <span class="eyebrow"><i class="bi bi-send-check"></i> Pedido de proposta</span>
+      <h2><?php echo htmlspecialchars($corporateEventsPage['form_title']); ?></h2>
+      <p class="text-secondary"><?php echo htmlspecialchars($corporateEventsPage['form_intro']); ?></p>
+      <?php if ($msg === 'contact_ok'): ?><div class="alert alert-success">Pedido enviado com sucesso. Vamos responder brevemente.</div><?php elseif ($msg === 'contact_error' || $msg === 'contact_captcha'): ?><div class="alert alert-danger">Não foi possível enviar o pedido. Confirma os dados e tenta novamente.</div><?php endif; ?>
+      <form method="post" action="/contact.php" class="row g-3">
+        <input type="hidden" name="page_slug" value="<?php echo htmlspecialchars($pageSlug); ?>">
+        <input type="hidden" name="subject" value="<?php echo htmlspecialchars($subject); ?>">
+        <div class="col-md-6"><label class="form-label" for="proposal_name">Nome</label><input id="proposal_name" class="form-control form-control-lg" name="name" autocomplete="name" required></div>
+        <div class="col-md-6"><label class="form-label" for="proposal_company">Empresa</label><input id="proposal_company" class="form-control form-control-lg" name="company" autocomplete="organization" required></div>
+        <div class="col-md-6"><label class="form-label" for="proposal_email">Email</label><input id="proposal_email" type="email" class="form-control form-control-lg" name="email" autocomplete="email" required></div>
+        <div class="col-md-6"><label class="form-label" for="proposal_phone">Telefone</label><input id="proposal_phone" class="form-control form-control-lg" name="phone" autocomplete="tel"></div>
+        <div class="col-md-6"><label class="form-label" for="proposal_date">Data prevista</label><input id="proposal_date" type="date" class="form-control form-control-lg" name="event_date"></div>
+        <div class="col-md-6"><label class="form-label" for="proposal_location">Local / cidade</label><input id="proposal_location" class="form-control form-control-lg" name="event_location" placeholder="Ex.: Lisboa, Porto, online"></div>
+        <div class="col-md-6"><label class="form-label" for="proposal_audience">Nº de participantes</label><input id="proposal_audience" type="number" min="1" class="form-control form-control-lg" name="audience_size" placeholder="Ex.: 120"></div>
+        <div class="col-md-6"><label class="form-label" for="proposal_format">Formato pretendido</label><select id="proposal_format" class="form-select form-select-lg" name="event_format"><option value="">Selecionar formato</option><option>Stand up comedy</option><option>Apresentação / hosting</option><option>Team building com humor</option><option>Ativação de marca</option><option>Outro formato</option></select></div>
+        <div class="col-12"><label class="form-label" for="proposal_message">Objetivo e briefing</label><textarea id="proposal_message" class="form-control form-control-lg" name="message" rows="5" placeholder="Objetivo do evento, perfil do público, timings, orçamento indicativo ou notas relevantes." required></textarea></div>
+        <?php if ($hasRecaptcha): ?><div class="col-12"><div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div></div><?php endif; ?>
+        <div class="col-12"><button class="btn btn-brand btn-lg px-5">Enviar pedido de proposta</button></div>
+      </form>
+    </section>
+    <?php
+}
 
 function render_partners_section(array $partners): void {
     if (count($partners) === 0) {
@@ -1011,33 +1054,7 @@ function render_partners_section(array $partners): void {
             <div class="col-lg-8"><section class="surface-card seo-content-card p-4 p-lg-5 fade-in"><h2><?php echo $activeVirtualSlug === 'eventos-corporativos' ? htmlspecialchars($corporateEventsPage['heading']) : htmlspecialchars((string)($activeVirtualPage['heading'] ?? ($activeVirtualPage['type'] === 'local' ? 'Eventos de stand up comedy em ' . $activeVirtualPage['place'] : 'Soluções de humor ao vivo'))); ?></h2><p class="page-content"><?php echo $activeVirtualSlug === 'eventos-corporativos' ? nl2br(htmlspecialchars($corporateEventsPage['content'])) : nl2br(htmlspecialchars((string)($activeVirtualPage['content'] ?? 'Planeamos stand-up comedy, eventos de humor e experiências para empresas com curadoria de artistas, briefing, produção técnica e acompanhamento até ao fim do evento.'))); ?></p><h2>O que torna a experiência diferente</h2><div class="row g-3 seo-mini-grid"><div class="col-md-4"><div><i class="bi bi-person-check"></i><h3>Curadoria</h3><p>Humoristas adequados ao público, contexto e objetivo.</p></div></div><div class="col-md-4"><div><i class="bi bi-calendar2-check"></i><h3>Produção</h3><p>Coordenação de palco, horários, comunicação e operação.</p></div></div><div class="col-md-4"><div><i class="bi bi-geo-alt"></i><h3>Local</h3><p>Conteúdo preparado para Portugal e expansão internacional.</p></div></div></div></section></div>
             <div class="col-lg-4"><aside class="surface-card seo-content-card p-4 fade-in"><h2 class="h4">Ligações úteis</h2><ul class="seo-link-list"><li><a href="/#servicos">Serviços na homepage</a></li><li><a href="/#agenda">Eventos próximos</a></li><li><a href="<?php echo $activeVirtualSlug === 'eventos-corporativos' ? '#pedido-proposta' : '/#contactos'; ?>">Contactos e propostas</a></li><li><a href="/blog">Artigos e recursos do blog</a></li></ul><h2 class="h4 mt-4">Soluções para empresas</h2><ul class="seo-link-list"><li><a href="/humoristas-para-eventos-empresas">Humoristas para eventos de empresas</a></li><li><a href="/stand-up-comedy-para-empresas">Stand-up comedy para empresas</a></li><li><a href="/humorista-jantar-natal-empresa">Humor para jantares de Natal</a></li><li><a href="/team-building-com-humor">Team building com humor</a></li><li><a href="/booking-humoristas">Booking de humoristas</a></li><li><a href="/mestre-cerimonias-com-humor">Mestre de cerimónias com humor</a></li><li><a href="/comedy-club-para-bares-restaurantes">Comedy club para espaços</a></li><li><a href="/producao-eventos-stand-up-comedy">Produção de stand-up comedy</a></li></ul><h2 class="h4 mt-4">Perguntas frequentes</h2><h3>Como pedir orçamento?</h3><p>Indica cidade, data, público, objetivo e formato pretendido.</p><h3>Trabalham fora de Portugal?</h3><p>Sim, com páginas e conteúdo preparados para Portugal, Suíça, França e Luxemburgo.</p></aside></div>
           </div>
-          <?php if ($activeVirtualSlug === 'eventos-corporativos'): ?>
-            <section id="pedido-proposta" class="surface-card seo-content-card proposal-form-card p-4 p-lg-5 mt-4 fade-in">
-              <span class="eyebrow"><i class="bi bi-send-check"></i> Pedido de proposta</span>
-              <h2><?php echo htmlspecialchars($corporateEventsPage['form_title']); ?></h2>
-              <p class="text-secondary"><?php echo htmlspecialchars($corporateEventsPage['form_intro']); ?></p>
-              <?php if ($msg === 'contact_ok'): ?>
-                <div class="alert alert-success">Pedido enviado com sucesso. Vamos responder brevemente.</div>
-              <?php elseif ($msg === 'contact_error' || $msg === 'contact_captcha'): ?>
-                <div class="alert alert-danger">Não foi possível enviar o pedido. Confirma os dados e tenta novamente.</div>
-              <?php endif; ?>
-              <form method="post" action="/contact.php" class="row g-3">
-                <input type="hidden" name="page_slug" value="eventos-corporativos">
-                <input type="hidden" name="subject" value="Pedido de proposta - eventos corporativos">
-                <div class="col-md-6"><label class="form-label" for="proposal_name">Nome</label><input id="proposal_name" class="form-control form-control-lg" name="name" autocomplete="name" required></div>
-                <div class="col-md-6"><label class="form-label" for="proposal_company">Empresa</label><input id="proposal_company" class="form-control form-control-lg" name="company" autocomplete="organization" required></div>
-                <div class="col-md-6"><label class="form-label" for="proposal_email">Email</label><input id="proposal_email" type="email" class="form-control form-control-lg" name="email" autocomplete="email" required></div>
-                <div class="col-md-6"><label class="form-label" for="proposal_phone">Telefone</label><input id="proposal_phone" class="form-control form-control-lg" name="phone" autocomplete="tel"></div>
-                <div class="col-md-6"><label class="form-label" for="proposal_date">Data prevista</label><input id="proposal_date" type="date" class="form-control form-control-lg" name="event_date"></div>
-                <div class="col-md-6"><label class="form-label" for="proposal_location">Local / cidade</label><input id="proposal_location" class="form-control form-control-lg" name="event_location" placeholder="Ex.: Lisboa, Porto, online"></div>
-                <div class="col-md-6"><label class="form-label" for="proposal_audience">Nº de participantes</label><input id="proposal_audience" type="number" min="1" class="form-control form-control-lg" name="audience_size" placeholder="Ex.: 120"></div>
-                <div class="col-md-6"><label class="form-label" for="proposal_format">Formato pretendido</label><select id="proposal_format" class="form-select form-select-lg" name="event_format"><option value="">Selecionar formato</option><option>Stand up comedy</option><option>Apresentação / hosting</option><option>Team building com humor</option><option>Ativação de marca</option><option>Outro formato</option></select></div>
-                <div class="col-12"><label class="form-label" for="proposal_message">Objetivo e briefing</label><textarea id="proposal_message" class="form-control form-control-lg" name="message" rows="5" placeholder="Objetivo do evento, perfil do público, timings, orçamento indicativo ou notas relevantes." required></textarea></div>
-                <?php if ($hasRecaptcha): ?><div class="col-12"><div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div></div><?php endif; ?>
-                <div class="col-12"><button class="btn btn-brand btn-lg px-5">Enviar pedido de proposta</button></div>
-              </form>
-            </section>
-          <?php endif; ?>
+          <?php if ($activeVirtualSlug === 'eventos-corporativos') { render_corporate_proposal_form($corporateEventsPage, $recaptchaSiteKey, $hasRecaptcha, $msg); } ?>
         </div>
       </section>
     <?php elseif ($activeBlogIndex): ?>
@@ -1064,6 +1081,17 @@ function render_partners_section(array $partners): void {
             <div class="page-content"><?php echo safe_content($activeBlogPost['content'] ?? ''); ?></div>
             <div class="d-flex flex-wrap gap-2 mt-4"><a class="btn btn-brand" href="/#contactos">Pedir proposta</a><a class="btn btn-outline-brand" href="/blog">Voltar ao blog</a></div>
           </article>
+          <?php if (!empty($activeBlogPost['show_corporate_form'])) { render_corporate_proposal_form($corporateEventsPage, $recaptchaSiteKey, $hasRecaptcha, $msg, 'blog/' . (string)$activeBlogPost['slug'], 'Pedido de proposta - ' . (string)$activeBlogPost['title']); } ?>
+          <?php if (count($relatedBlogPosts) > 0): ?>
+            <section class="mt-5" aria-labelledby="related-posts-title">
+              <div class="d-flex justify-content-between align-items-end gap-3 mb-3"><div><span class="eyebrow"><i class="bi bi-journals"></i> Continuar a ler</span><h2 id="related-posts-title" class="section-heading h3 mb-0">Outros artigos que podem interessar</h2></div><a class="btn btn-sm btn-outline-brand" href="/blog">Ver todos</a></div>
+              <div class="row g-4">
+                <?php foreach ($relatedBlogPosts as $relatedPost): ?>
+                  <div class="col-md-4"><article class="blog-card surface-card h-100 fade-in"><?php if (!empty($relatedPost['hero_image_url'])): ?><img src="<?php echo htmlspecialchars((string)$relatedPost['hero_image_url']); ?>" alt="Imagem do artigo <?php echo htmlspecialchars((string)$relatedPost['title']); ?>"><?php endif; ?><div class="p-4"><span class="eyebrow"><?php echo htmlspecialchars((string)($relatedPost['category'] ?: 'Blog')); ?></span><h3 class="h5"><a href="/blog/<?php echo htmlspecialchars((string)$relatedPost['slug']); ?>"><?php echo htmlspecialchars((string)$relatedPost['title']); ?></a></h3><p class="text-secondary"><?php echo htmlspecialchars(truncate_text((string)($relatedPost['excerpt'] ?: $relatedPost['content']), 100)); ?></p><a class="btn btn-sm btn-outline-brand" href="/blog/<?php echo htmlspecialchars((string)$relatedPost['slug']); ?>">Ler artigo</a></div></article></div>
+                <?php endforeach; ?>
+              </div>
+            </section>
+          <?php endif; ?>
         </div>
       </section>
     <?php elseif (!$isStandaloneView && !$isEventView): ?>
@@ -1990,8 +2018,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $pageSlug = trim((string)($_POST['page_slug'] ?? 'contactos'));
-$anchor = $pageSlug === 'eventos-corporativos' ? 'pedido-proposta' : ($pageSlug !== '' ? $pageSlug : 'contactos');
-$returnBase = $pageSlug === 'eventos-corporativos' ? '/eventos-corporativos' : '/';
+$isBlogPost = preg_match('#^blog/[a-z0-9-]+$#', $pageSlug) === 1;
+$anchor = ($pageSlug === 'eventos-corporativos' || $isBlogPost) ? 'pedido-proposta' : ($pageSlug !== '' ? $pageSlug : 'contactos');
+$returnBase = $pageSlug === 'eventos-corporativos' ? '/eventos-corporativos' : ($isBlogPost ? '/' . $pageSlug : '/');
 $captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
 if ($captchaSecret !== '') {
     $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));

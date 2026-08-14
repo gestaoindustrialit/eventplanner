@@ -35,10 +35,16 @@
             <label class="form-label">Imagem de capa (URL)</label>
             <input class="form-control" name="hero_image_url" value="<?= htmlspecialchars($post['hero_image_url'] ?? '') ?>" placeholder="https://...">
         </div>
-        <div class="col-md-6 d-flex align-items-end">
+        <div class="col-md-3 d-flex align-items-end">
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="is_published" id="is_published" <?= (!$post || (int)($post['is_published'] ?? 0) === 1) ? 'checked' : '' ?>>
                 <label class="form-check-label" for="is_published">Publicado</label>
+            </div>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="show_corporate_form" id="show_corporate_form" <?= (int)($post['show_corporate_form'] ?? 0) === 1 ? 'checked' : '' ?>>
+                <label class="form-check-label" for="show_corporate_form">Mostrar formulário de eventos corporativos no final</label>
             </div>
         </div>
         <div class="col-md-6">
