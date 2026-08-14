@@ -739,44 +739,28 @@ function render_partners_section(array $partners): void {
     .nav-link.active, .nav-link:hover { color: #fff !important; text-shadow: 0 0 16px rgba(225, 6, 0, .3); }
     .nav-link.active::after, .nav-link:hover::after { transform: scaleX(1); }
     .hero {
-      min-height: min(84vh, 760px);
-      display: flex;
-      align-items: center;
+      min-height: clamp(320px, 48vw, 560px);
       position: relative;
       overflow: hidden;
-      padding: calc(var(--nav-height) + 2rem) 0 4rem;
-      color: var(--text-primary);
       background-position: center right;
       background-size: cover;
       background-repeat: no-repeat;
     }
-    .hero::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, rgba(11,11,13,.96) 0%, rgba(11,11,13,.88) 34%, rgba(11,11,13,.2) 62%, rgba(225,6,0,.28) 100%);
-      transform: translateY(var(--hero-offset, 0px));
-      will-change: transform;
-      opacity: .98;
+    .hero-content {
+      padding-top: 1.25rem;
+      background: var(--background-main);
     }
-    .hero::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 24% 40%, rgba(255,255,255,.08), transparent 34%),
-                  radial-gradient(circle at 68% 62%, rgba(225,6,0,.25), transparent 45%);
-      pointer-events: none;
-    }
-    .hero > .container { position: relative; z-index: 2; }
     .hero-panel {
-      max-width: 650px;
+      position: relative;
+      z-index: 2;
+      width: 100%;
       background: rgba(11, 11, 13, 0.92);
       border: 1px solid rgba(255,255,255,.12);
       border-radius: 1.15rem;
       box-shadow: 0 28px 72px rgba(0, 0, 0, .55);
       backdrop-filter: blur(14px);
     }
-    .hero .btn-brand { padding: .8rem 1.5rem; }
+    .hero-content .btn-brand { padding: .8rem 1.5rem; }
     .hero-tagline { color: #fff !important; }
     .section-block {
       padding: clamp(3rem, 7vw, 5rem) 0;
@@ -970,8 +954,7 @@ function render_partners_section(array $partners): void {
     .blog-article-cover { width:100%; max-height:420px; object-fit:cover; border-radius:1rem; margin-bottom:1.5rem; }
 
     @media (max-width: 767.98px) {
-      .hero { background-position: 62% center; }
-      .hero::before { background: rgba(11, 11, 13, .72); }
+      .hero { min-height: clamp(260px, 72vw, 420px); background-position: 62% center; }
       .hero-panel { background: rgba(11, 11, 13, .9); }
       .navbar-brand img { height: 24px; max-height: 24px; }
       .navbar { padding-top: .45rem; padding-bottom: .45rem; }
@@ -1098,12 +1081,13 @@ function render_partners_section(array $partners): void {
         </div>
       </section>
     <?php elseif (!$isStandaloneView && !$isEventView): ?>
-      <section id="inicio" class="hero" style="background-image: url('<?php echo htmlspecialchars((string)$heroBackgroundUrl); ?>');">
+      <section id="inicio" class="hero" aria-label="Imagem de destaque" style="background-image: url('<?php echo htmlspecialchars((string)$heroBackgroundUrl); ?>');"></section>
+      <section class="hero-content section-block" aria-labelledby="home-title">
         <div class="container">
           <div class="hero-panel p-4 p-lg-5 col-12 fade-in show">
             <span class="hero-comedy-icon"><i class="bi bi-mic-fill"></i></span>
             <p class="hero-tagline text-uppercase small mb-2 fw-semibold"><?php echo htmlspecialchars((string)($homeCopy['tagline'] ?? '')); ?></p>
-            <h1 class="display-4 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
+            <h1 id="home-title" class="display-4 fw-bold mb-3"><?php echo htmlspecialchars((string)($homeCopy['title'] ?? '')); ?></h1>
             <p class="lead mb-4 text-light"><?php echo htmlspecialchars((string)($homeCopy['description'] ?? '')); ?></p>
             <div class="d-flex flex-wrap gap-2">
               <?php if ($hasAgendaEvents): ?>
@@ -1485,9 +1469,6 @@ function render_partners_section(array $partners): void {
     window.addEventListener('scroll', () => {
       if (navbar) {
         navbar.classList.toggle('scrolled', window.scrollY > 10);
-      }
-      if (!isStandaloneView) {
-        document.documentElement.style.setProperty('--hero-offset', `${window.scrollY * 0.18}px`);
       }
     });
 
