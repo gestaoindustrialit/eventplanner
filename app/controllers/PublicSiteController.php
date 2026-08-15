@@ -741,6 +741,7 @@ function render_partners_section(array $partners): void {
     .hero {
       min-height: clamp(320px, 48vw, 560px);
       position: relative;
+      z-index: 1;
       overflow: hidden;
       background-position: center right;
       background-size: cover;
