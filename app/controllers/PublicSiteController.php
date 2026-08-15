@@ -950,9 +950,23 @@ function render_partners_section(array $partners): void {
     .seo-link-list a:hover, .blog-card a:hover { color:var(--primary-hover); }
     .blog-card { overflow:hidden; transition:transform .22s ease, border-color .22s ease; }
     .blog-card:hover { transform:translateY(-4px); border-color:rgba(225,6,0,.45); }
-    .blog-card img { width:100%; height:210px; object-fit:cover; display:block; }
+    .blog-card img {
+      width:100%;
+      aspect-ratio:16 / 9;
+      object-fit:contain;
+      display:block;
+      background:#08080a;
+    }
     .blog-article { max-width:980px; margin-inline:auto; }
-    .blog-article-cover { width:100%; max-height:420px; object-fit:cover; border-radius:1rem; margin-bottom:1.5rem; }
+    .blog-article-cover {
+      width:100%;
+      height:auto;
+      object-fit:contain;
+      display:block;
+      background:#08080a;
+      border-radius:1rem;
+      margin-bottom:1.5rem;
+    }
 
     @media (max-width: 767.98px) {
       .hero {
