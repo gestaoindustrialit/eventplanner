@@ -188,6 +188,21 @@ $eventSlug = trim((string)($_GET['evento'] ?? ''));
 $recaptchaSiteKey = trim((string)'__RECAPTCHA_SITE_KEY__');
 $hasRecaptcha = $recaptchaSiteKey !== '';
 
+// Keep old, indexed query-string links working, but consolidate their SEO value
+// on the public URL. This is also a fallback for servers that do not apply the
+// Apache rewrite rules generated below.
+$requestPath = trim(parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/', '/');
+if ($pageSlug === 'eventos-corporativos' && ($requestPath === '' || $requestPath === 'index.php')) {
+    $redirectQuery = $_GET;
+    unset($redirectQuery['page']);
+    $cleanLocation = '/eventos-corporativos/';
+    if ($redirectQuery !== []) {
+        $cleanLocation .= '?' . http_build_query($redirectQuery);
+    }
+    header('Location: ' . $cleanLocation, true, 301);
+    exit;
+}
+
 try {
     $db = new PDO('sqlite:__DB_PATH__', null, null, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -612,6 +627,7 @@ function render_partners_section(array $partners): void {
         $seoDescription = truncate_text((string)$activeVirtualPage['description'], 158);
         $canonicalUrl = absolute_url($activeVirtualSlug);
         if ($activeVirtualSlug === 'eventos-corporativos') {
+            $canonicalUrl = absolute_url('eventos-corporativos/');
             $ogImage = absolute_url($corporateEventsImageUrl);
         }
     } elseif ($activeBlogPost) {
@@ -1014,7 +1030,7 @@ function render_partners_section(array $partners): void {
             <li class="nav-item"><a class="nav-link <?php echo $activeStandalonePage && (int)($activeStandalonePage['id'] ?? 0) === (int)($page['id'] ?? 0) ? 'active' : ''; ?>" href="/<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
           <?php endforeach; ?>
           <?php if (!empty($corporateEventsPage['enabled'])): ?>
-            <li class="nav-item"><a class="nav-link <?php echo $activeVirtualSlug === 'eventos-corporativos' ? 'active' : ''; ?>" href="/eventos-corporativos">Corporativos</a></li>
+            <li class="nav-item"><a class="nav-link <?php echo $activeVirtualSlug === 'eventos-corporativos' ? 'active' : ''; ?>" href="/eventos-corporativos/">Corporativos</a></li>
           <?php endif; ?>
           <li class="nav-item"><a class="nav-link" href="/blog">Blog</a></li>
           <?php if ($hasPartners): ?>
@@ -1634,6 +1650,9 @@ HTML;
 DirectoryIndex index.php
 
 RewriteEngine On
+# Redirect the legacy query-string URL before the internal clean-URL rewrite.
+RewriteCond %{QUERY_STRING} (^|&)page=eventos-corporativos(&|$) [NC]
+RewriteRule ^(?:index\.php)?$ /eventos-corporativos/ [R=301,L,NE,QSD]
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 RewriteRule ^eventos/([^/]+)/?$ index.php?evento=$1 [L,QSA]
 RewriteRule ^blog/?$ index.php?page=blog [L,QSA]
@@ -1674,7 +1693,7 @@ $static = ['stand-up-comedy','eventos-de-humor','eventos-corporativos','humorist
 if ('__INCLUDE_CORPORATE_EVENTS_PAGE__' !== '1') {
     $static = array_values(array_diff($static, ['eventos-corporativos']));
 }
-foreach ($static as $slug) { $urls[] = ['loc' => $baseUrl . '/' . $slug, 'priority' => '0.8']; }
+foreach ($static as $slug) { $urls[] = ['loc' => $baseUrl . '/' . $slug . ($slug === 'eventos-corporativos' ? '/' : ''), 'priority' => '0.8']; }
 try {
     $db = new PDO('sqlite:__DB_PATH__', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
     $pageColumns = array_column($db->query('PRAGMA table_info(public_pages)')->fetchAll(), 'name');
@@ -2021,7 +2040,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $pageSlug = trim((string)($_POST['page_slug'] ?? 'contactos'));
 $isBlogPost = preg_match('#^blog/[a-z0-9-]+$#', $pageSlug) === 1;
 $anchor = ($pageSlug === 'eventos-corporativos' || $isBlogPost) ? 'pedido-proposta' : ($pageSlug !== '' ? $pageSlug : 'contactos');
-$returnBase = $pageSlug === 'eventos-corporativos' ? '/eventos-corporativos' : ($isBlogPost ? '/' . $pageSlug : '/');
+$returnBase = $pageSlug === 'eventos-corporativos' ? '/eventos-corporativos/' : ($isBlogPost ? '/' . $pageSlug : '/');
 $captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
 if ($captchaSecret !== '') {
     $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));
