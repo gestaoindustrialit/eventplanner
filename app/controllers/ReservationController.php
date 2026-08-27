@@ -11,15 +11,20 @@ class ReservationController extends BaseController
             return;
         }
         $reservationModel = new Reservation($this->db);
-        $eventOverview = $reservationModel->eventOverview();
+        $eventOverview = $reservationModel->admissionsEventOverview();
         $selectedEventId = (int)($_GET['event_id'] ?? 0);
-        if ($selectedEventId <= 0) {
+        $availableEventIds = array_map('intval', array_column($eventOverview, 'id'));
+        if ($selectedEventId <= 0 || !in_array($selectedEventId, $availableEventIds, true)) {
+            $selectedEventId = 0;
             $today = date('Y-m-d');
             foreach ($eventOverview as $event) {
                 if ((string)$event['date'] === $today) {
                     $selectedEventId = (int)$event['id'];
                     break;
                 }
+            }
+            if ($selectedEventId <= 0 && !empty($eventOverview)) {
+                $selectedEventId = (int)$eventOverview[0]['id'];
             }
         }
         $validationResult = $_SESSION['reservation_validation_result'] ?? null;
@@ -183,32 +188,34 @@ class ReservationController extends BaseController
         $customerName = htmlspecialchars((string)($reservation['customer_name'] ?? ''));
 
         $tickets = $reservationModel->ticketsByReservation((int)$reservation['id']);
+        $logoUrl = 'https://chorarderir.com/chorarderir-logo.svg';
         $ticketHtml = '';
         foreach ($tickets as $ticket) {
             $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=230x230&data=' . rawurlencode((string)$ticket['qr_payload']);
-            $ticketHtml .= '<div style="border:1px solid #dbe4f0;border-radius:12px;padding:16px;margin:12px 0;background:#f8fafc">'
-                . '<p style="margin:0 0 8px;font-weight:700">Bilhete #' . (int)$ticket['ticket_no'] . '</p>'
+            $ticketHtml .= '<div style="border:1px solid #dedede;border-left:4px solid #b30000;border-radius:10px;padding:18px;margin:14px 0;background:#fafafa">'
+                . '<p style="margin:0 0 10px;font-size:18px;font-weight:700">Bilhete #' . (int)$ticket['ticket_no'] . '</p>'
                 . '<p style="margin:0 0 8px">Evento: <strong>' . $eventTitle . '</strong><br>Data: ' . $eventDate . ' às ' . $eventTime . '</p>'
                 . '<p style="margin:0 0 8px;font-size:12px;color:#475569">Token: ' . htmlspecialchars((string)$ticket['ticket_token']) . '</p>'
-                . '<img src="' . htmlspecialchars($qrUrl) . '" alt="QR Bilhete #' . (int)$ticket['ticket_no'] . '" width="180" height="180">'
+                . '<img src="' . htmlspecialchars($qrUrl) . '" alt="QR Bilhete #' . (int)$ticket['ticket_no'] . '" width="200" height="200" style="display:block;max-width:100%;height:auto;margin:14px auto 0">'
                 . '</div>';
         }
 
-        $htmlBody = '<div style="margin:0;padding:24px;background:#f1f5f9;font-family:Segoe UI,Arial,sans-serif;color:#0f172a">'
-            . '<div style="max-width:720px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden">'
-            . '<div style="padding:24px;background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff">'
-            . '<h1 style="margin:0;font-size:22px;">Reserva Confirmada ✅</h1>'
+        $htmlBody = '<div style="margin:0;padding:20px;background:#f4f4f4;font-family:Arial,sans-serif;color:#151515">'
+            . '<div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #dddddd;border-radius:14px;overflow:hidden">'
+            . '<div style="padding:22px 24px;background:#050505;color:#fff;border-bottom:5px solid #b30000">'
+            . '<img src="' . htmlspecialchars($logoUrl) . '" alt="Chorar de Rir" width="190" style="display:block;max-width:55%;height:auto;margin-bottom:20px;filter:invert(1)">'
+            . '<h1 style="margin:0;font-size:24px;">Reserva confirmada</h1>'
             . '<p style="margin:8px 0 0;opacity:.9">Evento: <strong>' . $eventTitle . '</strong></p>'
             . '</div>'
-            . '<div style="padding:24px">'
+            . '<div style="padding:clamp(20px,5vw,32px)">'
             . '<p style="margin-top:0">Olá <strong>' . $customerName . '</strong>,</p>'
             . '<p>A tua reserva foi confirmada com sucesso. Em baixo seguem os dados do evento e os QR codes dos bilhetes.</p>'
-            . '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin:14px 0 20px">'
+            . '<div style="background:#f7f7f7;border:1px solid #dddddd;border-radius:10px;padding:16px;margin:16px 0 22px">'
             . '<p style="margin:0 0 4px"><strong>Data:</strong> ' . $eventDate . ' às ' . $eventTime . '</p>'
             . '<p style="margin:0"><strong>Total de bilhetes:</strong> ' . count($tickets) . '</p>'
             . '</div>'
             . $ticketHtml
-            . '<p style="margin-top:20px;color:#475569;font-size:12px">Cada QR code só pode ser validado uma vez. Guarda este e-mail até ao dia do evento.</p>'
+            . '<p style="margin-top:22px;padding-top:16px;border-top:1px solid #e5e5e5;color:#666;font-size:13px">Cada QR code só pode ser validado uma vez. Guarda este e-mail até ao dia do evento.</p>'
             . '</div>'
             . '</div>'
             . '</div>';
@@ -231,7 +238,15 @@ class ReservationController extends BaseController
     {
         requireLogin();
         $token = trim((string)($_REQUEST['token'] ?? ''));
-        $result = (new Reservation($this->db))->validateTicket($token, (int)(currentUser()['id'] ?? 0));
+        $eventId = (int)($_REQUEST['event_id'] ?? 0);
+        $result = (new Reservation($this->db))->validateTicket(
+            $token,
+            (int)(currentUser()['id'] ?? 0),
+            $eventId > 0 ? $eventId : null
+        );
+        if ($this->wantsJson()) {
+            $this->json($result);
+        }
         $_SESSION['reservation_validation_result'] = $result;
         $redirectTarget = (string)($_REQUEST['redirect'] ?? 'index');
         if ($redirectTarget === 'eventos') {
@@ -243,5 +258,43 @@ class ReservationController extends BaseController
             $this->redirect($redirectUrl);
         }
         $this->redirect(BASE_URL . '?controller=reservation&action=index#validacao-qr');
+    }
+
+    public function admissionsData(): void
+    {
+        requireLogin();
+        if (!can('reservation')) {
+            $this->json(['ok' => false, 'reason' => 'forbidden'], 403);
+        }
+
+        $eventId = (int)($_GET['event_id'] ?? 0);
+        $tickets = (new Reservation($this->db))->ticketsOverview($eventId > 0 ? $eventId : null);
+        $this->json(['ok' => true, 'tickets' => $tickets]);
+    }
+
+    public function markTicketPending(): void
+    {
+        requireLogin();
+        if (!can('reservation')) {
+            $this->json(['ok' => false, 'reason' => 'forbidden'], 403);
+        }
+
+        $ticketId = (int)($_POST['ticket_id'] ?? 0);
+        $ok = $ticketId > 0 && (new Reservation($this->db))->markTicketPending($ticketId);
+        $this->json(['ok' => $ok], $ok ? 200 : 404);
+    }
+
+    private function wantsJson(): bool
+    {
+        return strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest'
+            || strpos((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json') !== false;
+    }
+
+    private function json(array $payload, int $status = 200): void
+    {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
     }
 }

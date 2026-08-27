@@ -181,6 +181,7 @@
                     <td>
                         <input type="number" min="1" class="form-control form-control-sm mb-1" name="tickets" value="<?= (int)$reservation['tickets'] ?>" form="reservation-<?= (int)$reservation['id'] ?>">
                         <small class="text-muted">Gerados: <?= (int)$reservation['generated_tickets'] ?> · Validados: <?= (int)$reservation['used_tickets'] ?></small>
+                        <?php if (($reservation['admission_status'] ?? 'pending') === 'validated'): ?><span class="badge text-bg-success d-block mt-1">Admissão validada</span><?php endif; ?>
                     </td>
                     <td>
                         <form id="reservation-<?= (int)$reservation['id'] ?>" method="post" action="<?= BASE_URL ?>?controller=reservation&action=update" class="d-flex gap-2">
