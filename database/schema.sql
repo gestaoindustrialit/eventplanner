@@ -101,6 +101,9 @@ CREATE TABLE event_reservations (
   customer_phone TEXT DEFAULT NULL,
   tickets INTEGER NOT NULL DEFAULT 1,
   notes TEXT DEFAULT NULL,
+  gdpr_consent INTEGER NOT NULL DEFAULT 0,
+  gdpr_consent_at TEXT DEFAULT NULL,
+  gdpr_consent_text TEXT DEFAULT NULL,
   status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'confirmed', 'cancelled')),
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE

@@ -1,5 +1,11 @@
-<h2 class="mb-3">Validação de QR por Evento</h2>
-<p class="text-muted">URL direta: <code>/eventos</code>. Seleciona o evento e valida o QR com a câmara do telemóvel.</p>
+<div class="admissions-hero mb-4">
+    <div>
+        <span class="admissions-eyebrow"><i class="bi bi-shield-check"></i> Controlo de entrada</span>
+        <h1 class="mb-2">Admissões do evento</h1>
+        <p class="mb-0">Digitaliza o QR code ou introduz o token. O evento de hoje é selecionado automaticamente.</p>
+    </div>
+    <div class="admissions-live"><span></span> Operação ativa</div>
+</div>
 
 <div class="card shadow-sm mb-4">
     <div class="card-body">
@@ -22,7 +28,7 @@
 
         <div class="row g-2 align-items-end">
             <div class="col-md-6">
-                <button id="startScan" class="btn btn-dark w-100">Iniciar câmara</button>
+                <button id="startScan" class="btn btn-primary btn-lg w-100"><i class="bi bi-camera-fill"></i> Iniciar câmara</button>
             </div>
             <div class="col-md-6">
                 <button id="stopScan" class="btn btn-outline-secondary w-100" type="button">Parar</button>

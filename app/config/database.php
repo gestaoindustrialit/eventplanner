@@ -297,6 +297,19 @@ class Database
                 $db->exec('ALTER TABLE events ADD COLUMN reservation_capacity INTEGER NOT NULL DEFAULT 0');
             }
         }
+
+        if ($this->tableExists($db, 'event_reservations')) {
+            $reservationColumns = array_column($db->query('PRAGMA table_info(event_reservations)')->fetchAll(), 'name');
+            if (!in_array('gdpr_consent', $reservationColumns, true)) {
+                $db->exec('ALTER TABLE event_reservations ADD COLUMN gdpr_consent INTEGER NOT NULL DEFAULT 0');
+            }
+            if (!in_array('gdpr_consent_at', $reservationColumns, true)) {
+                $db->exec('ALTER TABLE event_reservations ADD COLUMN gdpr_consent_at TEXT DEFAULT NULL');
+            }
+            if (!in_array('gdpr_consent_text', $reservationColumns, true)) {
+                $db->exec('ALTER TABLE event_reservations ADD COLUMN gdpr_consent_text TEXT DEFAULT NULL');
+            }
+        }
     }
 
     private function tableExists(PDO $db, string $table): bool

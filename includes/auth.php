@@ -37,6 +37,7 @@ function can(string $permission): bool
 function requireLogin(): void
 {
     if (!isLoggedIn()) {
+        $_SESSION['login_redirect'] = $_SERVER['REQUEST_URI'] ?? BASE_URL;
         header('Location: ' . BASE_URL . '?controller=auth&action=login');
         exit;
     }

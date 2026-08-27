@@ -1161,6 +1161,8 @@ function render_partners_section(array $partners): void {
                 <div class="alert alert-warning">Este email já está registado na newsletter.</div>
               <?php elseif ($msg === 'consent'): ?>
                 <div class="alert alert-warning">Precisas de aceitar o consentimento RGPD para subscrever.</div>
+              <?php elseif ($msg === 'gdpr'): ?>
+                <div class="alert alert-warning">Para concluir a reserva, é necessário aceitar o tratamento de dados pessoais indicado no formulário.</div>
               <?php elseif ($msg === 'closed'): ?>
                 <div class="alert alert-warning">As reservas para esse evento estão fechadas.</div>
               <?php elseif ($msg === 'soldout'): ?>
@@ -1356,6 +1358,12 @@ function render_partners_section(array $partners): void {
                 <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
                 <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
                 <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" id="reserveTickets" class="form-control" placeholder="Nº bilhetes"></div>
+                <div class="col-12">
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" value="1" name="gdpr_consent" id="reserveGdprConsent" required>
+                    <label class="form-check-label small text-secondary" for="reserveGdprConsent">Autorizo o tratamento dos meus dados pessoais para gestão desta reserva, nos termos do Regulamento Geral sobre a Proteção de Dados (RGPD). Compreendo que posso retirar o consentimento a qualquer momento, sem comprometer a licitude do tratamento efetuado anteriormente.</label>
+                  </div>
+                </div>
                 <?php if ($hasRecaptcha): ?>
                   <div class="col-12 d-flex justify-content-center">
                     <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div>
@@ -1407,20 +1415,21 @@ function render_partners_section(array $partners): void {
             <?php elseif ($selectedAvailable !== null && $selectedAvailable <= 0): ?>
               <div class="alert alert-warning py-2 mb-0">Esgotado. Não existem mais lugares disponíveis.</div>
             <?php else: ?>
-              <button
-                type="button"
-                class="btn btn-brand"
-                data-bs-toggle="modal"
-                data-bs-target="#reserveModal"
-                data-event-id="<?php echo (int)$selectedEvent['id']; ?>"
-                data-event-title="<?php echo htmlspecialchars((string)$selectedEvent['title'], ENT_QUOTES); ?>"
-                data-event-date="<?php echo htmlspecialchars((string)$selectedEvent['date'], ENT_QUOTES); ?>"
-                data-event-time="<?php echo htmlspecialchars(substr((string)$selectedEvent['time'], 0, 5), ENT_QUOTES); ?>"
-                data-event-location="<?php echo htmlspecialchars((string)$selectedEvent['location'], ENT_QUOTES); ?>"
-                data-max-tickets="<?php echo $selectedAvailable !== null ? (int)$selectedAvailable : 0; ?>"
-              >
-                Reservar lugar
-              </button>
+              <div class="surface-card p-3 p-lg-4 mt-4 reservation-inline-card">
+                <h2 class="h4 mb-2">Reserva o teu lugar</h2>
+                <p class="small text-secondary">Preenche os dados abaixo e recebe a confirmação da reserva.</p>
+                <form method="post" action="/reserve.php" class="row g-3">
+                  <input type="hidden" name="event_id" value="<?php echo (int)$selectedEvent['id']; ?>">
+                  <div class="col-12"><label class="form-label" for="eventReserveName">Nome</label><input id="eventReserveName" name="customer_name" required class="form-control" autocomplete="name"></div>
+                  <div class="col-md-6"><label class="form-label" for="eventReserveEmail">Email</label><input id="eventReserveEmail" type="email" name="customer_email" required class="form-control" autocomplete="email"></div>
+                  <div class="col-md-6"><label class="form-label" for="eventReservePhone">Telefone</label><input id="eventReservePhone" name="customer_phone" class="form-control" autocomplete="tel"></div>
+                  <div class="col-md-4"><label class="form-label" for="eventReserveTickets">N.º de bilhetes</label><input id="eventReserveTickets" type="number" min="1" <?php if ($selectedAvailable !== null): ?>max="<?php echo (int)$selectedAvailable; ?>"<?php endif; ?> value="1" name="tickets" required class="form-control"></div>
+                  <div class="col-12"><label class="form-label" for="eventReserveNotes">Notas <span class="text-secondary">(opcional)</span></label><textarea id="eventReserveNotes" name="notes" class="form-control" rows="2"></textarea></div>
+                  <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" value="1" name="gdpr_consent" id="eventReserveGdpr" required><label class="form-check-label small text-secondary" for="eventReserveGdpr">Autorizo o tratamento dos meus dados pessoais para gestão desta reserva, nos termos do Regulamento Geral sobre a Proteção de Dados (RGPD). Compreendo que posso retirar o consentimento a qualquer momento, sem comprometer a licitude do tratamento efetuado anteriormente.</label></div></div>
+                  <?php if ($hasRecaptcha): ?><div class="col-12"><div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div></div><?php endif; ?>
+                  <div class="col-12 col-md-5"><button class="btn btn-brand btn-lg w-100">Confirmar reserva</button></div>
+                </form>
+              </div>
             <?php endif; ?>
           </div>
           <?php $eventSchemaScript = function_exists('renderEventSchema') ? renderEventSchema(build_event_schema_payload($selectedEvent)) : ''; ?>
@@ -1444,6 +1453,12 @@ function render_partners_section(array $partners): void {
                 <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
                 <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
                 <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" id="reserveTickets" class="form-control" placeholder="Nº bilhetes"></div>
+                <div class="col-12">
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" value="1" name="gdpr_consent" id="reserveGdprConsent" required>
+                    <label class="form-check-label small text-secondary" for="reserveGdprConsent">Autorizo o tratamento dos meus dados pessoais para gestão desta reserva, nos termos do Regulamento Geral sobre a Proteção de Dados (RGPD). Compreendo que posso retirar o consentimento a qualquer momento, sem comprometer a licitude do tratamento efetuado anteriormente.</label>
+                  </div>
+                </div>
                 <?php if ($hasRecaptcha): ?>
                   <div class="col-12 d-flex justify-content-center">
                     <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div>
@@ -1745,6 +1760,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+if ((string)($_POST['gdpr_consent'] ?? '') !== '1') {
+    header('Location: /?msg=gdpr#eventos');
+    exit;
+}
+
 $captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
 if ($captchaSecret !== '') {
     $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));
@@ -1797,7 +1817,8 @@ try {
         exit;
     }
 
-    $stmt = $db->prepare('INSERT INTO event_reservations (event_id, customer_name, customer_email, customer_phone, tickets, notes, status) VALUES (:event_id, :customer_name, :customer_email, :customer_phone, :tickets, :notes, :status)');
+    $consentText = 'Autorizo o tratamento dos meus dados pessoais para gestão desta reserva, nos termos do Regulamento Geral sobre a Proteção de Dados (RGPD). Compreendo que posso retirar o consentimento a qualquer momento, sem comprometer a licitude do tratamento efetuado anteriormente.';
+    $stmt = $db->prepare('INSERT INTO event_reservations (event_id, customer_name, customer_email, customer_phone, tickets, notes, gdpr_consent, gdpr_consent_at, gdpr_consent_text, status) VALUES (:event_id, :customer_name, :customer_email, :customer_phone, :tickets, :notes, 1, CURRENT_TIMESTAMP, :gdpr_consent_text, :status)');
 
     $stmt->execute([
         'event_id' => $eventId,
@@ -1806,6 +1827,7 @@ try {
         'customer_phone' => trim((string)($_POST['customer_phone'] ?? '')),
         'tickets' => $tickets,
         'notes' => trim((string)($_POST['notes'] ?? '')) ?: null,
+        'gdpr_consent_text' => $consentText,
         'status' => 'new',
     ]);
     $reservationId = (int)$db->lastInsertId();
