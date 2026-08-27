@@ -9,6 +9,7 @@ class Reservation
     {
         $this->db = $db;
         $this->ensureTicketTable();
+        $this->ensureAdmissionStatusColumn();
     }
 
     public function create(array $data): int
@@ -70,6 +71,20 @@ class Reservation
 
         $stmt = $this->db->query($sql);
         return $stmt->fetchAll();
+    }
+
+    public function admissionsEventOverview(): array
+    {
+        $sql = "SELECT e.id, e.title, e.date, e.time,
+                       COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets
+                FROM events e
+                JOIN event_reservations r ON r.event_id = e.id AND r.status != 'cancelled'
+                WHERE e.reservations_open = 1
+                GROUP BY e.id
+                HAVING active_tickets > 0
+                ORDER BY e.date ASC, e.time ASC";
+
+        return $this->db->query($sql)->fetchAll();
     }
 
     public function updateEventAvailability(int $eventId, bool $open, int $capacity): void
@@ -141,7 +156,7 @@ class Reservation
         return $stmt->fetchAll();
     }
 
-    public function validateTicket(string $token, int $validatorUserId): array
+    public function validateTicket(string $token, int $validatorUserId, ?int $expectedEventId = null): array
     {
         $token = $this->extractToken($token);
         if ($token === '') {
@@ -160,6 +175,9 @@ class Reservation
         if (!$ticket) {
             return ['ok' => false, 'reason' => 'not_found'];
         }
+        if ($expectedEventId !== null && $expectedEventId > 0 && (int)$ticket['event_id'] !== $expectedEventId) {
+            return ['ok' => false, 'reason' => 'wrong_event', 'ticket' => $ticket];
+        }
         if ((int)$ticket['is_used'] === 1) {
             return ['ok' => false, 'reason' => 'already_used', 'ticket' => $ticket];
         }
@@ -167,11 +185,19 @@ class Reservation
             return ['ok' => false, 'reason' => 'cancelled', 'ticket' => $ticket];
         }
 
-        $update = $this->db->prepare('UPDATE event_reservation_tickets SET is_used = 1, used_at = CURRENT_TIMESTAMP, used_by_user_id = :user_id WHERE id = :id');
+        $update = $this->db->prepare('UPDATE event_reservation_tickets SET is_used = 1, used_at = CURRENT_TIMESTAMP, used_by_user_id = :user_id WHERE id = :id AND is_used = 0');
         $update->execute([
             'id' => (int)$ticket['id'],
             'user_id' => $validatorUserId,
         ]);
+
+        if ($update->rowCount() !== 1) {
+            $stmt->execute(['token' => $token]);
+            return ['ok' => false, 'reason' => 'already_used', 'ticket' => $stmt->fetch()];
+        }
+
+        $reservationUpdate = $this->db->prepare("UPDATE event_reservations SET admission_status = 'validated' WHERE id = :id");
+        $reservationUpdate->execute(['id' => (int)$ticket['reservation_id']]);
 
         $stmt->execute(['token' => $token]);
         $updated = $stmt->fetch();
@@ -181,8 +207,8 @@ class Reservation
 
     public function ticketsOverview(?int $eventId = null): array
     {
-        $sql = 'SELECT t.id, t.event_id, t.ticket_no, t.ticket_token, t.is_used, t.used_at,
-                       r.customer_name, r.status AS reservation_status, e.title AS event_title
+        $sql = 'SELECT t.id, t.event_id, t.reservation_id, t.ticket_no, t.ticket_token, t.is_used, t.used_at,
+                       r.customer_name, r.status AS reservation_status, r.admission_status, e.title AS event_title
                 FROM event_reservation_tickets t
                 JOIN event_reservations r ON r.id = t.reservation_id
                 JOIN events e ON e.id = t.event_id';
@@ -197,6 +223,29 @@ class Reservation
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    public function markTicketPending(int $ticketId): bool
+    {
+        $stmt = $this->db->prepare('SELECT reservation_id FROM event_reservation_tickets WHERE id = :id LIMIT 1');
+        $stmt->execute(['id' => $ticketId]);
+        $ticket = $stmt->fetch();
+        if (!$ticket) {
+            return false;
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $reset = $this->db->prepare('UPDATE event_reservation_tickets SET is_used = 0, used_at = NULL, used_by_user_id = NULL WHERE id = :id');
+            $reset->execute(['id' => $ticketId]);
+            $pending = $this->db->prepare("UPDATE event_reservations SET admission_status = 'pending' WHERE id = :id");
+            $pending->execute(['id' => (int)$ticket['reservation_id']]);
+            $this->db->commit();
+            return true;
+        } catch (Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
     }
 
     public function pendingCount(): int
@@ -269,6 +318,18 @@ class Reservation
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )'
         );
+    }
+
+    private function ensureAdmissionStatusColumn(): void
+    {
+        $columns = $this->db->query('PRAGMA table_info(event_reservations)')->fetchAll();
+        foreach ($columns as $column) {
+            if ((string)$column['name'] === 'admission_status') {
+                return;
+            }
+        }
+
+        $this->db->exec("ALTER TABLE event_reservations ADD COLUMN admission_status TEXT NOT NULL DEFAULT 'pending'");
     }
 
     private function extractToken(string $rawValue): string

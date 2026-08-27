@@ -105,6 +105,7 @@ CREATE TABLE event_reservations (
   gdpr_consent_at TEXT DEFAULT NULL,
   gdpr_consent_text TEXT DEFAULT NULL,
   status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'confirmed', 'cancelled')),
+  admission_status TEXT NOT NULL DEFAULT 'pending' CHECK (admission_status IN ('pending', 'validated')),
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
 );

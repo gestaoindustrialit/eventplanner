@@ -1,0 +1,4 @@
+RewriteEngine On
+
+# Entrada curta e estável para a equipa de admissões.
+RewriteRule ^eventos/?$ public/eventos.php [L,QSA]

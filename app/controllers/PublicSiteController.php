@@ -1925,20 +1925,21 @@ try {
         $ticketHtml = '';
         foreach ($ticketsData as $ticket) {
             $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=230x230&data=' . rawurlencode((string)$ticket['payload']);
-            $ticketHtml .= '<div style="border:1px solid #dbe4f0;border-radius:12px;padding:16px;margin:12px 0;background:#f8fafc">'
-                . '<p style="margin:0 0 8px;font-weight:700">Bilhete #' . (int)$ticket['ticket_no'] . '</p>'
+            $ticketHtml .= '<div style="border:1px solid #dedede;border-left:4px solid #b30000;border-radius:10px;padding:18px;margin:14px 0;background:#fafafa">'
+                . '<p style="margin:0 0 10px;font-size:18px;font-weight:700">Bilhete #' . (int)$ticket['ticket_no'] . '</p>'
                 . '<p style="margin:0 0 8px">Evento: <strong>' . $eventTitle . '</strong><br>Data: ' . $eventDate . ' às ' . $eventTime . '</p>'
                 . '<p style="margin:0 0 8px;font-size:12px;color:#475569">Token: ' . htmlspecialchars((string)$ticket['token']) . '</p>'
-                . '<img src="' . htmlspecialchars($qrUrl) . '" alt="QR Bilhete #' . (int)$ticket['ticket_no'] . '" width="180" height="180">'
+                . '<img src="' . htmlspecialchars($qrUrl) . '" alt="QR Bilhete #' . (int)$ticket['ticket_no'] . '" width="200" height="200" style="display:block;max-width:100%;height:auto;margin:14px auto 0">'
                 . '</div>';
         }
-        $htmlBody = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px;color:#0f172a">'
-            . '<div style="margin-bottom:16px"><img src="' . htmlspecialchars($logoUrl) . '" alt="Chorar de Rir" style="max-height:32px"></div>'
-            . '<p>Olá ' . $customerNameSafe . ',</p>'
-            . '<p>' . $intro . '</p>'
+        $htmlBody = '<div style="margin:0;padding:20px;background:#f4f4f4;font-family:Arial,sans-serif;color:#151515">'
+            . '<div style="max-width:680px;margin:0 auto;background:#fff;border:1px solid #ddd;border-radius:14px;overflow:hidden">'
+            . '<div style="padding:22px 24px;background:#050505;border-bottom:5px solid #b30000"><img src="' . htmlspecialchars($logoUrl) . '" alt="Chorar de Rir" width="190" style="display:block;max-width:55%;height:auto;filter:invert(1)"></div>'
+            . '<div style="padding:28px 24px">'
+            . '<div style="font-size:16px;line-height:1.6">' . $intro . '</div>'
             . $ticketHtml
-            . '<p style="margin-top:16px;color:#64748b;font-size:12px">Cada QR code só pode ser validado uma vez.</p>'
-            . '</div>';
+            . '<p style="margin-top:22px;padding-top:16px;border-top:1px solid #e5e5e5;color:#666;font-size:13px">Cada QR code só pode ser validado uma vez. Guarda este e-mail até ao dia do evento.</p>'
+            . '</div></div></div>';
 
         @mail($customerEmail, $subject, $htmlBody, implode("\r\n", $headers));
     }
