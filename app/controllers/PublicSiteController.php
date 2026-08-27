@@ -1393,12 +1393,9 @@ function render_partners_section(array $partners): void {
               <p class="text-secondary mb-3"><?php echo nl2br(htmlspecialchars((string)$selectedEvent['notes'])); ?></p>
             <?php endif; ?>
             <div class="row g-4 mt-2 mb-3">
-              <div class="col-md-4"><h2 class="h4">Artistas</h2><p class="text-secondary"><?php echo htmlspecialchars((string)($selectedEvent['artist_details'] ?: 'Line-up de humoristas confirmado pela produção.')); ?></p></div>
-              <div class="col-md-4"><h2 class="h4">Mapa e local</h2><p class="text-secondary"><?php echo htmlspecialchars((string)$selectedEvent['location']); ?></p><?php if (!empty($selectedEvent['artist_map_link'])): ?><a class="btn btn-sm btn-outline-light" href="<?php echo htmlspecialchars((string)$selectedEvent['artist_map_link']); ?>" target="_blank" rel="noopener noreferrer">Abrir mapa</a><?php endif; ?></div>
-              <div class="col-md-4"><h2 class="h4">Galeria</h2><p class="text-secondary">Cartaz, imagens e conteúdos do espetáculo serão atualizados nesta página para reforçar a pesquisa orgânica.</p></div>
+              <div class="col-md-6"><h2 class="h4">Mapa e local</h2><p class="text-secondary"><?php echo htmlspecialchars((string)$selectedEvent['location']); ?></p><?php if (!empty($selectedEvent['artist_map_link'])): ?><a class="btn btn-sm btn-outline-light" href="<?php echo htmlspecialchars((string)$selectedEvent['artist_map_link']); ?>" target="_blank" rel="noopener noreferrer">Abrir mapa</a><?php endif; ?></div>
+              <div class="col-md-6"><h2 class="h4">Quando devo chegar?</h2><p class="text-secondary">Deves chegar 30 minutos antes do início do evento.</p></div>
             </div>
-            <h2 class="h4">Perguntas frequentes sobre o evento</h2>
-            <div class="page-content mb-3"><h3>Como reservar?</h3><p>Usa o botão de reserva ou compra de bilhetes nesta página.</p><h3>Quando devo chegar?</h3><p>Recomendamos chegar com antecedência para garantir a melhor experiência de humor ao vivo.</p></div>
             <?php
               $selectedCapacity = (int)($selectedEvent['reservation_capacity'] ?? 0);
               $selectedActiveTickets = (int)($selectedEvent['active_tickets'] ?? 0);
