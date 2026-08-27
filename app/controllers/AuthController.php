@@ -39,7 +39,12 @@ class AuthController extends BaseController
         ];
 
         flash('success', 'Sessão iniciada com sucesso.');
-        $this->redirect(BASE_URL);
+        $redirect = (string)($_SESSION['login_redirect'] ?? BASE_URL);
+        unset($_SESSION['login_redirect']);
+        if ($redirect === '' || preg_match('#^(?:https?:)?//#i', $redirect)) {
+            $redirect = BASE_URL;
+        }
+        $this->redirect($redirect);
     }
 
     public function logout(): void

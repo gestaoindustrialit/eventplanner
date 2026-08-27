@@ -5,9 +5,23 @@ class ReservationController extends BaseController
     public function eventos(): void
     {
         requireLogin();
+        if (!can('reservation')) {
+            http_response_code(403);
+            echo 'Acesso negado.';
+            return;
+        }
         $reservationModel = new Reservation($this->db);
         $eventOverview = $reservationModel->eventOverview();
         $selectedEventId = (int)($_GET['event_id'] ?? 0);
+        if ($selectedEventId <= 0) {
+            $today = date('Y-m-d');
+            foreach ($eventOverview as $event) {
+                if ((string)$event['date'] === $today) {
+                    $selectedEventId = (int)$event['id'];
+                    break;
+                }
+            }
+        }
         $validationResult = $_SESSION['reservation_validation_result'] ?? null;
         unset($_SESSION['reservation_validation_result']);
         $ticketsOverview = $reservationModel->ticketsOverview($selectedEventId > 0 ? $selectedEventId : null);
