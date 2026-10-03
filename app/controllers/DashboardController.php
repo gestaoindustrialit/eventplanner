@@ -22,7 +22,7 @@ class DashboardController extends BaseController
             $this->redirect(BASE_URL . '?controller=comedianarea&action=index');
         }
 
-        $eventModel = new Event($this->db);
+        $eventModel = new EventModel($this->db);
 
         $dateFrom = $_GET['date_from'] ?? null;
         $dateTo = $_GET['date_to'] ?? null;
