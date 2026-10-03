@@ -176,6 +176,8 @@ class PublicSiteController extends BaseController
         $template = <<<'PHP'
 <?php
 $events = [];
+$seriesList = [];
+$seriesEvents = [];
 $pages = [];
 $partners = [];
 $blogPosts = [];
@@ -185,6 +187,7 @@ $corporateEventsPage = json_decode('__CORPORATE_EVENTS_PAGE_JSON__', true) ?: []
 $msg = $_GET['msg'] ?? '';
 $pageSlug = trim((string)($_GET['page'] ?? ''));
 $eventSlug = trim((string)($_GET['evento'] ?? ''));
+$sessionSlug = trim((string)($_GET['sessao'] ?? ''));
 $recaptchaSiteKey = trim((string)'__RECAPTCHA_SITE_KEY__');
 $hasRecaptcha = $recaptchaSiteKey !== '';
 
@@ -224,6 +227,12 @@ try {
     }
     $eventSql .= " GROUP BY e.id ORDER BY e.date ASC, e.time ASC";
     $events = $db->query($eventSql)->fetchAll() ?: [];
+
+    $seriesColumns = array_column($db->query("PRAGMA table_info(event_series)")->fetchAll(), 'name');
+    if ($seriesColumns) {
+        $seriesList = $db->query('SELECT * FROM event_series WHERE is_active = 1 ORDER BY name ASC')->fetchAll() ?: [];
+        $seriesEvents = $db->query("SELECT e.*, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets FROM events e LEFT JOIN event_reservations r ON r.event_id=e.id WHERE e.series_id IS NOT NULL AND e.is_visible=1 GROUP BY e.id ORDER BY e.date ASC,e.time ASC")->fetchAll() ?: [];
+    }
 
     $pageSql = 'SELECT * FROM public_pages';
     $pageColumns = array_column($db->query('PRAGMA table_info(public_pages)')->fetchAll(), 'name');
@@ -269,6 +278,8 @@ try {
     $pages = [];
     $partners = [];
     $blogPosts = [];
+    $seriesList = [];
+    $seriesEvents = [];
 }
 
 $siteTitle = 'Chorar de Rir';
@@ -430,12 +441,14 @@ foreach ($pages as $page) {
 $isStandaloneView = $activeStandalonePage !== null;
 $hasAgendaEvents = count($events) > 0;
 $selectedEvent = null;
+$selectedSeries = null;
+$selectedSeriesEvents = [];
 $selectedEventSlug = '';
 $eventSlugById = [];
 $eventIdBySlug = [];
 $usedSlugs = [];
 foreach ($events as $index => $event) {
-    $baseSlug = seo_slug((string)($event['title'] ?? ''));
+    $baseSlug = trim((string)($event['slug'] ?? '')) ?: seo_slug((string)($event['title'] ?? ''));
     if ($baseSlug === '') {
         $baseSlug = 'evento-' . (int)($event['id'] ?? ($index + 1));
     }
@@ -449,7 +462,17 @@ foreach ($events as $index => $event) {
     $eventSlugById[(int)$event['id']] = $slug;
     $eventIdBySlug[$slug] = (int)$event['id'];
 }
-if ($eventSlug !== '' && isset($eventIdBySlug[$eventSlug])) {
+foreach ($seriesList as $seriesItem) {
+    if ((string)$seriesItem['slug'] === $eventSlug) { $selectedSeries=$seriesItem; break; }
+}
+if ($selectedSeries) {
+    foreach ($seriesEvents as $seriesEvent) {
+        if ((int)$seriesEvent['series_id']!==(int)$selectedSeries['id']) continue;
+        $selectedSeriesEvents[]=$seriesEvent;
+        if ($sessionSlug !== '' && (string)$seriesEvent['slug'] === $sessionSlug) { $selectedEvent=$seriesEvent; $selectedEventSlug=(string)$selectedSeries['slug'].'/'.(string)$seriesEvent['slug']; }
+    }
+    if ($selectedEvent) { $selectedSeries=null; }
+} elseif ($eventSlug !== '' && isset($eventIdBySlug[$eventSlug])) {
     foreach ($events as $event) {
         if ((int)$event['id'] === (int)$eventIdBySlug[$eventSlug]) {
             $selectedEvent = $event;
@@ -459,6 +482,7 @@ if ($eventSlug !== '' && isset($eventIdBySlug[$eventSlug])) {
     }
 }
 $isEventView = $selectedEvent !== null;
+$isSeriesView = $selectedSeries !== null;
 $hasReservableEvents = false;
 $hasPartners = count($partners) > 0;
 foreach ($events as $event) {
@@ -611,7 +635,12 @@ function render_partners_section(array $partners): void {
     $canonicalUrl = absolute_url('/');
     $ogImage = absolute_url((string)$heroBackgroundUrl);
     $schemaType = 'WebPage';
-    if ($isEventView && $selectedEvent) {
+    if ($isSeriesView && $selectedSeries) {
+        $seoTitle = truncate_text((string)$selectedSeries['name'] . ' | Stand-up Comedy | Chorar de Rir', 62);
+        $seoDescription = truncate_text((string)($selectedSeries['description'] ?: 'Próximas sessões e reservas.'), 158);
+        $canonicalUrl = absolute_url('eventos/' . $selectedSeries['slug']);
+        $ogImage = !empty($selectedSeries['cover_image_url']) ? absolute_url((string)$selectedSeries['cover_image_url']) : $ogImage;
+    } elseif ($isEventView && $selectedEvent) {
         $seoTitle = truncate_text((string)$selectedEvent['title'] . ' | Evento de Stand Up Comedy | Chorar de Rir', 62);
         $seoDescription = truncate_text((string)($selectedEvent['notes'] ?: 'Espetáculo de humor ao vivo com reservas e informação do evento.'), 158);
         $canonicalUrl = absolute_url('eventos/' . $selectedEventSlug);
@@ -667,6 +696,7 @@ function render_partners_section(array $partners): void {
     if ($activeBlogIndex) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>'Blog','item'=>$canonicalUrl]; }
     if ($activeBlogPost) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>'Blog','item'=>absolute_url('blog')]; $breadcrumbs[] = ['@type'=>'ListItem','position'=>3,'name'=>$activeBlogPost['title'],'item'=>$canonicalUrl]; }
     if ($activeStandalonePage) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>$activeStandalonePage['title'],'item'=>$canonicalUrl]; }
+    if ($isSeriesView && $selectedSeries) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>'Eventos','item'=>absolute_url('/#agenda')]; $breadcrumbs[] = ['@type'=>'ListItem','position'=>3,'name'=>$selectedSeries['name'],'item'=>$canonicalUrl]; }
     if ($isEventView && $selectedEvent) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>'Eventos','item'=>absolute_url('/#agenda')]; $breadcrumbs[] = ['@type'=>'ListItem','position'=>3,'name'=>$selectedEvent['title'],'item'=>$canonicalUrl]; }
     $jsonLd[] = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>$breadcrumbs];
     if ($activeVirtualPage) {
@@ -818,6 +848,10 @@ function render_partners_section(array $partners): void {
       box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
     }
     .event-card { padding: 1.25rem; height: 100%; }
+    .series-cover { width:100%; max-height:420px; object-fit:cover; }
+    .series-session { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem 0; border-top:1px solid rgba(255,255,255,.12); }
+    .series-session div { display:grid; gap:.2rem; } .series-session span,.series-session small { color:var(--text-secondary); }
+    @media (max-width:575.98px) { .series-session { align-items:stretch; flex-direction:column; } .series-session .btn { width:100%; padding:.8rem; } }
     .event-card h4 { font-weight: 800; }
     .event-card p, .event-card .small { color: var(--text-secondary) !important; }
     .event-card input, .event-card textarea {
@@ -1117,7 +1151,7 @@ function render_partners_section(array $partners): void {
           <?php endif; ?>
         </div>
       </section>
-    <?php elseif (!$isStandaloneView && !$isEventView): ?>
+    <?php elseif (!$isStandaloneView && !$isEventView && !$isSeriesView): ?>
       <section id="inicio" class="hero" aria-label="Imagem de destaque" style="background-image: url('<?php echo htmlspecialchars((string)$heroBackgroundUrl); ?>');"></section>
       <section class="hero-content section-block" aria-labelledby="home-title">
         <div class="container">
@@ -1376,6 +1410,20 @@ function render_partners_section(array $partners): void {
           </div>
         </div>
       </div>
+    <?php elseif ($isSeriesView): ?>
+      <section class="section-block agenda-section pt-5"><div class="container"><div class="surface-card p-4 p-lg-5 fade-in show">
+        <?php if (!empty($selectedSeries['cover_image_url'])): ?><img src="<?php echo htmlspecialchars((string)$selectedSeries['cover_image_url']); ?>" alt="Capa de <?php echo htmlspecialchars((string)$selectedSeries['name']); ?>" class="img-fluid rounded mb-4 series-cover"><?php endif; ?>
+        <h1><?php echo htmlspecialchars((string)$selectedSeries['name']); ?></h1>
+        <?php if (!empty($selectedSeries['description'])): ?><p class="lead text-secondary"><?php echo nl2br(htmlspecialchars((string)$selectedSeries['description'])); ?></p><?php endif; ?>
+        <?php if (!empty($selectedSeries['location'])): ?><p><i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars((string)$selectedSeries['location']); ?></p><?php endif; ?>
+        <h2 class="h4 mt-4 mb-3">Próximas sessões</h2>
+        <?php $futureSeriesEvents=array_values(array_filter($selectedSeriesEvents,static function($item){return (string)$item['date']>=date('Y-m-d');})); ?>
+        <?php if (!$futureSeriesEvents): ?><div class="alert alert-secondary">Novas datas em breve. Segue-nos nas redes sociais para acompanhares as próximas sessões.</div><?php endif; ?>
+        <div class="series-sessions"><?php foreach($futureSeriesEvents as $session): $capacity=(int)($session['reservation_capacity']??0);$available=$capacity>0?max(0,$capacity-(int)$session['active_tickets']):null; ?>
+          <article class="series-session"><div><strong><?php echo htmlspecialchars(date('d M Y',strtotime((string)$session['date']))); ?></strong><span><?php echo htmlspecialchars(substr((string)$session['time'],0,5)); ?> · <?php echo htmlspecialchars((string)$session['location']); ?></span><?php if(!empty($session['public_price_label'])): ?><span><?php echo htmlspecialchars((string)$session['public_price_label']); ?></span><?php endif; ?><?php if($available!==null): ?><small><?php echo $available; ?> lugares disponíveis</small><?php endif; ?></div>
+          <a class="btn btn-brand" href="/eventos/<?php echo rawurlencode((string)$selectedSeries['slug']); ?>/<?php echo rawurlencode((string)$session['slug']); ?>">Reservar</a></article>
+        <?php endforeach; ?></div>
+      </div></div></section>
     <?php elseif ($isEventView): ?>
       <section class="section-block agenda-section pt-5">
         <div class="container">
@@ -1666,6 +1714,7 @@ RewriteEngine On
 RewriteCond %{QUERY_STRING} (^|&)page=eventos-corporativos(&|$) [NC]
 RewriteRule ^(?:index\.php)?$ /eventos-corporativos/ [R=301,L,NE,QSD]
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
+RewriteRule ^eventos/([^/]+)/([^/]+)/?$ index.php?evento=$1&sessao=$2 [L,QSA]
 RewriteRule ^eventos/([^/]+)/?$ index.php?evento=$1 [L,QSA]
 RewriteRule ^blog/?$ index.php?page=blog [L,QSA]
 RewriteRule ^blog/([^/]+)/?$ index.php?page=blog/$1 [L,QSA]
@@ -1730,6 +1779,12 @@ try {
         $where = in_array('is_visible', $eventColumns, true) ? ' AND is_visible = 1' : '';
         foreach (($db->query("SELECT id, title, date FROM events WHERE date >= date('now')" . $where . " ORDER BY date ASC")->fetchAll() ?: []) as $event) {
             $urls[] = ['loc' => $baseUrl . '/eventos/' . sitemap_slug((string)$event['title']), 'priority' => '0.9', 'lastmod' => (string)$event['date']];
+        }
+    }
+    $seriesColumns = array_column($db->query('PRAGMA table_info(event_series)')->fetchAll(), 'name');
+    if ($seriesColumns) {
+        foreach (($db->query('SELECT slug, updated_at FROM event_series WHERE is_active=1')->fetchAll() ?: []) as $series) {
+            $urls[] = ['loc'=>$baseUrl.'/eventos/'.sitemap_slug((string)$series['slug']),'priority'=>'0.9','lastmod'=>substr((string)$series['updated_at'],0,10)];
         }
     }
 } catch (Throwable $e) {}
@@ -1798,7 +1853,7 @@ try {
     $eventId = (int)($_POST['event_id'] ?? 0);
     $tickets = max(1, (int)($_POST['tickets'] ?? 1));
 
-    $eventStmt = $db->prepare("SELECT e.id, e.title, e.date, e.time, e.reservations_open, e.reservation_capacity, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets FROM events e LEFT JOIN event_reservations r ON r.event_id = e.id WHERE e.id = :event_id GROUP BY e.id");
+    $eventStmt = $db->prepare("SELECT e.id, e.title, e.date, e.time, e.reservations_open, e.reservation_capacity, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets FROM events e LEFT JOIN event_reservations r ON r.event_id = e.id WHERE e.id = :event_id AND e.is_visible = 1 GROUP BY e.id");
     $eventStmt->execute(['event_id' => $eventId]);
     $event = $eventStmt->fetch();
 

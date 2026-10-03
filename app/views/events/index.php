@@ -14,12 +14,13 @@
 </div>
 <div class="table-responsive">
     <table class="table table-striped searchable-table">
-        <thead><tr><th>Título</th><th>Data</th><th>Local</th><th>Cliente</th><th>Visível</th><th>Cachet</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Título</th><th>Data</th><th>Série</th><th>Local</th><th>Cliente</th><th>Visível</th><th>Cachet</th><th>Ações</th></tr></thead>
         <tbody>
         <?php foreach ($events as $event): ?>
             <tr>
                 <td><?= htmlspecialchars($event['title']) ?></td>
                 <td><?= htmlspecialchars($event['date']) ?> <?= htmlspecialchars(substr($event['time'], 0, 5)) ?></td>
+                <td><?= htmlspecialchars($event['series_name'] ?? '—') ?></td>
                 <td><?= htmlspecialchars($event['location']) ?></td>
                 <td><?= htmlspecialchars($event['client_name'] ?? '-') ?></td>
                 <td>

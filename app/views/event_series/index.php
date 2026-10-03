@@ -1,0 +1,4 @@
+<div class="d-flex justify-content-between align-items-center mb-3"><div><h2>Séries de eventos</h2><p class="text-muted mb-0">Páginas permanentes que agregam sessões.</p></div><a class="btn btn-dark" href="<?= BASE_URL ?>?controller=eventseries&action=create">Nova série</a></div>
+<div class="table-responsive"><table class="table table-striped"><thead><tr><th>Nome</th><th>Slug / URL</th><th>Local</th><th>Estado</th><th>Sessões</th><th></th></tr></thead><tbody>
+<?php foreach ($series as $item): ?><tr><td><?= htmlspecialchars($item['name']) ?></td><td><code>/eventos/<?= htmlspecialchars($item['slug']) ?></code></td><td><?= htmlspecialchars($item['location'] ?: '—') ?></td><td><?= (int)$item['is_active']===1?'Ativa':'Inativa' ?></td><td><?= (int)$item['event_count'] ?></td><td><a class="btn btn-sm btn-outline-secondary" href="<?= BASE_URL ?>?controller=eventseries&action=edit&id=<?= (int)$item['id'] ?>">Editar</a></td></tr><?php endforeach; ?>
+</tbody></table></div>

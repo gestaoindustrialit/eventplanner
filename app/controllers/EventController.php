@@ -14,7 +14,8 @@ class EventController extends BaseController
         requireAdmin();
         $clients = (new Client($this->db))->all();
         $comedians = (new Comedian($this->db))->all();
-        $this->render('events/form', ['event' => null, 'clients' => $clients, 'comedians' => $comedians, 'lineup' => []]);
+        $series = (new EventSeries($this->db))->all(true);
+        $this->render('events/form', ['event' => null, 'clients' => $clients, 'comedians' => $comedians, 'lineup' => [], 'series'=>$series]);
     }
 
     public function store(): void
@@ -35,8 +36,9 @@ class EventController extends BaseController
         $lineup = $eventModel->lineup($id);
         $clients = (new Client($this->db))->all();
         $comedians = (new Comedian($this->db))->all();
+        $series = (new EventSeries($this->db))->all();
 
-        $this->render('events/form', compact('event', 'lineup', 'clients', 'comedians'));
+        $this->render('events/form', compact('event', 'lineup', 'clients', 'comedians', 'series'));
     }
 
     public function update(): void
@@ -168,8 +170,19 @@ class EventController extends BaseController
 
     private function validatedData(): array
     {
+        $eventModel = new Event($this->db);
+        $id = (int)($_GET['id'] ?? 0);
+        $title = trim($_POST['title'] ?? '');
+        $seriesId = (int)($_POST['series_id'] ?? 0);
+        $requestedSlug = trim((string)($_POST['slug'] ?? ''));
+        if ($requestedSlug !== '' && !$eventModel->slugAvailable($requestedSlug, $id > 0 ? $id : null, $seriesId > 0 ? $seriesId : null)) {
+            flash('error', 'Este slug já está a ser usado por uma série ou evento.');
+            $this->redirect(BASE_URL . '?controller=event&action=' . ($id > 0 ? 'edit&id=' . $id : 'create'));
+        }
         return [
-            'title' => trim($_POST['title'] ?? ''),
+            'title' => $title,
+            'slug' => $eventModel->uniqueSlug($requestedSlug !== '' ? $requestedSlug : $title . '-' . ($_POST['date'] ?? ''), $id > 0 ? $id : null),
+            'series_id' => $seriesId > 0 ? $seriesId : null,
             'date' => $_POST['date'] ?? date('Y-m-d'),
             'time' => $_POST['time'] ?? '20:00',
             'location' => trim($_POST['location'] ?? ''),
@@ -183,6 +196,7 @@ class EventController extends BaseController
             'external_ticket_url' => trim($_POST['external_ticket_url'] ?? ''),
             'poster_url' => trim($_POST['poster_url'] ?? ''),
             'notes' => trim($_POST['notes'] ?? ''),
+            'public_price_label' => trim($_POST['public_price_label'] ?? ''),
         ];
     }
 

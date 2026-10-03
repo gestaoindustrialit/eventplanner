@@ -40,6 +40,19 @@ class Database
 
     private function ensureSchema(PDO $db): void
     {
+        $db->exec(
+            'CREATE TABLE IF NOT EXISTS event_series (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                slug TEXT NOT NULL UNIQUE,
+                location TEXT DEFAULT NULL,
+                description TEXT DEFAULT NULL,
+                cover_image_url TEXT DEFAULT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
         if ($this->tableExists($db, 'users')) {
             $userColumns = array_column($db->query('PRAGMA table_info(users)')->fetchAll(), 'name');
             if (!in_array('profile_type', $userColumns, true)) {
@@ -296,6 +309,19 @@ class Database
             if (!in_array('reservation_capacity', $eventColumns, true)) {
                 $db->exec('ALTER TABLE events ADD COLUMN reservation_capacity INTEGER NOT NULL DEFAULT 0');
             }
+            if (!in_array('series_id', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN series_id INTEGER DEFAULT NULL REFERENCES event_series(id) ON DELETE SET NULL');
+            }
+            if (!in_array('slug', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN slug TEXT DEFAULT NULL');
+            }
+            if (!in_array('public_price_label', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN public_price_label TEXT DEFAULT NULL');
+            }
+            $this->backfillEventSlugs($db);
+            $db->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_events_slug ON events(slug) WHERE slug IS NOT NULL');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_events_series_id ON events(series_id)');
+            $this->migrateLustreSeries($db);
         }
 
         if ($this->tableExists($db, 'event_reservations')) {
@@ -310,6 +336,50 @@ class Database
                 $db->exec('ALTER TABLE event_reservations ADD COLUMN gdpr_consent_text TEXT DEFAULT NULL');
             }
         }
+    }
+
+    private function backfillEventSlugs(PDO $db): void
+    {
+        $events = $db->query("SELECT id, title FROM events WHERE slug IS NULL OR trim(slug) = '' ORDER BY id ASC")->fetchAll();
+        $exists = $db->prepare('SELECT 1 FROM events WHERE slug = :slug AND id != :id LIMIT 1');
+        $update = $db->prepare('UPDATE events SET slug = :slug WHERE id = :id');
+        foreach ($events as $event) {
+            $base = $this->slugify((string)$event['title']);
+            $slug = $base !== '' ? $base : 'evento-' . (int)$event['id'];
+            $suffix = 2;
+            do {
+                $exists->execute(['slug' => $slug, 'id' => (int)$event['id']]);
+                if (!$exists->fetchColumn()) {
+                    break;
+                }
+                $slug = $base . '-' . $suffix++;
+            } while (true);
+            $update->execute(['slug' => $slug, 'id' => (int)$event['id']]);
+        }
+    }
+
+    private function migrateLustreSeries(PDO $db): void
+    {
+        $event = $db->query("SELECT id, title, location, poster_url, notes FROM events WHERE slug = 'lustre-comedy-club' ORDER BY id ASC LIMIT 1")->fetch();
+        if (!$event) {
+            return;
+        }
+        $stmt = $db->prepare('INSERT OR IGNORE INTO event_series (name, slug, location, description, cover_image_url, is_active) VALUES (:name, :slug, :location, :description, :cover, 1)');
+        $stmt->execute([
+            'name' => (string)$event['title'], 'slug' => 'lustre-comedy-club',
+            'location' => $event['location'], 'description' => $event['notes'], 'cover' => $event['poster_url'],
+        ]);
+        $seriesId = (int)$db->query("SELECT id FROM event_series WHERE slug = 'lustre-comedy-club' LIMIT 1")->fetchColumn();
+        if ($seriesId > 0) {
+            $update = $db->prepare('UPDATE events SET series_id = :series_id WHERE id = :id AND series_id IS NULL');
+            $update->execute(['series_id' => $seriesId, 'id' => (int)$event['id']]);
+        }
+    }
+
+    private function slugify(string $value): string
+    {
+        $value = strtolower(trim(strtr($value, ['Á'=>'a','À'=>'a','Ã'=>'a','Â'=>'a','É'=>'e','Ê'=>'e','Í'=>'i','Ó'=>'o','Õ'=>'o','Ô'=>'o','Ú'=>'u','Ç'=>'c','á'=>'a','à'=>'a','ã'=>'a','â'=>'a','é'=>'e','ê'=>'e','í'=>'i','ó'=>'o','õ'=>'o','ô'=>'o','ú'=>'u','ç'=>'c'])));
+        return trim((string)preg_replace('/[^a-z0-9]+/', '-', $value), '-');
     }
 
     private function tableExists(PDO $db, string $table): bool

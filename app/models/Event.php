@@ -12,7 +12,7 @@ class Event
 
     public function all(?string $dateFrom = null, ?string $dateTo = null): array
     {
-        $sql = 'SELECT e.*, c.name as client_name FROM events e LEFT JOIN clients c ON c.id = e.client_id WHERE 1=1';
+        $sql = 'SELECT e.*, c.name as client_name, s.name as series_name FROM events e LEFT JOIN clients c ON c.id = e.client_id LEFT JOIN event_series s ON s.id=e.series_id WHERE 1=1';
         $params = [];
 
         if ($dateFrom) {
@@ -87,7 +87,7 @@ class Event
 
     public function create(array $data, array $lineup): int
     {
-        $stmt = $this->db->prepare('INSERT INTO events (title, date, time, location, client_id, is_visible, reservations_open, reservation_capacity, cachet_total, artist_map_link, artist_details, external_ticket_url, poster_url, notes) VALUES (:title, :date, :time, :location, :client_id, :is_visible, :reservations_open, :reservation_capacity, :cachet_total, :artist_map_link, :artist_details, :external_ticket_url, :poster_url, :notes)');
+        $stmt = $this->db->prepare('INSERT INTO events (title, slug, series_id, date, time, location, client_id, is_visible, reservations_open, reservation_capacity, cachet_total, artist_map_link, artist_details, external_ticket_url, poster_url, notes, public_price_label) VALUES (:title, :slug, :series_id, :date, :time, :location, :client_id, :is_visible, :reservations_open, :reservation_capacity, :cachet_total, :artist_map_link, :artist_details, :external_ticket_url, :poster_url, :notes, :public_price_label)');
         $stmt->execute($data);
         $eventId = (int)$this->db->lastInsertId();
 
@@ -99,7 +99,7 @@ class Event
     public function update(int $id, array $data, array $lineup): bool
     {
         $data['id'] = $id;
-        $stmt = $this->db->prepare('UPDATE events SET title=:title, date=:date, time=:time, location=:location, client_id=:client_id, is_visible=:is_visible, reservations_open=:reservations_open, reservation_capacity=:reservation_capacity, cachet_total=:cachet_total, artist_map_link=:artist_map_link, artist_details=:artist_details, external_ticket_url=:external_ticket_url, poster_url=:poster_url, notes=:notes WHERE id=:id');
+        $stmt = $this->db->prepare('UPDATE events SET title=:title, slug=:slug, series_id=:series_id, date=:date, time=:time, location=:location, client_id=:client_id, is_visible=:is_visible, reservations_open=:reservations_open, reservation_capacity=:reservation_capacity, cachet_total=:cachet_total, artist_map_link=:artist_map_link, artist_details=:artist_details, external_ticket_url=:external_ticket_url, poster_url=:poster_url, notes=:notes, public_price_label=:public_price_label WHERE id=:id');
         $ok = $stmt->execute($data);
 
         $delete = $this->db->prepare('DELETE FROM event_comedians WHERE event_id=:event_id');
@@ -143,6 +143,8 @@ class Event
 
         $data = [
             'title' => $event['title'],
+            'slug' => $this->uniqueSlug((string)$event['title'] . '-' . $newDate),
+            'series_id' => $event['series_id'] ?: null,
             'date' => $newDate,
             'time' => $event['time'],
             'location' => $event['location'],
@@ -156,12 +158,33 @@ class Event
             'external_ticket_url' => $event['external_ticket_url'] ?? null,
             'poster_url' => $event['poster_url'],
             'notes' => $event['notes'],
+            'public_price_label' => $event['public_price_label'] ?? null,
         ];
 
         $newEventId = $this->create($data, $lineupData);
         $this->duplicateScheduleItems($id, $newEventId);
 
         return $newEventId;
+    }
+
+    public function uniqueSlug(string $value, ?int $ignoreId = null): string
+    {
+        $base = strtolower(trim((string)preg_replace('/[^a-z0-9]+/', '-', strtr($value, ['á'=>'a','à'=>'a','ã'=>'a','â'=>'a','é'=>'e','ê'=>'e','í'=>'i','ó'=>'o','õ'=>'o','ô'=>'o','ú'=>'u','ç'=>'c'])), '-'));
+        if ($base === '') { $base = 'evento'; }
+        $slug=$base; $suffix=2;
+        $sql='SELECT 1 FROM events WHERE slug=:slug'.($ignoreId?' AND id != :id':'').' UNION SELECT 1 FROM event_series WHERE slug=:slug LIMIT 1';
+        $stmt=$this->db->prepare($sql);
+        while (true) { $params=['slug'=>$slug]; if($ignoreId){$params['id']=$ignoreId;} $stmt->execute($params); if(!$stmt->fetchColumn())return $slug; $slug=$base.'-'.$suffix++; }
+    }
+
+    public function slugAvailable(string $slug, ?int $ignoreId = null, ?int $seriesId = null): bool
+    {
+        $eventSql='SELECT 1 FROM events WHERE slug=:slug'.($ignoreId?' AND id != :event_id':'').' LIMIT 1';
+        $stmt=$this->db->prepare($eventSql); $params=['slug'=>$slug]; if($ignoreId){$params['event_id']=$ignoreId;} $stmt->execute($params);
+        if($stmt->fetchColumn()) return false;
+        $seriesSql='SELECT 1 FROM event_series WHERE slug=:slug'.($seriesId?' AND id != :series_id':'').' LIMIT 1';
+        $stmt=$this->db->prepare($seriesSql); $params=['slug'=>$slug]; if($seriesId){$params['series_id']=$seriesId;} $stmt->execute($params);
+        return !$stmt->fetchColumn();
     }
 
     public function upcomingCount(): int
