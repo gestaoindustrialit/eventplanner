@@ -1662,9 +1662,9 @@ HTML;
 DirectoryIndex index.php
 
 RewriteEngine On
-# Redirect the legacy query-string URL before the internal clean-URL rewrite.
-RewriteCond %{QUERY_STRING} (^|&)page=eventos-corporativos(&|$) [NC]
-RewriteRule ^(?:index\.php)?$ /eventos-corporativos/ [R=301,L,NE,QSD]
+# The legacy ?page=eventos-corporativos URL is canonicalized by index.php.
+# Keeping that redirect out of mod_rewrite prevents the internal clean-URL
+# rewrite below from being mistaken for a new browser request and looping.
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 RewriteRule ^eventos/([^/]+)/?$ index.php?evento=$1 [L,QSA]
 RewriteRule ^blog/?$ index.php?page=blog [L,QSA]
