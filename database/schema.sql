@@ -9,6 +9,7 @@ DROP TABLE IF EXISTS checklist_templates;
 DROP TABLE IF EXISTS event_reservation_tickets;
 DROP TABLE IF EXISTS event_reservations;
 DROP TABLE IF EXISTS user_admission_access;
+DROP TABLE IF EXISTS event_series;
 DROP TABLE IF EXISTS events;
 DROP TABLE IF EXISTS comedians;
 DROP TABLE IF EXISTS clients;
@@ -64,6 +65,8 @@ CREATE TABLE clients (
 CREATE TABLE events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
+  slug TEXT DEFAULT NULL UNIQUE,
+  series_id INTEGER DEFAULT NULL,
   date TEXT NOT NULL,
   time TEXT NOT NULL,
   location TEXT NOT NULL,
@@ -79,8 +82,22 @@ CREATE TABLE events (
   poster_url TEXT DEFAULT NULL,
   notes TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT
+  FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT,
+  FOREIGN KEY (series_id) REFERENCES event_series(id) ON DELETE SET NULL
 );
+
+CREATE TABLE event_series (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  location TEXT DEFAULT NULL,
+  description TEXT DEFAULT NULL,
+  cover_image_url TEXT DEFAULT NULL,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_events_series_id ON events(series_id);
 
 CREATE TABLE user_admission_access (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

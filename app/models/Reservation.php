@@ -102,6 +102,12 @@ class Reservation
                        COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN COALESCE(t.used_tickets, 0) ELSE 0 END), 0) AS admitted_tickets
                 FROM events e
                 JOIN event_reservations r ON r.event_id = e.id AND r.status != 'cancelled'
+                LEFT JOIN (
+                    SELECT reservation_id, COUNT(*) AS used_tickets
+                    FROM event_reservation_tickets
+                    WHERE is_used = 1
+                    GROUP BY reservation_id
+                ) t ON t.reservation_id = r.id
                 WHERE e.reservations_open = 1";
         $params = [];
         if ($userId !== null) {

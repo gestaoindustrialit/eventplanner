@@ -15,7 +15,7 @@ class EventModel
 
     public function all(?string $dateFrom = null, ?string $dateTo = null): array
     {
-        $sql = 'SELECT e.*, c.name as client_name FROM events e LEFT JOIN clients c ON c.id = e.client_id WHERE 1=1';
+        $sql = 'SELECT e.*, c.name as client_name, s.name as series_name FROM events e LEFT JOIN clients c ON c.id = e.client_id LEFT JOIN event_series s ON s.id = e.series_id WHERE 1=1';
         $params = [];
 
         if ($dateFrom) {
@@ -90,7 +90,8 @@ class EventModel
 
     public function create(array $data, array $lineup): int
     {
-        $stmt = $this->db->prepare('INSERT INTO events (title, date, time, location, client_id, is_visible, reservations_open, reservation_capacity, admission_group, cachet_total, artist_map_link, artist_details, external_ticket_url, poster_url, notes) VALUES (:title, :date, :time, :location, :client_id, :is_visible, :reservations_open, :reservation_capacity, :admission_group, :cachet_total, :artist_map_link, :artist_details, :external_ticket_url, :poster_url, :notes)');
+        $this->validateRelationsAndSlug($data);
+        $stmt = $this->db->prepare('INSERT INTO events (title, slug, series_id, date, time, location, client_id, is_visible, reservations_open, reservation_capacity, admission_group, cachet_total, artist_map_link, artist_details, external_ticket_url, poster_url, notes) VALUES (:title, :slug, :series_id, :date, :time, :location, :client_id, :is_visible, :reservations_open, :reservation_capacity, :admission_group, :cachet_total, :artist_map_link, :artist_details, :external_ticket_url, :poster_url, :notes)');
         $stmt->execute($data);
         $eventId = (int)$this->db->lastInsertId();
 
@@ -101,8 +102,9 @@ class EventModel
 
     public function update(int $id, array $data, array $lineup): bool
     {
+        $this->validateRelationsAndSlug($data, $id);
         $data['id'] = $id;
-        $stmt = $this->db->prepare('UPDATE events SET title=:title, date=:date, time=:time, location=:location, client_id=:client_id, is_visible=:is_visible, reservations_open=:reservations_open, reservation_capacity=:reservation_capacity, admission_group=:admission_group, cachet_total=:cachet_total, artist_map_link=:artist_map_link, artist_details=:artist_details, external_ticket_url=:external_ticket_url, poster_url=:poster_url, notes=:notes WHERE id=:id');
+        $stmt = $this->db->prepare('UPDATE events SET title=:title, slug=:slug, series_id=:series_id, date=:date, time=:time, location=:location, client_id=:client_id, is_visible=:is_visible, reservations_open=:reservations_open, reservation_capacity=:reservation_capacity, admission_group=:admission_group, cachet_total=:cachet_total, artist_map_link=:artist_map_link, artist_details=:artist_details, external_ticket_url=:external_ticket_url, poster_url=:poster_url, notes=:notes WHERE id=:id');
         $ok = $stmt->execute($data);
 
         $delete = $this->db->prepare('DELETE FROM event_comedians WHERE event_id=:event_id');
@@ -146,6 +148,8 @@ class EventModel
 
         $data = [
             'title' => $event['title'],
+            'slug' => $this->uniqueDuplicateSlug((string)$event['slug'], $newDate),
+            'series_id' => $event['series_id'] ? (int)$event['series_id'] : null,
             'date' => $newDate,
             'time' => $event['time'],
             'location' => $event['location'],
@@ -233,5 +237,39 @@ class EventModel
                 'sort_order' => (int)$item['sort_order'],
             ]);
         }
+    }
+
+    private function validateRelationsAndSlug(array $data, ?int $id = null): void
+    {
+        $slug = trim((string)($data['slug'] ?? ''));
+        if ($slug === '') {
+            throw new InvalidArgumentException('O slug do evento é obrigatório.');
+        }
+        $seriesId = (int)($data['series_id'] ?? 0);
+        if ($seriesId > 0) {
+            $series = $this->db->prepare('SELECT id FROM event_series WHERE id=:id LIMIT 1');
+            $series->execute(['id' => $seriesId]);
+            if (!$series->fetchColumn()) {
+                throw new InvalidArgumentException('A série selecionada não existe.');
+            }
+        }
+        $collision = $this->db->prepare('SELECT id FROM events WHERE slug=:slug AND (:id IS NULL OR id != :id) UNION ALL SELECT id FROM event_series WHERE slug=:slug AND (:series_id = 0 OR id != :series_id) LIMIT 1');
+        $collision->execute(['slug' => $slug, 'id' => $id, 'series_id' => $seriesId]);
+        if ($collision->fetchColumn()) {
+            throw new InvalidArgumentException('Este slug já está a ser utilizado por outro evento ou série.');
+        }
+    }
+
+    private function uniqueDuplicateSlug(string $slug, string $date): string
+    {
+        $base = rtrim($slug, '-') . '-' . date('d-m-Y', strtotime($date));
+        $candidate = $base;
+        $suffix = 2;
+        $stmt = $this->db->prepare('SELECT 1 FROM events WHERE slug=:slug UNION ALL SELECT 1 FROM event_series WHERE slug=:slug LIMIT 1');
+        do {
+            $stmt->execute(['slug' => $candidate]);
+            if (!$stmt->fetchColumn()) return $candidate;
+            $candidate = $base . '-' . $suffix++;
+        } while (true);
     }
 }

@@ -55,6 +55,7 @@ $map = [
     'client' => ClientController::class,
     'crm' => CrmController::class,
     'event' => EventController::class,
+    'eventseries' => EventSeriesController::class,
     'reservation' => ReservationController::class,
     'publicsite' => PublicSiteController::class,
     'publicpage' => PublicPageController::class,
