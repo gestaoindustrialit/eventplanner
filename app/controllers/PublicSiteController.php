@@ -460,8 +460,13 @@ foreach ($events as $index => $event) {
     $eventSlugById[(int)$event['id']] = $slug;
     $eventIdBySlug[$slug] = (int)$event['id'];
 }
+// A single-segment /eventos/{slug} URL can identify either a series or an
+// independent event. The rewrite sends the slug in both parameters so series
+// always take precedence when a legacy event shares their public slug, while
+// the event lookup below remains the fallback for ordinary event URLs.
+$requestedSeriesSlug = $seriesSlug !== '' ? $seriesSlug : $eventSlug;
 foreach ($eventSeries as $seriesItem) {
-    if ((string)$seriesItem['slug'] === ($seriesSlug !== '' ? $seriesSlug : $eventSlug)) {
+    if ((string)$seriesItem['slug'] === $requestedSeriesSlug) {
         $selectedSeries = $seriesItem;
         foreach ($events as $event) {
             if ((int)($event['series_id'] ?? 0) === (int)$seriesItem['id']) {
@@ -1746,7 +1751,7 @@ RewriteEngine On
 # rewrite below from being mistaken for a new browser request and looping.
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 RewriteRule ^eventos/([^/]+)/([^/]+)/?$ index.php?serie=$1&sessao=$2 [L,QSA]
-RewriteRule ^eventos/([^/]+)/?$ index.php?evento=$1 [L,QSA]
+RewriteRule ^eventos/([^/]+)/?$ index.php?serie=$1&evento=$1 [L,QSA]
 RewriteRule ^blog/?$ index.php?page=blog [L,QSA]
 RewriteRule ^blog/([^/]+)/?$ index.php?page=blog/$1 [L,QSA]
 RewriteRule ^(stand-up-comedy|eventos-de-humor|eventos-corporativos|humoristas-para-eventos-empresas|humorista-jantar-natal-empresa|team-building-com-humor|stand-up-comedy-para-empresas|booking-humoristas|mestre-cerimonias-com-humor|comedy-club-para-bares-restaurantes|producao-eventos-stand-up-comedy|booking-de-humoristas|producao-de-eventos|stand-up-comedy-portugal|stand-up-comedy-aveiro|stand-up-comedy-porto|stand-up-comedy-lisboa|stand-up-comedy-braga|stand-up-comedy-coimbra|stand-up-comedy-faro|stand-up-comedy-suica|stand-up-comedy-franca|stand-up-comedy-luxemburgo)/?$ index.php?page=$1 [L,QSA]
