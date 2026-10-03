@@ -70,6 +70,7 @@ try {
     $assert(strpos($public, '@media (max-width: 767px)') !== false, 'Mobile series layout is missing.');
     $assert(strpos($public, 'name="event_id" id="seriesReserveEventId"') !== false, 'Series reservation does not submit event_id.');
     $assert(strpos($htaccess, 'serie=$1&sessao=$2') !== false, 'Individual session route is missing.');
+    $assert(strpos($htaccess, 'index.php?serie=$1&evento=$1') !== false, 'Series URL does not prioritize the series selector.');
 } catch (Throwable $e) {
     $fail($e->getMessage());
 } finally {
