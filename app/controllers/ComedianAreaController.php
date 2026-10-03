@@ -19,7 +19,7 @@ class ComedianAreaController extends BaseController
             return;
         }
 
-        $events = (new Event($this->db))->forComedian((int)$comedian['id']);
+        $events = (new EventModel($this->db))->forComedian((int)$comedian['id']);
         $this->render('comedian_area/index', compact('events'));
     }
 }

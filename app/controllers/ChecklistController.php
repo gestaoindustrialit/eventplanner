@@ -86,7 +86,7 @@ class ChecklistController extends BaseController
     {
         requireLogin();
         $eventId = (int)($_GET['event_id'] ?? 0);
-        $event = (new Event($this->db))->find($eventId);
+        $event = (new EventModel($this->db))->find($eventId);
 
         if (!$event) {
             flash('error', 'Evento não encontrado.');
