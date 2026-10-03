@@ -1,6 +1,12 @@
 <?php
 
 require_once __DIR__ . '/../app/models/Reservation.php';
+require_once __DIR__ . '/../app/controllers/BaseController.php';
+require_once __DIR__ . '/../app/controllers/ReservationController.php';
+
+if (!method_exists(ReservationController::class, 'exportAdmissions')) {
+    throw new RuntimeException('Admissions export action is not available to the application router.');
+}
 
 $path = tempnam(sys_get_temp_dir(), 'admissions-');
 try {
