@@ -225,6 +225,7 @@ CREATE TABLE newsletter_subscriptions (
   gdpr_consent INTEGER NOT NULL DEFAULT 0,
   consent_text TEXT NOT NULL,
   source TEXT DEFAULT NULL,
+  segment TEXT DEFAULT NULL,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'unsubscribed')),
   subscribed_at TEXT DEFAULT CURRENT_TIMESTAMP,
   unsubscribed_at TEXT DEFAULT NULL,

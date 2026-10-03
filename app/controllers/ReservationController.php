@@ -37,10 +37,27 @@ class ReservationController extends BaseController
     {
         requireAdmin();
         $reservationModel = new Reservation($this->db);
-        $reservations = $reservationModel->all();
-        $eventOverview = $reservationModel->eventOverview();
-        $validationResult = $_SESSION['reservation_validation_result'] ?? null;
-        unset($_SESSION['reservation_validation_result']);
+        $selectedEventId = max(0, (int)($_GET['event_id'] ?? 0));
+        $admissionFilter = (string)($_GET['admission'] ?? 'all');
+        if (!in_array($admissionFilter, ['all', 'pending', 'validated'], true)) {
+            $admissionFilter = 'all';
+        }
+        $eventFilter = (string)($_GET['event_filter'] ?? 'upcoming');
+        if (!in_array($eventFilter, ['upcoming', 'open'], true)) {
+            $eventFilter = 'upcoming';
+        }
+        $eventPage = max(1, (int)($_GET['event_page'] ?? 1));
+        $eventsPerPage = 10;
+        $eventTotal = $reservationModel->eventOverviewCount($eventFilter);
+        $eventPages = max(1, (int)ceil($eventTotal / $eventsPerPage));
+        $eventPage = min($eventPage, $eventPages);
+
+        $reservations = $reservationModel->all(
+            $selectedEventId > 0 ? $selectedEventId : null,
+            $admissionFilter === 'all' ? null : $admissionFilter
+        );
+        $reservationEvents = $reservationModel->reservationEvents();
+        $eventOverview = $reservationModel->eventOverview($eventFilter, $eventsPerPage, ($eventPage - 1) * $eventsPerPage);
         $settings = new SiteSetting($this->db);
         $emailTemplateA = $settings->get(
             'reservation_email_template_a',
@@ -63,8 +80,76 @@ class ReservationController extends BaseController
             'emailTemplateB',
             'selectedEmailTemplate',
             'validationBaseUrl',
-            'validationResult'
+            'reservationEvents',
+            'selectedEventId',
+            'admissionFilter',
+            'eventFilter',
+            'eventPage',
+            'eventPages'
         ));
+    }
+
+    public function export(): void
+    {
+        requireAdmin();
+        $eventId = max(0, (int)($_GET['event_id'] ?? 0));
+        $admission = (string)($_GET['admission'] ?? 'all');
+        $rows = (new Reservation($this->db))->all(
+            $eventId > 0 ? $eventId : null,
+            in_array($admission, ['pending', 'validated'], true) ? $admission : null
+        );
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="reservas-' . date('Y-m-d') . '.csv"');
+        $output = fopen('php://output', 'wb');
+        fwrite($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['Evento', 'Data', 'Local/Cidade', 'Cliente', 'Email', 'Telefone', 'Bilhetes', 'Estado', 'Admissão', 'Criada em'], ';');
+        foreach ($rows as $row) {
+            fputcsv($output, [
+                $row['event_title'], $row['event_date'] . ' ' . substr((string)$row['event_time'], 0, 5),
+                $row['event_location'], $row['customer_name'], $row['customer_email'], $row['customer_phone'],
+                $row['tickets'], $row['status'], $row['admission_status'], $row['created_at'],
+            ], ';');
+        }
+        fclose($output);
+        exit;
+    }
+
+    public function addToNewsletter(): void
+    {
+        requireAdmin();
+        $eventId = max(0, (int)($_POST['event_id'] ?? 0));
+        if ($eventId <= 0) {
+            flash('error', 'Selecione um evento para segmentar os contactos.');
+            $this->redirect(BASE_URL . '?controller=reservation&action=index');
+        }
+
+        $reservations = (new Reservation($this->db))->all($eventId);
+        $newsletter = new NewsletterSubscription($this->db);
+        $added = 0;
+        $skipped = 0;
+        foreach ($reservations as $reservation) {
+            if ((int)($reservation['gdpr_consent'] ?? 0) !== 1 || !filter_var($reservation['customer_email'], FILTER_VALIDATE_EMAIL)) {
+                $skipped++;
+                continue;
+            }
+            $newsletter->subscribeFromReservation([
+                'email' => $reservation['customer_email'],
+                'name' => $reservation['customer_name'],
+                'segment' => $this->cityFromLocation((string)$reservation['event_location']),
+                'source' => 'reserva: ' . $reservation['event_title'],
+                'consent_text' => (string)($reservation['gdpr_consent_text'] ?? 'Consentimento recolhido na reserva.'),
+            ]);
+            $added++;
+        }
+        flash('success', $added . ' contacto(s) adicionado(s)/atualizado(s) na newsletter por cidade.' . ($skipped ? ' ' . $skipped . ' sem consentimento válido foram ignorados.' : ''));
+        $this->redirect(BASE_URL . '?controller=reservation&action=index&event_id=' . $eventId);
+    }
+
+    private function cityFromLocation(string $location): string
+    {
+        $parts = array_values(array_filter(array_map('trim', explode(',', $location))));
+        return $parts ? (string)end($parts) : 'Sem cidade';
     }
 
     public function updateStatus(): void
