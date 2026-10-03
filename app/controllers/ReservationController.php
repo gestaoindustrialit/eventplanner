@@ -353,7 +353,11 @@ class ReservationController extends BaseController
 
         $eventId = (int)($_GET['event_id'] ?? 0);
         $accessUserId = isAdmin() ? null : (int)(currentUser()['id'] ?? 0);
-        $tickets = (new Reservation($this->db))->ticketsOverview($eventId > 0 ? $eventId : null, $accessUserId);
+        // Keep this endpoint compatible with the PHP version used by the
+        // production host. In particular, do not replace this callback-free
+        // code with PHP 7.4 arrow functions (`fn (...) => ...`).
+        $reservationModel = new Reservation($this->db);
+        $tickets = $reservationModel->ticketsOverview($eventId > 0 ? $eventId : null, $accessUserId);
         $this->json(['ok' => true, 'tickets' => $tickets]);
     }
 
@@ -364,7 +368,8 @@ class ReservationController extends BaseController
 
         $ticketId = (int)($_POST['ticket_id'] ?? 0);
         $accessUserId = isAdmin() ? null : (int)(currentUser()['id'] ?? 0);
-        $ok = $ticketId > 0 && (new Reservation($this->db))->markTicketPending($ticketId, $accessUserId);
+        $reservationModel = new Reservation($this->db);
+        $ok = $ticketId > 0 && $reservationModel->markTicketPending($ticketId, $accessUserId);
         $this->json(['ok' => $ok], $ok ? 200 : 404);
     }
 
