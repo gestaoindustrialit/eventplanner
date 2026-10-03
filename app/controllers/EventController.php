@@ -177,6 +177,7 @@ class EventController extends BaseController
             'is_visible' => isset($_POST['is_visible']) ? 1 : 0,
             'reservations_open' => isset($_POST['reservations_open']) ? 1 : 0,
             'reservation_capacity' => max(0, (int)($_POST['reservation_capacity'] ?? 0)),
+            'admission_group' => trim((string)($_POST['admission_group'] ?? '')) ?: null,
             'cachet_total' => (float)($_POST['cachet_total'] ?? 0),
             'artist_map_link' => trim($_POST['artist_map_link'] ?? ''),
             'artist_details' => trim($_POST['artist_details'] ?? ''),

@@ -32,6 +32,11 @@
             <input type="number" min="0" class="form-control" name="reservation_capacity" value="<?= htmlspecialchars((string)($event['reservation_capacity'] ?? '0')) ?>">
             <small class="text-muted">0 = sem limite de lugares.</small>
         </div>
+        <div class="col-md-4">
+            <label class="form-label">Grupo de admissões</label>
+            <input class="form-control" name="admission_group" value="<?= htmlspecialchars((string)($event['admission_group'] ?? '')) ?>" placeholder="Ex.: Festival Lisboa">
+            <small class="text-muted">Eventos com o mesmo grupo podem ser atribuídos em conjunto a um utilizador.</small>
+        </div>
         <div class="col-md-4 d-flex align-items-end">
             <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" role="switch" id="is_visible" name="is_visible" value="1" <?= (!isset($event['is_visible']) || (int)$event['is_visible'] === 1) ? 'checked' : '' ?>>

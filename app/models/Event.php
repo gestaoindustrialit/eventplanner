@@ -87,7 +87,7 @@ class Event
 
     public function create(array $data, array $lineup): int
     {
-        $stmt = $this->db->prepare('INSERT INTO events (title, date, time, location, client_id, is_visible, reservations_open, reservation_capacity, cachet_total, artist_map_link, artist_details, external_ticket_url, poster_url, notes) VALUES (:title, :date, :time, :location, :client_id, :is_visible, :reservations_open, :reservation_capacity, :cachet_total, :artist_map_link, :artist_details, :external_ticket_url, :poster_url, :notes)');
+        $stmt = $this->db->prepare('INSERT INTO events (title, date, time, location, client_id, is_visible, reservations_open, reservation_capacity, admission_group, cachet_total, artist_map_link, artist_details, external_ticket_url, poster_url, notes) VALUES (:title, :date, :time, :location, :client_id, :is_visible, :reservations_open, :reservation_capacity, :admission_group, :cachet_total, :artist_map_link, :artist_details, :external_ticket_url, :poster_url, :notes)');
         $stmt->execute($data);
         $eventId = (int)$this->db->lastInsertId();
 
@@ -99,7 +99,7 @@ class Event
     public function update(int $id, array $data, array $lineup): bool
     {
         $data['id'] = $id;
-        $stmt = $this->db->prepare('UPDATE events SET title=:title, date=:date, time=:time, location=:location, client_id=:client_id, is_visible=:is_visible, reservations_open=:reservations_open, reservation_capacity=:reservation_capacity, cachet_total=:cachet_total, artist_map_link=:artist_map_link, artist_details=:artist_details, external_ticket_url=:external_ticket_url, poster_url=:poster_url, notes=:notes WHERE id=:id');
+        $stmt = $this->db->prepare('UPDATE events SET title=:title, date=:date, time=:time, location=:location, client_id=:client_id, is_visible=:is_visible, reservations_open=:reservations_open, reservation_capacity=:reservation_capacity, admission_group=:admission_group, cachet_total=:cachet_total, artist_map_link=:artist_map_link, artist_details=:artist_details, external_ticket_url=:external_ticket_url, poster_url=:poster_url, notes=:notes WHERE id=:id');
         $ok = $stmt->execute($data);
 
         $delete = $this->db->prepare('DELETE FROM event_comedians WHERE event_id=:event_id');
@@ -150,6 +150,7 @@ class Event
             'is_visible' => (int)($event['is_visible'] ?? 1),
             'reservations_open' => (int)($event['reservations_open'] ?? 1),
             'reservation_capacity' => max(0, (int)($event['reservation_capacity'] ?? 0)),
+            'admission_group' => $event['admission_group'] ?? null,
             'cachet_total' => (float)$event['cachet_total'],
             'artist_map_link' => $event['artist_map_link'],
             'artist_details' => $event['artist_details'],

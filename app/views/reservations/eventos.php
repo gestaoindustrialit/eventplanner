@@ -5,11 +5,14 @@
             <h1 class="mb-2">Admissões</h1>
             <p class="mb-0">Seleciona o evento e aponta a câmara ao QR code.</p>
         </div>
-        <div class="admissions-live"><span></span> Operação ativa</div>
+        <div class="d-flex gap-2 align-items-center">
+            <?php if (isAdmin()): ?><a class="btn btn-outline-dark" href="<?= BASE_URL ?>?controller=reservation&action=index"><i class="bi bi-gear"></i> Gerir reservas</a><?php endif; ?>
+            <div class="admissions-live"><span></span> Operação ativa</div>
+        </div>
     </div>
 
     <?php if (empty($eventOverview)): ?>
-        <div class="alert alert-info">Não existem eventos abertos com reservas.</div>
+        <div class="alert alert-info">Não existem eventos com reservas disponíveis para este utilizador.</div>
     <?php else: ?>
         <?php
             $selectedEvent = null;

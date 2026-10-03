@@ -5,13 +5,12 @@ class ReservationController extends BaseController
     public function eventos(): void
     {
         requireLogin();
-        if (!can('reservation')) {
-            http_response_code(403);
-            echo 'Acesso negado.';
-            return;
-        }
+        $this->requireAdmissionAccess();
+        header('X-Robots-Tag: noindex, nofollow, noarchive');
+        header('Cache-Control: private, no-store, max-age=0');
         $reservationModel = new Reservation($this->db);
-        $eventOverview = $reservationModel->admissionsEventOverview();
+        $accessUserId = isAdmin() ? null : (int)(currentUser()['id'] ?? 0);
+        $eventOverview = $reservationModel->admissionsEventOverview($accessUserId);
         $selectedEventId = (int)($_GET['event_id'] ?? 0);
         $availableEventIds = array_map('intval', array_column($eventOverview, 'id'));
         if ($selectedEventId <= 0 || !in_array($selectedEventId, $availableEventIds, true)) {
@@ -29,7 +28,7 @@ class ReservationController extends BaseController
         }
         $validationResult = $_SESSION['reservation_validation_result'] ?? null;
         unset($_SESSION['reservation_validation_result']);
-        $ticketsOverview = $reservationModel->ticketsOverview($selectedEventId > 0 ? $selectedEventId : null);
+        $ticketsOverview = $reservationModel->ticketsOverview($selectedEventId > 0 ? $selectedEventId : null, $accessUserId);
         $this->render('reservations/eventos', compact('eventOverview', 'validationResult', 'ticketsOverview', 'selectedEventId'));
     }
 
@@ -322,12 +321,14 @@ class ReservationController extends BaseController
     public function validateTicket(): void
     {
         requireLogin();
+        $this->requireAdmissionAccess($this->wantsJson());
         $token = trim((string)($_REQUEST['token'] ?? ''));
         $eventId = (int)($_REQUEST['event_id'] ?? 0);
         $result = (new Reservation($this->db))->validateTicket(
             $token,
             (int)(currentUser()['id'] ?? 0),
-            $eventId > 0 ? $eventId : null
+            $eventId > 0 ? $eventId : null,
+            isAdmin()
         );
         if ($this->wantsJson()) {
             $this->json($result);
@@ -348,81 +349,22 @@ class ReservationController extends BaseController
     public function admissionsData(): void
     {
         requireLogin();
-        if (!can('reservation')) {
-            $this->json(['ok' => false, 'reason' => 'forbidden'], 403);
-        }
+        $this->requireAdmissionAccess(true);
 
         $eventId = (int)($_GET['event_id'] ?? 0);
-        $model = new Reservation($this->db);
-        $tickets = $model->ticketsOverview($eventId > 0 ? $eventId : null);
-        $admitted = count(array_filter($tickets, static function (array $ticket): bool {
-            return (int)$ticket['is_used'] === 1;
-        }));
-        $this->json([
-            'ok' => true,
-            'tickets' => $tickets,
-            'summary' => [
-                'total' => count($tickets),
-                'admitted' => $admitted,
-                'pending' => count($tickets) - $admitted,
-            ],
-        ]);
-    }
-
-    public function exportAdmissions(): void
-    {
-        requireLogin();
-        if (!can('reservation')) {
-            http_response_code(403);
-            echo 'Acesso negado.';
-            return;
-        }
-
-        $eventId = (int)($_GET['event_id'] ?? 0);
-        $format = strtolower((string)($_GET['format'] ?? 'excel'));
-        $report = (new Reservation($this->db))->admissionsReport($eventId);
-        if (!$report) {
-            http_response_code(404);
-            echo 'Evento não encontrado.';
-            return;
-        }
-
-        $filename = 'admissoes-evento-' . $eventId;
-        if ($format === 'pdf') {
-            $this->downloadAdmissionsPdf($report, $filename . '.pdf');
-            return;
-        }
-
-        header('Content-Type: text/csv; charset=UTF-8');
-        header('Content-Disposition: attachment; filename="' . $filename . '.csv"');
-        echo "\xEF\xBB\xBF";
-        $output = fopen('php://output', 'wb');
-        fputcsv($output, ['Evento', $this->spreadsheetSafe((string)$report['event']['title'])], ';');
-        fputcsv($output, ['Data', $report['event']['date'], 'Hora', substr((string)$report['event']['time'], 0, 5)], ';');
-        fputcsv($output, ['Reservados', $report['total'], 'Entraram', $report['admitted'], 'Por entrar', $report['pending']], ';');
-        fputcsv($output, [], ';');
-        fputcsv($output, ['Cliente', 'Bilhete', 'Estado', 'Validado em'], ';');
-        foreach ($report['tickets'] as $ticket) {
-            fputcsv($output, [
-                $this->spreadsheetSafe((string)$ticket['customer_name']),
-                (int)$ticket['ticket_no'],
-                (int)$ticket['is_used'] === 1 ? 'Entrou' : 'Por entrar',
-                (string)($ticket['used_at'] ?? ''),
-            ], ';');
-        }
-        fclose($output);
-        exit;
+        $accessUserId = isAdmin() ? null : (int)(currentUser()['id'] ?? 0);
+        $tickets = (new Reservation($this->db))->ticketsOverview($eventId > 0 ? $eventId : null, $accessUserId);
+        $this->json(['ok' => true, 'tickets' => $tickets]);
     }
 
     public function markTicketPending(): void
     {
         requireLogin();
-        if (!can('reservation')) {
-            $this->json(['ok' => false, 'reason' => 'forbidden'], 403);
-        }
+        $this->requireAdmissionAccess(true);
 
         $ticketId = (int)($_POST['ticket_id'] ?? 0);
-        $ok = $ticketId > 0 && (new Reservation($this->db))->markTicketPending($ticketId);
+        $accessUserId = isAdmin() ? null : (int)(currentUser()['id'] ?? 0);
+        $ok = $ticketId > 0 && (new Reservation($this->db))->markTicketPending($ticketId, $accessUserId);
         $this->json(['ok' => $ok], $ok ? 200 : 404);
     }
 
@@ -432,65 +374,22 @@ class ReservationController extends BaseController
             || strpos((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json') !== false;
     }
 
-    private function spreadsheetSafe(string $value): string
+    private function requireAdmissionAccess(bool $json = false): void
     {
-        return preg_match('/^[=+\-@]/', $value) ? "'" . $value : $value;
-    }
-
-    private function downloadAdmissionsPdf(array $report, string $filename): void
-    {
-        $event = $report['event'];
-        $lines = [
-            'RELATORIO DE ADMISSOES',
-            (string)$event['title'],
-            'Data: ' . $event['date'] . ' ' . substr((string)$event['time'], 0, 5),
-            'Reservados: ' . $report['total'] . ' | Entraram: ' . $report['admitted'] . ' | Por entrar: ' . $report['pending'],
-            '',
-            'Cliente | Bilhete | Estado | Validado em',
-        ];
-        foreach ($report['tickets'] as $ticket) {
-            $lines[] = $ticket['customer_name'] . ' | #' . $ticket['ticket_no'] . ' | '
-                . ((int)$ticket['is_used'] === 1 ? 'Entrou' : 'Por entrar') . ' | ' . ($ticket['used_at'] ?? '');
+        if (isAdmin()) {
+            return;
         }
 
-        $pages = array_chunk($lines, 43);
-        $objects = [1 => '<< /Type /Catalog /Pages 2 0 R >>', 3 => '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
-        $pageRefs = [];
-        foreach ($pages as $index => $pageLines) {
-            $pageObject = 4 + ($index * 2);
-            $contentObject = $pageObject + 1;
-            $pageRefs[] = $pageObject . ' 0 R';
-            $stream = "BT\n/F1 11 Tf\n50 790 Td\n14 TL\n";
-            foreach ($pageLines as $line) {
-                $encoded = iconv('UTF-8', 'Windows-1252//TRANSLIT', (string)$line);
-                $encoded = substr($encoded ?: '', 0, 105);
-                $encoded = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $encoded);
-                $stream .= '(' . $encoded . ") Tj\nT*\n";
-            }
-            $stream .= "ET\n";
-            $objects[$pageObject] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ' . $contentObject . ' 0 R >>';
-            $objects[$contentObject] = "<< /Length " . strlen($stream) . ">>\nstream\n" . $stream . 'endstream';
+        $userId = (int)(currentUser()['id'] ?? 0);
+        if ($userId > 0 && (new User($this->db))->hasAdmissionAccess($userId)) {
+            return;
         }
-        $objects[2] = '<< /Type /Pages /Kids [' . implode(' ', $pageRefs) . '] /Count ' . count($pageRefs) . ' >>';
-        ksort($objects);
 
-        $pdf = "%PDF-1.4\n";
-        $offsets = [0];
-        foreach ($objects as $number => $object) {
-            $offsets[$number] = strlen($pdf);
-            $pdf .= $number . " 0 obj\n" . $object . "\nendobj\n";
+        if ($json) {
+            $this->json(['ok' => false, 'reason' => 'not_found'], 404);
         }
-        $xref = strlen($pdf);
-        $pdf .= 'xref' . "\n0 " . (count($objects) + 1) . "\n0000000000 65535 f \n";
-        for ($i = 1; $i <= count($objects); $i++) {
-            $pdf .= sprintf("%010d 00000 n \n", $offsets[$i]);
-        }
-        $pdf .= 'trailer << /Size ' . (count($objects) + 1) . ' /Root 1 0 R >>' . "\nstartxref\n" . $xref . "\n%%EOF";
-
-        header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Content-Length: ' . strlen($pdf));
-        echo $pdf;
+        http_response_code(404);
+        echo 'Página não encontrada.';
         exit;
     }
 

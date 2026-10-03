@@ -13,6 +13,7 @@ abstract class BaseController
     protected function render(string $view, array $data = []): void
     {
         extract($data);
+        $db = $this->db;
         $viewPath = __DIR__ . '/../views/' . $view . '.php';
         include __DIR__ . '/../views/partials/header.php';
         include $viewPath;
