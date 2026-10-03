@@ -34,7 +34,7 @@ $isActiveLink = static function (string $controller, ?string $action = null) use
 $items = [
  'dashboard'=>['Dashboard','speedometer2',BASE_URL], 'comedian'=>['Comediantes','mic',BASE_URL.'?controller=comedian&action=index'],
  'client'=>['Clientes','people',BASE_URL.'?controller=client&action=index'], 'crm'=>['CRM','kanban',BASE_URL.'?controller=crm&action=index'],
- 'event'=>['Eventos','calendar-event',BASE_URL.'?controller=event&action=index'], 'checklist'=>['Checklists','check2-square',BASE_URL.'?controller=checklist&action=index'],
+ 'event'=>['Eventos','calendar-event',BASE_URL.'?controller=event&action=index'], 'eventseries'=>['Séries','calendar2-range',BASE_URL.'?controller=eventseries&action=index'], 'checklist'=>['Checklists','check2-square',BASE_URL.'?controller=checklist&action=index'],
  'reservation'=>['Admissões','ticket-detailed',BASE_PATH.'/eventos/'], 'publicpage'=>['Páginas públicas','layout-text-window-reverse',BASE_URL.'?controller=publicpage&action=index'],
  'blogpost'=>['Blog','journal-richtext',BASE_URL.'?controller=blogpost&action=index'], 'partner'=>['Parceiros','diagram-3',BASE_URL.'?controller=partner&action=index'],
  'publicsite'=>['Publicar website','globe2',BASE_URL.'?controller=publicsite&action=index'], 'newsletter'=>['Newsletter','envelope-paper',BASE_URL.'?controller=newsletter&action=index'],

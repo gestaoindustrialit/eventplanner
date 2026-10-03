@@ -14,15 +14,21 @@ class EventController extends BaseController
         requireAdmin();
         $clients = (new Client($this->db))->all();
         $comedians = (new Comedian($this->db))->all();
-        $this->render('events/form', ['event' => null, 'clients' => $clients, 'comedians' => $comedians, 'lineup' => []]);
+        $series = (new EventSeries($this->db))->all(true);
+        $this->render('events/form', ['event' => null, 'clients' => $clients, 'comedians' => $comedians, 'lineup' => [], 'series' => $series]);
     }
 
     public function store(): void
     {
         requireAdmin();
         $eventModel = new EventModel($this->db);
-        $eventModel->create($this->validatedData(), $this->lineupData());
-        flash('success', 'Evento criado com sucesso.');
+        try {
+            $eventModel->create($this->validatedData(), $this->lineupData());
+            flash('success', 'Evento criado com sucesso.');
+        } catch (InvalidArgumentException $e) {
+            flash('error', $e->getMessage());
+            $this->redirect(BASE_URL . '?controller=event&action=create');
+        }
         $this->redirect(BASE_URL . '?controller=event&action=index');
     }
 
@@ -35,8 +41,9 @@ class EventController extends BaseController
         $lineup = $eventModel->lineup($id);
         $clients = (new Client($this->db))->all();
         $comedians = (new Comedian($this->db))->all();
+        $series = (new EventSeries($this->db))->all(true);
 
-        $this->render('events/form', compact('event', 'lineup', 'clients', 'comedians'));
+        $this->render('events/form', compact('event', 'lineup', 'clients', 'comedians', 'series'));
     }
 
     public function update(): void
@@ -44,8 +51,13 @@ class EventController extends BaseController
         requireAdmin();
         $id = (int)($_GET['id'] ?? 0);
         $eventModel = new EventModel($this->db);
-        $eventModel->update($id, $this->validatedData(), $this->lineupData());
-        flash('success', 'Evento atualizado.');
+        try {
+            $eventModel->update($id, $this->validatedData(), $this->lineupData());
+            flash('success', 'Evento atualizado.');
+        } catch (InvalidArgumentException $e) {
+            flash('error', $e->getMessage());
+            $this->redirect(BASE_URL . '?controller=event&action=edit&id=' . $id);
+        }
         $this->redirect(BASE_URL . '?controller=event&action=index');
     }
 
@@ -168,8 +180,12 @@ class EventController extends BaseController
 
     private function validatedData(): array
     {
+        $title = trim((string)($_POST['title'] ?? ''));
+        $slugInput = trim((string)($_POST['slug'] ?? ''));
         return [
-            'title' => trim($_POST['title'] ?? ''),
+            'title' => $title,
+            'slug' => EventSeries::slugify($slugInput !== '' ? $slugInput : $title),
+            'series_id' => (int)($_POST['series_id'] ?? 0) ?: null,
             'date' => $_POST['date'] ?? date('Y-m-d'),
             'time' => $_POST['time'] ?? '20:00',
             'location' => trim($_POST['location'] ?? ''),

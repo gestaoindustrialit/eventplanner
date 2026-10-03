@@ -12,6 +12,13 @@ Aplicação web em **PHP puro + SQLite + Bootstrap 5** para gestão de eventos d
 - Website público exportável para pasta externa (ex.: `chorarderir.com`)
 - Gestão de páginas públicas (conteúdos institucionais, menu e ordem de destaque)
 - Reservas públicas por evento com gestão de estado no painel admin
+- Séries de eventos com URL pública permanente e sessões/reservas independentes
+
+## Séries de eventos
+
+No painel, abra **Séries**, crie a série e defina nome, slug, descrição, capa e local habitual. Depois, em **Novo Evento**, selecione a série no campo “Série / Evento recorrente”. Cada sessão mantém data, lotação, publicação e reservas próprias; a página `/eventos/{slug-da-serie}` agrega automaticamente apenas as próximas sessões publicadas.
+
+A atualização do esquema é automática e idempotente ao abrir a aplicação: cria `event_series`, adiciona `events.series_id` e um slug estável a `events`. Se existir o evento “Lustre Comedy Club”, a migração cria/associa a série sem alterar o ID do evento nem os `event_id` das reservas existentes.
 
 ## Instalação rápida
 1. Crie a base de dados e dados iniciais (CLI):

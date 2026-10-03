@@ -2,10 +2,12 @@
 <form method="post" action="<?= BASE_URL ?>?controller=event&action=<?= $event ? 'update&id=' . $event['id'] : 'store' ?>">
     <div class="row g-3">
         <div class="col-md-6"><label class="form-label">Título</label><input required class="form-control" name="title" value="<?= htmlspecialchars($event['title'] ?? '') ?>"></div>
+        <div class="col-md-6"><label class="form-label">Slug da sessão</label><div class="input-group"><span class="input-group-text">/eventos/</span><input pattern="[a-z0-9-]+" class="form-control" name="slug" value="<?= htmlspecialchars($event['slug'] ?? '') ?>" placeholder="Gerado automaticamente se ficar vazio"></div></div>
+        <div class="col-md-6"><label class="form-label">Série / Evento recorrente</label><select class="form-select" name="series_id" id="series_id"><option value="">Nenhuma — evento independente</option><?php foreach ($series as $seriesOption): ?><option value="<?= (int)$seriesOption['id'] ?>" data-location="<?= htmlspecialchars($seriesOption['location'] ?? '') ?>" <?= (int)($event['series_id'] ?? 0) === (int)$seriesOption['id'] ? 'selected' : '' ?>><?= htmlspecialchars($seriesOption['name']) ?></option><?php endforeach; ?></select><small class="text-muted">A reserva continuará ligada exclusivamente a esta sessão.</small></div>
         <div class="col-md-2"><label class="form-label">Data</label><input required type="date" class="form-control" name="date" value="<?= htmlspecialchars($event['date'] ?? '') ?>"></div>
         <div class="col-md-2"><label class="form-label">Hora</label><input required type="time" class="form-control" name="time" value="<?= htmlspecialchars(substr(($event['time'] ?? '20:00'),0,5)) ?>"></div>
         <div class="col-md-2"><label class="form-label">Cachet total</label><input type="number" step="0.01" class="form-control" name="cachet_total" value="<?= htmlspecialchars($event['cachet_total'] ?? '0') ?>"></div>
-        <div class="col-md-6"><label class="form-label">Local</label><input class="form-control" name="location" value="<?= htmlspecialchars($event['location'] ?? '') ?>"></div>
+        <div class="col-md-6"><label class="form-label">Local</label><input class="form-control" id="event_location" name="location" value="<?= htmlspecialchars($event['location'] ?? '') ?>"></div>
         <div class="col-md-6"><label class="form-label">Cliente</label>
             <select class="form-select" name="client_id" required>
                 <option value="">-- selecionar --</option>
@@ -97,3 +99,4 @@
 
     <button class="btn btn-dark mt-3">Guardar</button>
 </form>
+<script>document.getElementById('series_id')?.addEventListener('change',function(){const location=document.getElementById('event_location');const suggested=this.selectedOptions[0]?.dataset.location||'';if(suggested&&location&&!location.value.trim())location.value=suggested;});</script>

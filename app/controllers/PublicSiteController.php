@@ -176,6 +176,7 @@ class PublicSiteController extends BaseController
         $template = <<<'PHP'
 <?php
 $events = [];
+$eventSeries = [];
 $pages = [];
 $partners = [];
 $blogPosts = [];
@@ -185,6 +186,8 @@ $corporateEventsPage = json_decode('__CORPORATE_EVENTS_PAGE_JSON__', true) ?: []
 $msg = $_GET['msg'] ?? '';
 $pageSlug = trim((string)($_GET['page'] ?? ''));
 $eventSlug = trim((string)($_GET['evento'] ?? ''));
+$seriesSlug = trim((string)($_GET['serie'] ?? ''));
+$sessionSlug = trim((string)($_GET['sessao'] ?? ''));
 $recaptchaSiteKey = trim((string)'__RECAPTCHA_SITE_KEY__');
 $hasRecaptcha = $recaptchaSiteKey !== '';
 
@@ -224,6 +227,11 @@ try {
     }
     $eventSql .= " GROUP BY e.id ORDER BY e.date ASC, e.time ASC";
     $events = $db->query($eventSql)->fetchAll() ?: [];
+
+    $seriesColumns = array_column($db->query('PRAGMA table_info(event_series)')->fetchAll(), 'name');
+    if (count($seriesColumns) > 0) {
+        $eventSeries = $db->query('SELECT * FROM event_series WHERE is_active = 1 ORDER BY name ASC')->fetchAll() ?: [];
+    }
 
     $pageSql = 'SELECT * FROM public_pages';
     $pageColumns = array_column($db->query('PRAGMA table_info(public_pages)')->fetchAll(), 'name');
@@ -266,6 +274,7 @@ try {
     }
 } catch (Throwable $e) {
     $events = [];
+    $eventSeries = [];
     $pages = [];
     $partners = [];
     $blogPosts = [];
@@ -431,11 +440,13 @@ $isStandaloneView = $activeStandalonePage !== null;
 $hasAgendaEvents = count($events) > 0;
 $selectedEvent = null;
 $selectedEventSlug = '';
+$selectedSeries = null;
+$seriesSessions = [];
 $eventSlugById = [];
 $eventIdBySlug = [];
 $usedSlugs = [];
 foreach ($events as $index => $event) {
-    $baseSlug = seo_slug((string)($event['title'] ?? ''));
+    $baseSlug = trim((string)($event['slug'] ?? '')) ?: seo_slug((string)($event['title'] ?? ''));
     if ($baseSlug === '') {
         $baseSlug = 'evento-' . (int)($event['id'] ?? ($index + 1));
     }
@@ -449,7 +460,27 @@ foreach ($events as $index => $event) {
     $eventSlugById[(int)$event['id']] = $slug;
     $eventIdBySlug[$slug] = (int)$event['id'];
 }
-if ($eventSlug !== '' && isset($eventIdBySlug[$eventSlug])) {
+foreach ($eventSeries as $seriesItem) {
+    if ((string)$seriesItem['slug'] === ($seriesSlug !== '' ? $seriesSlug : $eventSlug)) {
+        $selectedSeries = $seriesItem;
+        foreach ($events as $event) {
+            if ((int)($event['series_id'] ?? 0) === (int)$seriesItem['id']) {
+                $seriesSessions[] = $event;
+            }
+        }
+        break;
+    }
+}
+if ($selectedSeries !== null && $sessionSlug !== '') {
+    foreach ($seriesSessions as $event) {
+        if ((string)($event['slug'] ?? '') === $sessionSlug || date('d-m-Y', strtotime((string)$event['date'])) === $sessionSlug) {
+            $selectedEvent = $event;
+            $selectedEventSlug = (string)($event['slug'] ?? $sessionSlug);
+            break;
+        }
+    }
+}
+if ($selectedSeries === null && $eventSlug !== '' && isset($eventIdBySlug[$eventSlug])) {
     foreach ($events as $event) {
         if ((int)$event['id'] === (int)$eventIdBySlug[$eventSlug]) {
             $selectedEvent = $event;
@@ -458,6 +489,7 @@ if ($eventSlug !== '' && isset($eventIdBySlug[$eventSlug])) {
         }
     }
 }
+$isSeriesView = $selectedSeries !== null && $selectedEvent === null;
 $isEventView = $selectedEvent !== null;
 $hasReservableEvents = false;
 $hasPartners = count($partners) > 0;
@@ -529,7 +561,7 @@ if ($activeBlogPost !== null) {
     }
     $relatedBlogPosts = array_slice(array_merge($sameCategoryPosts, $otherCategoryPosts), 0, 3);
 }
-if ($activeVirtualPage !== null || $activeBlogIndex || $activeBlogPost !== null) { $isStandaloneView = false; $isEventView = false; }
+if ($activeVirtualPage !== null || $activeBlogIndex || $activeBlogPost !== null) { $isStandaloneView = false; $isEventView = false; $isSeriesView = false; }
 
 function render_corporate_proposal_form(array $corporateEventsPage, string $recaptchaSiteKey, bool $hasRecaptcha, string $msg, string $pageSlug = 'eventos-corporativos', string $subject = 'Pedido de proposta - eventos corporativos'): void {
     ?>
@@ -616,6 +648,11 @@ function render_partners_section(array $partners): void {
         $seoDescription = truncate_text((string)($selectedEvent['notes'] ?: 'Espetáculo de humor ao vivo com reservas e informação do evento.'), 158);
         $canonicalUrl = absolute_url('eventos/' . $selectedEventSlug);
         $ogImage = !empty($selectedEvent['poster_url']) ? absolute_url((string)$selectedEvent['poster_url']) : $ogImage;
+    } elseif ($isSeriesView && $selectedSeries) {
+        $seoTitle = truncate_text((string)$selectedSeries['name'] . ' | Stand-up Comedy | Chorar de Rir', 62);
+        $seoDescription = truncate_text((string)($selectedSeries['description'] ?: 'Próximas sessões e reservas para ' . $selectedSeries['name'] . '.'), 158);
+        $canonicalUrl = absolute_url('eventos/' . (string)$selectedSeries['slug']);
+        $ogImage = !empty($selectedSeries['cover_image_url']) ? absolute_url((string)$selectedSeries['cover_image_url']) : $ogImage;
         $schemaType = 'Event';
     } elseif ($activeStandalonePage) {
         $seoTitle = truncate_text((string)$activeStandalonePage['title'] . ' | Chorar de Rir', 62);
@@ -1005,6 +1042,24 @@ function render_partners_section(array $partners): void {
       }
       .nav-link { padding: .5rem .35rem; }
     }
+    .series-public-hero img { width:100%; max-height:420px; object-fit:cover; }
+    .series-session-grid { display:grid; gap:1rem; }
+    .series-session-card { display:grid; grid-template-columns:120px 1fr auto; gap:1.25rem; align-items:center; padding:1.25rem; }
+    .series-session-date { display:flex; flex-direction:column; padding-right:1rem; border-right:1px solid rgba(255,255,255,.14); }
+    .series-session-date strong { color:#ff3d32; font-size:1.35rem; }
+    .series-session-date span { font-size:1.1rem; }
+    .series-session-actions { display:flex; gap:.5rem; align-items:center; }
+    @media (max-width: 767px) {
+      .series-public-page .container { padding-inline:.8rem; }
+      .series-public-hero img { max-height:260px; }
+      .series-public-hero .p-4 { padding:1.25rem !important; }
+      .series-session-card { grid-template-columns:76px 1fr; gap:.85rem; padding:1rem; }
+      .series-session-date { padding-right:.65rem; }
+      .series-session-date strong { font-size:1.05rem; }
+      .series-session-actions { grid-column:1 / -1; display:grid; grid-template-columns:1fr 1.4fr; }
+      .series-session-actions .btn { min-height:48px; display:grid; place-items:center; }
+      .modal-dialog { margin:.5rem; }
+    }
   </style>
 </head>
   <body>
@@ -1018,7 +1073,7 @@ function render_partners_section(array $partners): void {
       </button>
       <div class="collapse navbar-collapse" id="menuPublico">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link <?php echo (!$isStandaloneView && !$isEventView) ? 'active' : ''; ?>" href="/#inicio">Início</a></li>
+          <li class="nav-item"><a class="nav-link <?php echo (!$isStandaloneView && !$isEventView && !$isSeriesView) ? 'active' : ''; ?>" href="/#inicio">Início</a></li>
           <?php foreach ($sectionPages as $page): ?>
             <?php $menuSlug = trim((string)($page['slug'] ?? '')); ?>
             <?php if ($menuSlug === '' || ($menuSlug === 'agenda' && !$hasAgendaEvents)) { continue; } ?>
@@ -1117,7 +1172,7 @@ function render_partners_section(array $partners): void {
           <?php endif; ?>
         </div>
       </section>
-    <?php elseif (!$isStandaloneView && !$isEventView): ?>
+    <?php elseif (!$isStandaloneView && !$isEventView && !$isSeriesView): ?>
       <section id="inicio" class="hero" aria-label="Imagem de destaque" style="background-image: url('<?php echo htmlspecialchars((string)$heroBackgroundUrl); ?>');"></section>
       <section class="hero-content section-block" aria-labelledby="home-title">
         <div class="container">
@@ -1376,6 +1431,30 @@ function render_partners_section(array $partners): void {
           </div>
         </div>
       </div>
+    <?php elseif ($isSeriesView): ?>
+      <section class="section-block agenda-section pt-4 pt-lg-5 series-public-page">
+        <div class="container" style="max-width:960px">
+          <a class="btn btn-sm btn-outline-light mb-4" href="/#agenda">← Voltar à agenda</a>
+          <article class="series-public-hero surface-card overflow-hidden mb-4">
+            <?php if (!empty($selectedSeries['cover_image_url'])): ?><img src="<?php echo htmlspecialchars((string)$selectedSeries['cover_image_url']); ?>" alt="Capa de <?php echo htmlspecialchars((string)$selectedSeries['name']); ?>"><?php endif; ?>
+            <div class="p-4 p-lg-5"><span class="eyebrow">Série de eventos</span><h1><?php echo htmlspecialchars((string)$selectedSeries['name']); ?></h1><?php if (!empty($selectedSeries['description'])): ?><p class="lead text-secondary"><?php echo nl2br(htmlspecialchars((string)$selectedSeries['description'])); ?></p><?php endif; ?><?php if (!empty($selectedSeries['location'])): ?><p class="mb-0"><i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars((string)$selectedSeries['location']); ?></p><?php endif; ?></div>
+          </article>
+          <h2 class="h4 text-uppercase mb-3">Próximas sessões</h2>
+          <div class="series-session-grid">
+          <?php foreach ($seriesSessions as $session): $capacity=(int)($session['reservation_capacity']??0); $available=$capacity>0?max(0,$capacity-(int)($session['active_tickets']??0)):null; ?>
+            <article class="series-session-card surface-card">
+              <div class="series-session-date"><strong><?php echo htmlspecialchars(strtoupper(date('d M', strtotime((string)$session['date'])))); ?></strong><span><?php echo htmlspecialchars(substr((string)$session['time'],0,5)); ?></span></div>
+              <div class="series-session-info"><h3 class="h5 mb-1"><?php echo htmlspecialchars((string)$session['title']); ?></h3><p class="text-secondary mb-0"><i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars((string)$session['location']); ?></p><?php if ($available !== null): ?><small><?php echo $available; ?> lugares disponíveis</small><?php endif; ?></div>
+              <div class="series-session-actions"><a class="btn btn-sm btn-outline-light" href="/eventos/<?php echo rawurlencode((string)$selectedSeries['slug']); ?>/<?php echo rawurlencode((string)$session['slug']); ?>">Detalhes</a>
+              <?php if ((int)$session['reservations_open'] === 1 && ($available === null || $available > 0)): ?><button class="btn btn-brand reserve-trigger" data-bs-toggle="modal" data-bs-target="#seriesReserveModal" data-event-id="<?php echo (int)$session['id']; ?>" data-event-info="<?php echo htmlspecialchars((string)$selectedSeries['name'].' · '.date('d/m/Y',strtotime((string)$session['date'])).' · '.substr((string)$session['time'],0,5).' · '.$session['location']); ?>">Reservar</button><?php elseif (!empty($session['external_ticket_url'])): ?><a class="btn btn-brand" href="<?php echo htmlspecialchars((string)$session['external_ticket_url']); ?>">Bilhetes</a><?php else: ?><span class="badge text-bg-secondary">Indisponível</span><?php endif; ?></div>
+            </article>
+          <?php endforeach; ?>
+          <?php if (!$seriesSessions): ?><div class="surface-card p-4 p-lg-5 text-center"><h3 class="h4">Novas datas em breve.</h3><p class="text-secondary mb-0">Segue-nos nas redes sociais para acompanhares as próximas sessões.</p></div><?php endif; ?>
+          </div>
+        </div>
+      </section>
+      <div class="modal fade" id="seriesReserveModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content bg-dark text-white"><div class="modal-header border-secondary"><div><h2 class="modal-title h5">Reservar sessão</h2><p class="small text-secondary mb-0" id="seriesReserveInfo"></p></div><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="post" action="/reserve.php" class="row g-3"><input type="hidden" name="event_id" id="seriesReserveEventId"><div class="col-12"><label class="form-label">Nome</label><input name="customer_name" required class="form-control" autocomplete="name"></div><div class="col-12"><label class="form-label">Email</label><input type="email" name="customer_email" required class="form-control" autocomplete="email"></div><div class="col-7"><label class="form-label">Telefone</label><input name="customer_phone" class="form-control" autocomplete="tel"></div><div class="col-5"><label class="form-label">Lugares</label><input type="number" min="1" value="1" name="tickets" class="form-control"></div><div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" value="1" name="gdpr_consent" id="seriesGdpr" required><label class="form-check-label small" for="seriesGdpr">Autorizo o tratamento dos meus dados para gerir esta reserva.</label></div></div><?php if ($hasRecaptcha): ?><div class="col-12 d-flex justify-content-center"><div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div></div><?php endif; ?><div class="col-12"><button class="btn btn-brand btn-lg w-100">Confirmar reserva</button></div></form></div></div></div></div>
+      <script>document.querySelectorAll('.reserve-trigger').forEach(function(button){button.addEventListener('click',function(){document.getElementById('seriesReserveEventId').value=this.dataset.eventId;document.getElementById('seriesReserveInfo').textContent=this.dataset.eventInfo;});});</script>
     <?php elseif ($isEventView): ?>
       <section class="section-block agenda-section pt-5">
         <div class="container">
@@ -1666,6 +1745,7 @@ RewriteEngine On
 # Keeping that redirect out of mod_rewrite prevents the internal clean-URL
 # rewrite below from being mistaken for a new browser request and looping.
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
+RewriteRule ^eventos/([^/]+)/([^/]+)/?$ index.php?serie=$1&sessao=$2 [L,QSA]
 RewriteRule ^eventos/([^/]+)/?$ index.php?evento=$1 [L,QSA]
 RewriteRule ^blog/?$ index.php?page=blog [L,QSA]
 RewriteRule ^blog/([^/]+)/?$ index.php?page=blog/$1 [L,QSA]
@@ -1728,8 +1808,14 @@ try {
     $eventColumns = array_column($db->query('PRAGMA table_info(events)')->fetchAll(), 'name');
     if ($eventColumns) {
         $where = in_array('is_visible', $eventColumns, true) ? ' AND is_visible = 1' : '';
-        foreach (($db->query("SELECT id, title, date FROM events WHERE date >= date('now')" . $where . " ORDER BY date ASC")->fetchAll() ?: []) as $event) {
-            $urls[] = ['loc' => $baseUrl . '/eventos/' . sitemap_slug((string)$event['title']), 'priority' => '0.9', 'lastmod' => (string)$event['date']];
+        foreach (($db->query("SELECT id, title, slug, date FROM events WHERE date >= date('now')" . $where . " ORDER BY date ASC")->fetchAll() ?: []) as $event) {
+            $urls[] = ['loc' => $baseUrl . '/eventos/' . ((string)($event['slug'] ?? '') ?: sitemap_slug((string)$event['title'])), 'priority' => '0.9', 'lastmod' => (string)$event['date']];
+        }
+    }
+    $seriesColumns = array_column($db->query('PRAGMA table_info(event_series)')->fetchAll(), 'name');
+    if ($seriesColumns) {
+        foreach (($db->query('SELECT slug, updated_at FROM event_series WHERE is_active = 1')->fetchAll() ?: []) as $series) {
+            $urls[] = ['loc' => $baseUrl . '/eventos/' . (string)$series['slug'], 'priority' => '0.9', 'lastmod' => substr((string)$series['updated_at'], 0, 10)];
         }
     }
 } catch (Throwable $e) {}
@@ -1798,7 +1884,7 @@ try {
     $eventId = (int)($_POST['event_id'] ?? 0);
     $tickets = max(1, (int)($_POST['tickets'] ?? 1));
 
-    $eventStmt = $db->prepare("SELECT e.id, e.title, e.date, e.time, e.reservations_open, e.reservation_capacity, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets FROM events e LEFT JOIN event_reservations r ON r.event_id = e.id WHERE e.id = :event_id GROUP BY e.id");
+    $eventStmt = $db->prepare("SELECT e.id, e.title, e.date, e.time, e.reservations_open, e.reservation_capacity, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets FROM events e LEFT JOIN event_reservations r ON r.event_id = e.id WHERE e.id = :event_id AND e.is_visible = 1 AND e.date >= date('now') GROUP BY e.id");
     $eventStmt->execute(['event_id' => $eventId]);
     $event = $eventStmt->fetch();
 

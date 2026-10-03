@@ -304,6 +304,33 @@ class Database
             if (!in_array('admission_group', $eventColumns, true)) {
                 $db->exec('ALTER TABLE events ADD COLUMN admission_group TEXT DEFAULT NULL');
             }
+            if (!in_array('slug', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN slug TEXT DEFAULT NULL');
+            }
+            if (!in_array('series_id', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN series_id INTEGER DEFAULT NULL REFERENCES event_series(id) ON DELETE SET NULL');
+            }
+        }
+
+        $db->exec(
+            'CREATE TABLE IF NOT EXISTS event_series (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                slug TEXT NOT NULL UNIQUE,
+                location TEXT DEFAULT NULL,
+                description TEXT DEFAULT NULL,
+                cover_image_url TEXT DEFAULT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )'
+        );
+        $db->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_event_series_slug ON event_series(slug)');
+        if ($this->tableExists($db, 'events')) {
+            $db->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_events_slug ON events(slug)');
+            $db->exec('CREATE INDEX IF NOT EXISTS idx_events_series_id ON events(series_id)');
+            $this->backfillEventSlugs($db);
+            $this->migrateLustreSeries($db);
         }
 
         $db->exec(
@@ -343,5 +370,51 @@ class Database
         $stmt = $db->prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = :table LIMIT 1");
         $stmt->execute(['table' => $table]);
         return (bool)$stmt->fetchColumn();
+    }
+
+    private function backfillEventSlugs(PDO $db): void
+    {
+        $events = $db->query('SELECT id, title, date FROM events WHERE slug IS NULL OR trim(slug) = \'\' ORDER BY date ASC, time ASC, id ASC')->fetchAll();
+        $exists = $db->prepare('SELECT 1 FROM events WHERE slug = :slug AND id != :id LIMIT 1');
+        $update = $db->prepare('UPDATE events SET slug = :slug WHERE id = :id');
+        foreach ($events as $event) {
+            $base = $this->slugify((string)$event['title']);
+            $slug = $base;
+            $suffix = 2;
+            while (true) {
+                $exists->execute(['slug' => $slug, 'id' => (int)$event['id']]);
+                if (!$exists->fetchColumn()) {
+                    break;
+                }
+                $slug = $base . '-' . $suffix++;
+            }
+            $update->execute(['slug' => $slug, 'id' => (int)$event['id']]);
+        }
+    }
+
+    private function migrateLustreSeries(PDO $db): void
+    {
+        $event = $db->query("SELECT * FROM events WHERE slug = 'lustre-comedy-club' OR lower(title) = 'lustre comedy club' ORDER BY date ASC, id ASC LIMIT 1")->fetch();
+        if (!$event) {
+            return;
+        }
+        $insert = $db->prepare('INSERT OR IGNORE INTO event_series (name, slug, location, description, cover_image_url, is_active) VALUES (:name, :slug, :location, :description, :cover_image_url, 1)');
+        $insert->execute([
+            'name' => 'Lustre Comedy Club',
+            'slug' => 'lustre-comedy-club',
+            'location' => $event['location'] ?: null,
+            'description' => $event['notes'] ?: null,
+            'cover_image_url' => $event['poster_url'] ?: null,
+        ]);
+        $seriesId = (int)$db->query("SELECT id FROM event_series WHERE slug = 'lustre-comedy-club'")->fetchColumn();
+        $link = $db->prepare("UPDATE events SET series_id = :series_id WHERE series_id IS NULL AND (slug = 'lustre-comedy-club' OR lower(title) = 'lustre comedy club')");
+        $link->execute(['series_id' => $seriesId]);
+    }
+
+    private function slugify(string $value): string
+    {
+        $value = strtolower(trim(strtr($value, ['á'=>'a','à'=>'a','ã'=>'a','â'=>'a','é'=>'e','ê'=>'e','í'=>'i','ó'=>'o','õ'=>'o','ô'=>'o','ú'=>'u','ç'=>'c'])));
+        $value = trim((string)preg_replace('/[^a-z0-9]+/', '-', $value), '-');
+        return $value !== '' ? $value : 'evento';
     }
 }
