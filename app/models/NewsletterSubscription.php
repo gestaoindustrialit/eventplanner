@@ -32,6 +32,27 @@ class NewsletterSubscription
         return $stmt->fetchAll();
     }
 
+    public function subscribeFromReservation(array $data): void
+    {
+        $stmt = $this->db->prepare('INSERT INTO newsletter_subscriptions (email, name, gdpr_consent, consent_text, source, segment, status)
+            VALUES (:email, :name, 1, :consent_text, :source, :segment, \'active\')
+            ON CONFLICT(email) DO UPDATE SET
+                name = COALESCE(NULLIF(excluded.name, \'\'), newsletter_subscriptions.name),
+                gdpr_consent = 1,
+                consent_text = excluded.consent_text,
+                source = excluded.source,
+                segment = excluded.segment,
+                status = \'active\',
+                unsubscribed_at = NULL');
+        $stmt->execute([
+            'email' => trim((string)$data['email']),
+            'name' => trim((string)($data['name'] ?? '')),
+            'consent_text' => trim((string)($data['consent_text'] ?? '')),
+            'source' => trim((string)($data['source'] ?? 'reserva')),
+            'segment' => trim((string)($data['segment'] ?? 'Sem cidade')),
+        ]);
+    }
+
     public function deactivate(int $id): void
     {
         $stmt = $this->db->prepare("UPDATE newsletter_subscriptions SET status = 'unsubscribed', unsubscribed_at = CURRENT_TIMESTAMP WHERE id = :id");
@@ -48,11 +69,16 @@ class NewsletterSubscription
                 gdpr_consent INTEGER NOT NULL DEFAULT 0,
                 consent_text TEXT NOT NULL,
                 source TEXT DEFAULT NULL,
+                segment TEXT DEFAULT NULL,
                 status TEXT NOT NULL DEFAULT "active" CHECK (status IN ("active", "unsubscribed")),
                 subscribed_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 unsubscribed_at TEXT DEFAULT NULL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )'
         );
+        $columns = array_column($this->db->query('PRAGMA table_info(newsletter_subscriptions)')->fetchAll(), 'name');
+        if (!in_array('segment', $columns, true)) {
+            $this->db->exec('ALTER TABLE newsletter_subscriptions ADD COLUMN segment TEXT DEFAULT NULL');
+        }
     }
 }

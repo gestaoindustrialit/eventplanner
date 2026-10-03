@@ -1,8 +1,14 @@
 <h2 class="mb-4">Reservas dos Eventos</h2>
 
 <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Modelos de e-mail de confirmação</h5>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#emailTemplates" aria-expanded="false" aria-controls="emailTemplates">
+            Mostrar/ocultar <i class="bi bi-chevron-down ms-1"></i>
+        </button>
+    </div>
+    <div class="collapse" id="emailTemplates">
     <div class="card-body">
-        <h5 class="mb-3">Modelos de e-mail de confirmação</h5>
         <p class="text-muted">Após a submissão da reserva no site público, o sistema envia o e-mail com o modelo selecionado.</p>
         <form method="post" action="<?= BASE_URL ?>?controller=reservation&action=updateEmailTemplates">
             <div class="row g-3">
@@ -33,11 +39,31 @@
             </div>
         </form>
     </div>
+    </div>
 </div>
 
 <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <h5 class="mb-0">Configuração por evento</h5>
+        <?php $configurationExpanded = isset($_GET['event_filter']) || isset($_GET['event_page']); ?>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#eventConfiguration" aria-expanded="<?= $configurationExpanded ? 'true' : 'false' ?>" aria-controls="eventConfiguration">
+            Mostrar/ocultar <i class="bi bi-chevron-down ms-1"></i>
+        </button>
+    </div>
+    <div class="collapse <?= $configurationExpanded ? 'show' : '' ?>" id="eventConfiguration">
     <div class="card-body">
-        <h5 class="mb-3">Configuração por evento</h5>
+        <form method="get" action="<?= BASE_URL ?>" class="row g-2 align-items-end mb-3">
+            <input type="hidden" name="controller" value="reservation">
+            <input type="hidden" name="action" value="index">
+            <div class="col-sm-8 col-md-4">
+                <label class="form-label" for="event-filter">Mostrar eventos</label>
+                <select class="form-select" id="event-filter" name="event_filter">
+                    <option value="upcoming" <?= $eventFilter === 'upcoming' ? 'selected' : '' ?>>Futuros</option>
+                    <option value="open" <?= $eventFilter === 'open' ? 'selected' : '' ?>>Com reservas abertas</option>
+                </select>
+            </div>
+            <div class="col-sm-4"><button class="btn btn-outline-dark">Filtrar</button></div>
+        </form>
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
                 <thead>
@@ -94,47 +120,59 @@
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                    <?php if (empty($eventOverview)): ?>
+                        <tr><td colspan="7" class="text-muted py-4 text-center">Não existem eventos para este filtro.</td></tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
+        <?php if ($eventPages > 1): ?>
+            <nav class="mt-3" aria-label="Paginação da configuração por evento">
+                <ul class="pagination pagination-sm mb-0">
+                    <?php for ($page = 1; $page <= $eventPages; $page++): ?>
+                        <li class="page-item <?= $page === $eventPage ? 'active' : '' ?>">
+                            <a class="page-link" href="<?= BASE_URL ?>?controller=reservation&amp;action=index&amp;event_filter=<?= urlencode($eventFilter) ?>&amp;event_page=<?= $page ?>#eventConfiguration"><?= $page ?></a>
+                        </li>
+                    <?php endfor; ?>
+                </ul>
+            </nav>
+        <?php endif; ?>
+    </div>
     </div>
 </div>
 
-<div class="card shadow-sm mb-4" id="validacao-qr">
+<div class="card shadow-sm mb-3">
     <div class="card-body">
-        <h5 class="mb-3">Validação de QR code</h5>
-        <form method="post" action="<?= BASE_URL ?>?controller=reservation&action=validateTicket" class="row g-2 align-items-end">
-            <div class="col-md-9">
-                <label class="form-label">Token do bilhete / conteúdo do QR</label>
-                <input type="text" name="token" class="form-control" required placeholder="Cole aqui o token lido no scanner">
+        <form method="get" action="<?= BASE_URL ?>" class="row g-2 align-items-end">
+            <input type="hidden" name="controller" value="reservation">
+            <input type="hidden" name="action" value="index">
+            <div class="col-md-5">
+                <label class="form-label" for="reservation-event">Evento</label>
+                <select class="form-select" id="reservation-event" name="event_id">
+                    <option value="0">Todos os eventos</option>
+                    <?php foreach ($reservationEvents as $event): ?>
+                        <option value="<?= (int)$event['id'] ?>" <?= (int)$selectedEventId === (int)$event['id'] ? 'selected' : '' ?>><?= htmlspecialchars($event['title']) ?> — <?= htmlspecialchars($event['date']) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
             <div class="col-md-3">
-                <button class="btn btn-primary w-100">Validar agora</button>
+                <label class="form-label" for="admission-filter">Admissão</label>
+                <select class="form-select" id="admission-filter" name="admission">
+                    <option value="all" <?= $admissionFilter === 'all' ? 'selected' : '' ?>>Todas</option>
+                    <option value="pending" <?= $admissionFilter === 'pending' ? 'selected' : '' ?>>Por validar</option>
+                    <option value="validated" <?= $admissionFilter === 'validated' ? 'selected' : '' ?>>Validadas</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex flex-wrap gap-2">
+                <button class="btn btn-dark">Filtrar reservas</button>
+                <a class="btn btn-outline-success" href="<?= BASE_URL ?>?controller=reservation&amp;action=export&amp;event_id=<?= (int)$selectedEventId ?>&amp;admission=<?= urlencode($admissionFilter) ?>"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Exportar Excel</a>
             </div>
         </form>
-        <?php if (!empty($validationResult)): ?>
-            <?php if (!empty($validationResult['ok'])): ?>
-                <?php $ticket = $validationResult['ticket']; ?>
-                <div class="alert alert-success mt-3 mb-0">
-                    Bilhete válido ✅ | Evento: <strong><?= htmlspecialchars($ticket['event_title']) ?></strong> (<?= htmlspecialchars($ticket['event_date']) ?> <?= htmlspecialchars(substr((string)$ticket['event_time'], 0, 5)) ?>) |
-                    Cliente: <?= htmlspecialchars($ticket['customer_name']) ?> |
-                    Bilhete #<?= (int)$ticket['ticket_no'] ?> marcado como utilizado em <?= htmlspecialchars((string)$ticket['used_at']) ?>.
-                </div>
-            <?php else: ?>
-                <?php $ticket = $validationResult['ticket'] ?? null; ?>
-                <div class="alert alert-danger mt-3 mb-0">
-                    <?php if (($validationResult['reason'] ?? '') === 'already_used' && $ticket): ?>
-                        Este bilhete já foi utilizado em <?= htmlspecialchars((string)$ticket['used_at']) ?>.
-                    <?php elseif (($validationResult['reason'] ?? '') === 'cancelled' && $ticket): ?>
-                        Este bilhete pertence a uma reserva cancelada.
-                    <?php elseif (($validationResult['reason'] ?? '') === 'empty'): ?>
-                        Introduz um token de bilhete.
-                    <?php else: ?>
-                        Bilhete não encontrado.
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
-        <?php endif; ?>
+        <form method="post" action="<?= BASE_URL ?>?controller=reservation&amp;action=addToNewsletter" class="mt-3" onsubmit="return confirm('Adicionar à newsletter apenas os contactos deste evento que deram consentimento?');">
+            <input type="hidden" name="event_id" value="<?= (int)$selectedEventId ?>">
+            <button class="btn btn-outline-primary" <?= $selectedEventId <= 0 ? 'disabled' : '' ?>><i class="bi bi-person-plus me-1"></i>Adicionar contactos do evento à newsletter</button>
+            <small class="text-muted ms-2">Segmentação automática pela cidade do evento; só são incluídos contactos com consentimento RGPD.</small>
+        </form>
     </div>
 </div>
 
@@ -206,6 +244,9 @@
                     <td><?= htmlspecialchars($reservation['created_at']) ?></td>
                 </tr>
             <?php endforeach; ?>
+            <?php if (empty($reservations)): ?>
+                <tr><td colspan="7" class="text-muted py-4 text-center">Não existem reservas para os filtros selecionados.</td></tr>
+            <?php endif; ?>
         </tbody>
     </table>
 </div>
