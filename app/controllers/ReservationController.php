@@ -268,8 +268,65 @@ class ReservationController extends BaseController
         }
 
         $eventId = (int)($_GET['event_id'] ?? 0);
-        $tickets = (new Reservation($this->db))->ticketsOverview($eventId > 0 ? $eventId : null);
-        $this->json(['ok' => true, 'tickets' => $tickets]);
+        $model = new Reservation($this->db);
+        $tickets = $model->ticketsOverview($eventId > 0 ? $eventId : null);
+        $admitted = count(array_filter($tickets, static function (array $ticket): bool {
+            return (int)$ticket['is_used'] === 1;
+        }));
+        $this->json([
+            'ok' => true,
+            'tickets' => $tickets,
+            'summary' => [
+                'total' => count($tickets),
+                'admitted' => $admitted,
+                'pending' => count($tickets) - $admitted,
+            ],
+        ]);
+    }
+
+    public function exportAdmissions(): void
+    {
+        requireLogin();
+        if (!can('reservation')) {
+            http_response_code(403);
+            echo 'Acesso negado.';
+            return;
+        }
+
+        $eventId = (int)($_GET['event_id'] ?? 0);
+        $format = strtolower((string)($_GET['format'] ?? 'excel'));
+        $report = (new Reservation($this->db))->admissionsReport($eventId);
+        if (!$report) {
+            http_response_code(404);
+            echo 'Evento não encontrado.';
+            return;
+        }
+
+        $filename = 'admissoes-evento-' . $eventId;
+        if ($format === 'pdf') {
+            $this->downloadAdmissionsPdf($report, $filename . '.pdf');
+            return;
+        }
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '.csv"');
+        echo "\xEF\xBB\xBF";
+        $output = fopen('php://output', 'wb');
+        fputcsv($output, ['Evento', $this->spreadsheetSafe((string)$report['event']['title'])], ';');
+        fputcsv($output, ['Data', $report['event']['date'], 'Hora', substr((string)$report['event']['time'], 0, 5)], ';');
+        fputcsv($output, ['Reservados', $report['total'], 'Entraram', $report['admitted'], 'Por entrar', $report['pending']], ';');
+        fputcsv($output, [], ';');
+        fputcsv($output, ['Cliente', 'Bilhete', 'Estado', 'Validado em'], ';');
+        foreach ($report['tickets'] as $ticket) {
+            fputcsv($output, [
+                $this->spreadsheetSafe((string)$ticket['customer_name']),
+                (int)$ticket['ticket_no'],
+                (int)$ticket['is_used'] === 1 ? 'Entrou' : 'Por entrar',
+                (string)($ticket['used_at'] ?? ''),
+            ], ';');
+        }
+        fclose($output);
+        exit;
     }
 
     public function markTicketPending(): void
@@ -288,6 +345,28 @@ class ReservationController extends BaseController
     {
         return strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest'
             || strpos((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json') !== false;
+    }
+
+    private function spreadsheetSafe(string $value): string
+    {
+        return preg_match('/^[=+\-@]/', $value) ? "'" . $value : $value;
+    }
+
+    private function downloadAdmissionsPdf(array $report, string $filename): void
+    {
+        $settings = new SiteSetting($this->db);
+        $contacts = [
+            'website' => $settings->get('reservation_report_website', 'https://chorarderir.com'),
+            'instagram' => $settings->get('reservation_report_instagram', 'https://instagram.com/chorarderir'),
+            'email' => $settings->get('reservation_report_email', 'info@chorarderir.com'),
+        ];
+        $pdf = AdmissionsPdfReport::render($report, $contacts);
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($pdf));
+        echo $pdf;
+        exit;
     }
 
     private function json(array $payload, int $status = 200): void

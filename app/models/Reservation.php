@@ -76,9 +76,15 @@ class Reservation
     public function admissionsEventOverview(): array
     {
         $sql = "SELECT e.id, e.title, e.date, e.time,
-                       COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets
+                       COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets,
+                       COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN COALESCE(t.used_tickets, 0) ELSE 0 END), 0) AS admitted_tickets
                 FROM events e
                 JOIN event_reservations r ON r.event_id = e.id AND r.status != 'cancelled'
+                LEFT JOIN (
+                    SELECT reservation_id, SUM(CASE WHEN is_used = 1 THEN 1 ELSE 0 END) AS used_tickets
+                    FROM event_reservation_tickets
+                    GROUP BY reservation_id
+                ) t ON t.reservation_id = r.id
                 WHERE e.reservations_open = 1
                 GROUP BY e.id
                 HAVING active_tickets > 0
@@ -214,8 +220,10 @@ class Reservation
                 JOIN events e ON e.id = t.event_id';
         $params = [];
 
+        $sql .= " WHERE r.status != 'cancelled'";
+
         if ($eventId !== null && $eventId > 0) {
-            $sql .= ' WHERE t.event_id = :event_id';
+            $sql .= ' AND t.event_id = :event_id';
             $params['event_id'] = $eventId;
         }
 
@@ -223,6 +231,41 @@ class Reservation
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    public function admissionsReport(int $eventId): ?array
+    {
+        $eventStmt = $this->db->prepare('SELECT id, title, date, time, location FROM events WHERE id = :id LIMIT 1');
+        $eventStmt->execute(['id' => $eventId]);
+        $event = $eventStmt->fetch();
+        if (!$event) {
+            return null;
+        }
+
+        $tickets = $this->ticketsOverview($eventId);
+        $attendeeStmt = $this->db->prepare("SELECT r.id, r.customer_name, r.customer_email, r.customer_phone,
+                   r.tickets, r.created_at,
+                   COALESCE(SUM(CASE WHEN t.is_used = 1 THEN 1 ELSE 0 END), 0) AS admitted_tickets
+            FROM event_reservations r
+            LEFT JOIN event_reservation_tickets t ON t.reservation_id = r.id
+            WHERE r.event_id = :event_id AND r.status != 'cancelled'
+            GROUP BY r.id
+            ORDER BY r.customer_name ASC, r.id ASC");
+        $attendeeStmt->execute(['event_id' => $eventId]);
+        $attendees = $attendeeStmt->fetchAll();
+        $admitted = 0;
+        foreach ($tickets as $ticket) {
+            $admitted += (int)$ticket['is_used'] === 1 ? 1 : 0;
+        }
+
+        return [
+            'event' => $event,
+            'tickets' => $tickets,
+            'attendees' => $attendees,
+            'total' => count($tickets),
+            'admitted' => $admitted,
+            'pending' => count($tickets) - $admitted,
+        ];
     }
 
     public function markTicketPending(int $ticketId): bool
