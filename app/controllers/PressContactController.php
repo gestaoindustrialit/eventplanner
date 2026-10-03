@@ -129,7 +129,7 @@ class PressContactController extends BaseController
         $district = trim((string)($_GET['district'] ?? ''));
         $locality = trim((string)($_GET['locality'] ?? ''));
 
-        $eventModel = new Event($this->db);
+        $eventModel = new EventModel($this->db);
         $events = $eventModel->all(date('Y-m-d'));
         $event = $eventId > 0 ? $eventModel->find($eventId) : null;
 

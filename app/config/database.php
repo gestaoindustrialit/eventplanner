@@ -318,8 +318,11 @@ class Database
                 FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
             )'
         );
-        $db->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_user_admission_event ON user_admission_access(user_id, event_id) WHERE event_id IS NOT NULL');
-        $db->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_user_admission_group ON user_admission_access(user_id, event_group) WHERE event_group IS NOT NULL');
+        // SQLite already permits multiple NULL values in a UNIQUE index. Avoid
+        // partial-index WHERE clauses so this migration also works with the
+        // older SQLite versions still supplied by some shared hosts.
+        $db->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_user_admission_event ON user_admission_access(user_id, event_id)');
+        $db->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_user_admission_group ON user_admission_access(user_id, event_group)');
 
         if ($this->tableExists($db, 'event_reservations')) {
             $reservationColumns = array_column($db->query('PRAGMA table_info(event_reservations)')->fetchAll(), 'name');

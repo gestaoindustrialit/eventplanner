@@ -1,6 +1,9 @@
 <?php
 
-class Event
+// "Event" is also the name of a class provided by the optional PECL event
+// extension. Keep the application model name specific so the application can
+// run on hosts where that extension is enabled.
+class EventModel
 {
     /** @var PDO */
     private $db;

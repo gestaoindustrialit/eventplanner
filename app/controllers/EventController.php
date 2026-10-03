@@ -5,7 +5,7 @@ class EventController extends BaseController
     public function index(): void
     {
         requireAdmin();
-        $events = (new Event($this->db))->all();
+        $events = (new EventModel($this->db))->all();
         $this->render('events/index', compact('events'));
     }
 
@@ -20,7 +20,7 @@ class EventController extends BaseController
     public function store(): void
     {
         requireAdmin();
-        $eventModel = new Event($this->db);
+        $eventModel = new EventModel($this->db);
         $eventModel->create($this->validatedData(), $this->lineupData());
         flash('success', 'Evento criado com sucesso.');
         $this->redirect(BASE_URL . '?controller=event&action=index');
@@ -30,7 +30,7 @@ class EventController extends BaseController
     {
         requireAdmin();
         $id = (int)($_GET['id'] ?? 0);
-        $eventModel = new Event($this->db);
+        $eventModel = new EventModel($this->db);
         $event = $eventModel->find($id);
         $lineup = $eventModel->lineup($id);
         $clients = (new Client($this->db))->all();
@@ -43,7 +43,7 @@ class EventController extends BaseController
     {
         requireAdmin();
         $id = (int)($_GET['id'] ?? 0);
-        $eventModel = new Event($this->db);
+        $eventModel = new EventModel($this->db);
         $eventModel->update($id, $this->validatedData(), $this->lineupData());
         flash('success', 'Evento atualizado.');
         $this->redirect(BASE_URL . '?controller=event&action=index');
@@ -53,7 +53,7 @@ class EventController extends BaseController
     {
         requireLogin();
         $id = (int)($_GET['id'] ?? 0);
-        $eventModel = new Event($this->db);
+        $eventModel = new EventModel($this->db);
         $event = $eventModel->find($id);
         $lineup = $eventModel->lineup($id);
 
@@ -63,7 +63,7 @@ class EventController extends BaseController
     public function openSchedule(): void
     {
         requireAdmin();
-        $events = (new Event($this->db))->openEvents();
+        $events = (new EventModel($this->db))->openEvents();
         $this->render('events/open_schedule', compact('events'));
     }
 
@@ -71,7 +71,7 @@ class EventController extends BaseController
     {
         requireAdmin();
         $id = (int)($_GET['id'] ?? 0);
-        $eventModel = new Event($this->db);
+        $eventModel = new EventModel($this->db);
         $event = $eventModel->find($id);
         $scheduleItems = $eventModel->scheduleItems($id);
         $lineup = $eventModel->lineup($id);
@@ -88,7 +88,7 @@ class EventController extends BaseController
     {
         requireAdmin();
         $id = (int)($_GET['id'] ?? 0);
-        $eventModel = new Event($this->db);
+        $eventModel = new EventModel($this->db);
 
         if (!$eventModel->find($id)) {
             flash('error', 'Evento não encontrado.');
@@ -104,7 +104,7 @@ class EventController extends BaseController
     {
         requireLogin();
         $id = (int)($_GET['id'] ?? 0);
-        $eventModel = new Event($this->db);
+        $eventModel = new EventModel($this->db);
         $event = $eventModel->find($id);
         $scheduleItems = $eventModel->scheduleItems($id);
 
@@ -121,7 +121,7 @@ class EventController extends BaseController
     {
         requireAdmin();
         $id = (int)($_GET['id'] ?? 0);
-        (new Event($this->db))->delete($id);
+        (new EventModel($this->db))->delete($id);
         flash('success', 'Evento eliminado.');
         $this->redirect(BASE_URL . '?controller=event&action=index');
     }
@@ -137,7 +137,7 @@ class EventController extends BaseController
         $id = (int)($_GET['id'] ?? 0);
         $isVisible = isset($_POST['is_visible']) && (int)$_POST['is_visible'] === 1;
 
-        (new Event($this->db))->setVisibility($id, $isVisible);
+        (new EventModel($this->db))->setVisibility($id, $isVisible);
         flash('success', $isVisible ? 'Evento visível no site público.' : 'Evento ocultado do site público.');
         $this->redirect(BASE_URL . '?controller=event&action=index');
     }
@@ -154,7 +154,7 @@ class EventController extends BaseController
             $this->redirect(BASE_URL . '?controller=event&action=index');
         }
 
-        $eventModel = new Event($this->db);
+        $eventModel = new EventModel($this->db);
         $newEventId = $eventModel->duplicate($id, $newDate);
 
         if (!$newEventId) {

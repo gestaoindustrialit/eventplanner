@@ -18,7 +18,7 @@ class UserController extends BaseController
 
     private function renderForm(?array $profile): void
     {
-        $events=(new Event($this->db))->all();
+        $events=(new EventModel($this->db))->all();
         $groups=[];
         foreach ($events as $event) {
             $group=trim((string)($event['admission_group']??''));
