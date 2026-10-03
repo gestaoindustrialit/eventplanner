@@ -268,7 +268,7 @@ class Reservation
 
     public function admissionsReport(int $eventId): ?array
     {
-        $eventStmt = $this->db->prepare('SELECT id, title, date, time FROM events WHERE id = :id LIMIT 1');
+        $eventStmt = $this->db->prepare('SELECT id, title, date, time, location FROM events WHERE id = :id LIMIT 1');
         $eventStmt->execute(['id' => $eventId]);
         $event = $eventStmt->fetch();
         if (!$event) {
@@ -276,6 +276,16 @@ class Reservation
         }
 
         $tickets = $this->ticketsOverview($eventId);
+        $attendeeStmt = $this->db->prepare("SELECT r.id, r.customer_name, r.customer_email, r.customer_phone,
+                   r.tickets, r.created_at,
+                   COALESCE(SUM(CASE WHEN t.is_used = 1 THEN 1 ELSE 0 END), 0) AS admitted_tickets
+            FROM event_reservations r
+            LEFT JOIN event_reservation_tickets t ON t.reservation_id = r.id
+            WHERE r.event_id = :event_id AND r.status != 'cancelled'
+            GROUP BY r.id
+            ORDER BY r.customer_name ASC, r.id ASC");
+        $attendeeStmt->execute(['event_id' => $eventId]);
+        $attendees = $attendeeStmt->fetchAll();
         $admitted = 0;
         foreach ($tickets as $ticket) {
             $admitted += (int)$ticket['is_used'] === 1 ? 1 : 0;
@@ -284,6 +294,7 @@ class Reservation
         return [
             'event' => $event,
             'tickets' => $tickets,
+            'attendees' => $attendees,
             'total' => count($tickets),
             'admitted' => $admitted,
             'pending' => count($tickets) - $admitted,

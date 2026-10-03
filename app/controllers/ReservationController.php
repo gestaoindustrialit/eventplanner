@@ -439,53 +439,13 @@ class ReservationController extends BaseController
 
     private function downloadAdmissionsPdf(array $report, string $filename): void
     {
-        $event = $report['event'];
-        $lines = [
-            'RELATORIO DE ADMISSOES',
-            (string)$event['title'],
-            'Data: ' . $event['date'] . ' ' . substr((string)$event['time'], 0, 5),
-            'Reservados: ' . $report['total'] . ' | Entraram: ' . $report['admitted'] . ' | Por entrar: ' . $report['pending'],
-            '',
-            'Cliente | Bilhete | Estado | Validado em',
+        $settings = new SiteSetting($this->db);
+        $contacts = [
+            'website' => $settings->get('reservation_report_website', 'https://chorarderir.com'),
+            'instagram' => $settings->get('reservation_report_instagram', 'https://instagram.com/chorarderir'),
+            'email' => $settings->get('reservation_report_email', 'info@chorarderir.com'),
         ];
-        foreach ($report['tickets'] as $ticket) {
-            $lines[] = $ticket['customer_name'] . ' | #' . $ticket['ticket_no'] . ' | '
-                . ((int)$ticket['is_used'] === 1 ? 'Entrou' : 'Por entrar') . ' | ' . ($ticket['used_at'] ?? '');
-        }
-
-        $pages = array_chunk($lines, 43);
-        $objects = [1 => '<< /Type /Catalog /Pages 2 0 R >>', 3 => '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
-        $pageRefs = [];
-        foreach ($pages as $index => $pageLines) {
-            $pageObject = 4 + ($index * 2);
-            $contentObject = $pageObject + 1;
-            $pageRefs[] = $pageObject . ' 0 R';
-            $stream = "BT\n/F1 11 Tf\n50 790 Td\n14 TL\n";
-            foreach ($pageLines as $line) {
-                $encoded = iconv('UTF-8', 'Windows-1252//TRANSLIT', (string)$line);
-                $encoded = substr($encoded ?: '', 0, 105);
-                $encoded = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $encoded);
-                $stream .= '(' . $encoded . ") Tj\nT*\n";
-            }
-            $stream .= "ET\n";
-            $objects[$pageObject] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ' . $contentObject . ' 0 R >>';
-            $objects[$contentObject] = "<< /Length " . strlen($stream) . ">>\nstream\n" . $stream . 'endstream';
-        }
-        $objects[2] = '<< /Type /Pages /Kids [' . implode(' ', $pageRefs) . '] /Count ' . count($pageRefs) . ' >>';
-        ksort($objects);
-
-        $pdf = "%PDF-1.4\n";
-        $offsets = [0];
-        foreach ($objects as $number => $object) {
-            $offsets[$number] = strlen($pdf);
-            $pdf .= $number . " 0 obj\n" . $object . "\nendobj\n";
-        }
-        $xref = strlen($pdf);
-        $pdf .= 'xref' . "\n0 " . (count($objects) + 1) . "\n0000000000 65535 f \n";
-        for ($i = 1; $i <= count($objects); $i++) {
-            $pdf .= sprintf("%010d 00000 n \n", $offsets[$i]);
-        }
-        $pdf .= 'trailer << /Size ' . (count($objects) + 1) . ' /Root 1 0 R >>' . "\nstartxref\n" . $xref . "\n%%EOF";
+        $pdf = AdmissionsPdfReport::render($report, $contacts);
 
         header('Content-Type: application/pdf');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
