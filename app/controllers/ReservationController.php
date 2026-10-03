@@ -5,13 +5,12 @@ class ReservationController extends BaseController
     public function eventos(): void
     {
         requireLogin();
-        if (!can('reservation')) {
-            http_response_code(403);
-            echo 'Acesso negado.';
-            return;
-        }
+        $this->requireAdmissionAccess();
+        header('X-Robots-Tag: noindex, nofollow, noarchive');
+        header('Cache-Control: private, no-store, max-age=0');
         $reservationModel = new Reservation($this->db);
-        $eventOverview = $reservationModel->admissionsEventOverview();
+        $accessUserId = isAdmin() ? null : (int)(currentUser()['id'] ?? 0);
+        $eventOverview = $reservationModel->admissionsEventOverview($accessUserId);
         $selectedEventId = (int)($_GET['event_id'] ?? 0);
         $availableEventIds = array_map('intval', array_column($eventOverview, 'id'));
         if ($selectedEventId <= 0 || !in_array($selectedEventId, $availableEventIds, true)) {
@@ -29,7 +28,7 @@ class ReservationController extends BaseController
         }
         $validationResult = $_SESSION['reservation_validation_result'] ?? null;
         unset($_SESSION['reservation_validation_result']);
-        $ticketsOverview = $reservationModel->ticketsOverview($selectedEventId > 0 ? $selectedEventId : null);
+        $ticketsOverview = $reservationModel->ticketsOverview($selectedEventId > 0 ? $selectedEventId : null, $accessUserId);
         $this->render('reservations/eventos', compact('eventOverview', 'validationResult', 'ticketsOverview', 'selectedEventId'));
     }
 
@@ -237,12 +236,14 @@ class ReservationController extends BaseController
     public function validateTicket(): void
     {
         requireLogin();
+        $this->requireAdmissionAccess($this->wantsJson());
         $token = trim((string)($_REQUEST['token'] ?? ''));
         $eventId = (int)($_REQUEST['event_id'] ?? 0);
         $result = (new Reservation($this->db))->validateTicket(
             $token,
             (int)(currentUser()['id'] ?? 0),
-            $eventId > 0 ? $eventId : null
+            $eventId > 0 ? $eventId : null,
+            isAdmin()
         );
         if ($this->wantsJson()) {
             $this->json($result);
@@ -263,24 +264,22 @@ class ReservationController extends BaseController
     public function admissionsData(): void
     {
         requireLogin();
-        if (!can('reservation')) {
-            $this->json(['ok' => false, 'reason' => 'forbidden'], 403);
-        }
+        $this->requireAdmissionAccess(true);
 
         $eventId = (int)($_GET['event_id'] ?? 0);
-        $tickets = (new Reservation($this->db))->ticketsOverview($eventId > 0 ? $eventId : null);
+        $accessUserId = isAdmin() ? null : (int)(currentUser()['id'] ?? 0);
+        $tickets = (new Reservation($this->db))->ticketsOverview($eventId > 0 ? $eventId : null, $accessUserId);
         $this->json(['ok' => true, 'tickets' => $tickets]);
     }
 
     public function markTicketPending(): void
     {
         requireLogin();
-        if (!can('reservation')) {
-            $this->json(['ok' => false, 'reason' => 'forbidden'], 403);
-        }
+        $this->requireAdmissionAccess(true);
 
         $ticketId = (int)($_POST['ticket_id'] ?? 0);
-        $ok = $ticketId > 0 && (new Reservation($this->db))->markTicketPending($ticketId);
+        $accessUserId = isAdmin() ? null : (int)(currentUser()['id'] ?? 0);
+        $ok = $ticketId > 0 && (new Reservation($this->db))->markTicketPending($ticketId, $accessUserId);
         $this->json(['ok' => $ok], $ok ? 200 : 404);
     }
 
@@ -288,6 +287,25 @@ class ReservationController extends BaseController
     {
         return strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest'
             || strpos((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json') !== false;
+    }
+
+    private function requireAdmissionAccess(bool $json = false): void
+    {
+        if (isAdmin()) {
+            return;
+        }
+
+        $userId = (int)(currentUser()['id'] ?? 0);
+        if ($userId > 0 && (new User($this->db))->hasAdmissionAccess($userId)) {
+            return;
+        }
+
+        if ($json) {
+            $this->json(['ok' => false, 'reason' => 'not_found'], 404);
+        }
+        http_response_code(404);
+        echo 'Página não encontrada.';
+        exit;
     }
 
     private function json(array $payload, int $status = 200): void

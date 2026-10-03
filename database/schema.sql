@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS checklist_template_fields;
 DROP TABLE IF EXISTS checklist_templates;
 DROP TABLE IF EXISTS event_reservation_tickets;
 DROP TABLE IF EXISTS event_reservations;
+DROP TABLE IF EXISTS user_admission_access;
 DROP TABLE IF EXISTS events;
 DROP TABLE IF EXISTS comedians;
 DROP TABLE IF EXISTS clients;
@@ -70,6 +71,7 @@ CREATE TABLE events (
   is_visible INTEGER NOT NULL DEFAULT 1,
   reservations_open INTEGER NOT NULL DEFAULT 1,
   reservation_capacity INTEGER NOT NULL DEFAULT 0,
+  admission_group TEXT DEFAULT NULL,
   cachet_total NUMERIC DEFAULT 0,
   artist_map_link TEXT DEFAULT NULL,
   artist_details TEXT DEFAULT NULL,
@@ -79,6 +81,20 @@ CREATE TABLE events (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT
 );
+
+CREATE TABLE user_admission_access (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  event_id INTEGER DEFAULT NULL,
+  event_group TEXT DEFAULT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  CHECK (event_id IS NOT NULL OR event_group IS NOT NULL),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX idx_user_admission_event ON user_admission_access(user_id, event_id) WHERE event_id IS NOT NULL;
+CREATE UNIQUE INDEX idx_user_admission_group ON user_admission_access(user_id, event_group) WHERE event_group IS NOT NULL;
 
 CREATE TABLE event_comedians (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

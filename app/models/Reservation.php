@@ -73,18 +73,30 @@ class Reservation
         return $stmt->fetchAll();
     }
 
-    public function admissionsEventOverview(): array
+    public function admissionsEventOverview(?int $userId = null): array
     {
         $sql = "SELECT e.id, e.title, e.date, e.time,
                        COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets
                 FROM events e
                 JOIN event_reservations r ON r.event_id = e.id AND r.status != 'cancelled'
-                WHERE e.reservations_open = 1
+                WHERE e.reservations_open = 1";
+        $params = [];
+        if ($userId !== null) {
+            $sql .= " AND EXISTS (
+                SELECT 1 FROM user_admission_access access
+                WHERE access.user_id = :user_id
+                  AND (access.event_id = e.id OR (access.event_group IS NOT NULL AND access.event_group = e.admission_group))
+            )";
+            $params['user_id'] = $userId;
+        }
+        $sql .= "
                 GROUP BY e.id
                 HAVING active_tickets > 0
                 ORDER BY e.date ASC, e.time ASC";
 
-        return $this->db->query($sql)->fetchAll();
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
     }
 
     public function updateEventAvailability(int $eventId, bool $open, int $capacity): void
@@ -156,7 +168,7 @@ class Reservation
         return $stmt->fetchAll();
     }
 
-    public function validateTicket(string $token, int $validatorUserId, ?int $expectedEventId = null): array
+    public function validateTicket(string $token, int $validatorUserId, ?int $expectedEventId = null, bool $hasAllEvents = false): array
     {
         $token = $this->extractToken($token);
         if ($token === '') {
@@ -174,6 +186,9 @@ class Reservation
 
         if (!$ticket) {
             return ['ok' => false, 'reason' => 'not_found'];
+        }
+        if (!$hasAllEvents && !$this->userCanAccessEvent($validatorUserId, (int)$ticket['event_id'])) {
+            return ['ok' => false, 'reason' => 'forbidden'];
         }
         if ($expectedEventId !== null && $expectedEventId > 0 && (int)$ticket['event_id'] !== $expectedEventId) {
             return ['ok' => false, 'reason' => 'wrong_event', 'ticket' => $ticket];
@@ -205,7 +220,7 @@ class Reservation
     }
 
 
-    public function ticketsOverview(?int $eventId = null): array
+    public function ticketsOverview(?int $eventId = null, ?int $userId = null): array
     {
         $sql = 'SELECT t.id, t.event_id, t.reservation_id, t.ticket_no, t.ticket_token, t.is_used, t.used_at,
                        r.customer_name, r.status AS reservation_status, r.admission_status, e.title AS event_title
@@ -214,9 +229,17 @@ class Reservation
                 JOIN events e ON e.id = t.event_id';
         $params = [];
 
+        $conditions = [];
         if ($eventId !== null && $eventId > 0) {
-            $sql .= ' WHERE t.event_id = :event_id';
+            $conditions[] = 't.event_id = :event_id';
             $params['event_id'] = $eventId;
+        }
+        if ($userId !== null) {
+            $conditions[] = 'EXISTS (SELECT 1 FROM user_admission_access access WHERE access.user_id = :user_id AND (access.event_id = e.id OR (access.event_group IS NOT NULL AND access.event_group = e.admission_group)))';
+            $params['user_id'] = $userId;
+        }
+        if ($conditions) {
+            $sql .= ' WHERE ' . implode(' AND ', $conditions);
         }
 
         $sql .= ' ORDER BY e.date DESC, e.time DESC, t.ticket_no ASC, t.id ASC';
@@ -225,10 +248,17 @@ class Reservation
         return $stmt->fetchAll();
     }
 
-    public function markTicketPending(int $ticketId): bool
+    public function markTicketPending(int $ticketId, ?int $userId = null): bool
     {
-        $stmt = $this->db->prepare('SELECT reservation_id FROM event_reservation_tickets WHERE id = :id LIMIT 1');
-        $stmt->execute(['id' => $ticketId]);
+        $sql = 'SELECT t.reservation_id FROM event_reservation_tickets t JOIN events e ON e.id = t.event_id WHERE t.id = :id';
+        $params = ['id' => $ticketId];
+        if ($userId !== null) {
+            $sql .= ' AND EXISTS (SELECT 1 FROM user_admission_access access WHERE access.user_id = :user_id AND (access.event_id = e.id OR (access.event_group IS NOT NULL AND access.event_group = e.admission_group)))';
+            $params['user_id'] = $userId;
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         $ticket = $stmt->fetch();
         if (!$ticket) {
             return false;
@@ -246,6 +276,13 @@ class Reservation
             $this->db->rollBack();
             throw $e;
         }
+    }
+
+    public function userCanAccessEvent(int $userId, int $eventId): bool
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM events e WHERE e.id = :event_id AND EXISTS (SELECT 1 FROM user_admission_access access WHERE access.user_id = :user_id AND (access.event_id = e.id OR (access.event_group IS NOT NULL AND access.event_group = e.admission_group))) LIMIT 1');
+        $stmt->execute(['event_id' => $eventId, 'user_id' => $userId]);
+        return (bool)$stmt->fetchColumn();
     }
 
     public function pendingCount(): int

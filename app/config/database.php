@@ -296,7 +296,25 @@ class Database
             if (!in_array('reservation_capacity', $eventColumns, true)) {
                 $db->exec('ALTER TABLE events ADD COLUMN reservation_capacity INTEGER NOT NULL DEFAULT 0');
             }
+            if (!in_array('admission_group', $eventColumns, true)) {
+                $db->exec('ALTER TABLE events ADD COLUMN admission_group TEXT DEFAULT NULL');
+            }
         }
+
+        $db->exec(
+            'CREATE TABLE IF NOT EXISTS user_admission_access (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                event_id INTEGER DEFAULT NULL,
+                event_group TEXT DEFAULT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                CHECK (event_id IS NOT NULL OR event_group IS NOT NULL),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+            )'
+        );
+        $db->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_user_admission_event ON user_admission_access(user_id, event_id) WHERE event_id IS NOT NULL');
+        $db->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_user_admission_group ON user_admission_access(user_id, event_group) WHERE event_group IS NOT NULL');
 
         if ($this->tableExists($db, 'event_reservations')) {
             $reservationColumns = array_column($db->query('PRAGMA table_info(event_reservations)')->fetchAll(), 'name');
