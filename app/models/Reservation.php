@@ -34,13 +34,25 @@ class Reservation
         return $reservationId;
     }
 
-    public function all(): array
+    public function all(?int $eventId = null, ?string $admissionStatus = null): array
     {
-        $stmt = $this->db->query('SELECT r.*, e.title as event_title, e.date as event_date, e.time as event_time, e.poster_url as event_poster_url, COALESCE(t.total_tickets, 0) as generated_tickets, COALESCE(t.used_tickets, 0) as used_tickets FROM event_reservations r JOIN events e ON e.id = r.event_id LEFT JOIN (
+        $sql = 'SELECT r.*, e.title as event_title, e.date as event_date, e.time as event_time, e.location as event_location, e.poster_url as event_poster_url, COALESCE(t.total_tickets, 0) as generated_tickets, COALESCE(t.used_tickets, 0) as used_tickets FROM event_reservations r JOIN events e ON e.id = r.event_id LEFT JOIN (
             SELECT reservation_id, COUNT(*) as total_tickets, SUM(CASE WHEN is_used = 1 THEN 1 ELSE 0 END) as used_tickets
             FROM event_reservation_tickets
             GROUP BY reservation_id
-        ) t ON t.reservation_id = r.id ORDER BY r.created_at DESC, r.id DESC');
+        ) t ON t.reservation_id = r.id WHERE 1=1';
+        $params = [];
+        if ($eventId !== null && $eventId > 0) {
+            $sql .= ' AND r.event_id = :event_id';
+            $params['event_id'] = $eventId;
+        }
+        if (in_array($admissionStatus, ['pending', 'validated'], true)) {
+            $sql .= ' AND r.admission_status = :admission_status';
+            $params['admission_status'] = $admissionStatus;
+        }
+        $sql .= ' ORDER BY r.created_at DESC, r.id DESC';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 
@@ -52,7 +64,7 @@ class Reservation
         return $row ?: null;
     }
 
-    public function eventOverview(): array
+    public function eventOverview(string $filter = 'upcoming', int $limit = 10, int $offset = 0): array
     {
         $sql = "SELECT
                     e.id,
@@ -65,18 +77,29 @@ class Reservation
                     COALESCE(SUM(CASE WHEN r.status = 'confirmed' THEN r.tickets ELSE 0 END), 0) AS confirmed_tickets,
                     COALESCE(SUM(CASE WHEN r.status = 'new' THEN r.tickets ELSE 0 END), 0) AS new_tickets
                 FROM events e
-                LEFT JOIN event_reservations r ON r.event_id = e.id
+                LEFT JOIN event_reservations r ON r.event_id = e.id";
+        if ($filter === 'open') {
+            $sql .= " WHERE e.reservations_open = 1";
+        } else {
+            $sql .= " WHERE e.date >= date('now')";
+        }
+        $sql .= "
                 GROUP BY e.id
-                ORDER BY e.date ASC, e.time ASC";
+                ORDER BY e.date ASC, e.time ASC
+                LIMIT :limit OFFSET :offset";
 
-        $stmt = $this->db->query($sql);
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':limit', max(1, $limit), PDO::PARAM_INT);
+        $stmt->bindValue(':offset', max(0, $offset), PDO::PARAM_INT);
+        $stmt->execute();
         return $stmt->fetchAll();
     }
 
     public function admissionsEventOverview(?int $userId = null): array
     {
         $sql = "SELECT e.id, e.title, e.date, e.time,
-                       COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets
+                       COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets,
+                       COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN COALESCE(t.used_tickets, 0) ELSE 0 END), 0) AS admitted_tickets
                 FROM events e
                 JOIN event_reservations r ON r.event_id = e.id AND r.status != 'cancelled'
                 WHERE e.reservations_open = 1";

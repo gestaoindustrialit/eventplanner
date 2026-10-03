@@ -89,12 +89,17 @@ class Database
                 gdpr_consent INTEGER NOT NULL DEFAULT 0,
                 consent_text TEXT NOT NULL DEFAULT \'\',
                 source TEXT DEFAULT NULL,
+                segment TEXT DEFAULT NULL,
                 status TEXT NOT NULL DEFAULT \'active\' CHECK (status IN (\'active\', \'unsubscribed\')),
                 subscribed_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 unsubscribed_at TEXT DEFAULT NULL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )'
         );
+        $newsletterColumns = array_column($db->query('PRAGMA table_info(newsletter_subscriptions)')->fetchAll(), 'name');
+        if (!in_array('segment', $newsletterColumns, true)) {
+            $db->exec('ALTER TABLE newsletter_subscriptions ADD COLUMN segment TEXT DEFAULT NULL');
+        }
 
         $db->exec(
             'CREATE TABLE IF NOT EXISTS site_settings (

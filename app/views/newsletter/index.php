@@ -8,6 +8,7 @@
                 <th>Email</th>
                 <th>Nome</th>
                 <th>Estado</th>
+                <th>Segmento</th>
                 <th>Consentimento</th>
                 <th>Data</th>
                 <th>Ações</th>
@@ -25,6 +26,7 @@
                             <span class="badge bg-secondary">Cancelada</span>
                         <?php endif; ?>
                     </td>
+                    <td><?= htmlspecialchars($subscription['segment'] ?: '—') ?></td>
                     <td>
                         <small class="d-block"><?= (int)$subscription['gdpr_consent'] === 1 ? 'Sim' : 'Não' ?></small>
                         <small class="text-muted"><?= htmlspecialchars($subscription['consent_text']) ?></small>
@@ -45,7 +47,7 @@
 
             <?php if (count($subscriptions) === 0): ?>
                 <tr>
-                    <td colspan="6" class="text-muted">Ainda não existem subscrições de newsletter.</td>
+                    <td colspan="7" class="text-muted">Ainda não existem subscrições de newsletter.</td>
                 </tr>
             <?php endif; ?>
         </tbody>

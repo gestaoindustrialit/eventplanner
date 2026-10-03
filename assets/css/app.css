@@ -182,6 +182,12 @@ body {
 }
 
 .admissions-page { max-width: 1280px; margin: 0 auto; }
+.admissions-summary .card-body { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; }
+.admissions-summary-copy { flex: 1; min-width: 0; }
+.admissions-summary-value { margin: .15rem 0; font-size: clamp(1.2rem, 2.5vw, 1.65rem); }
+.admissions-summary-value > strong { color: #198754; font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1; }
+.admissions-summary .progress { max-width: 620px; height: .7rem; margin-bottom: .35rem; }
+.admissions-export-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
 .admissions-grid { display: grid; grid-template-columns: minmax(320px, .9fr) minmax(380px, 1.1fr); gap: 1rem; align-items: start; }
 .admissions-scanner-card, .admissions-list-card { overflow: hidden; }
 .admissions-camera { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 1rem; background: #101010; }
@@ -200,6 +206,8 @@ body {
     .admissions-hero h1 { font-size: 1.75rem; }
     .admissions-live { white-space: nowrap; font-size: .75rem; }
     .admissions-grid { grid-template-columns: 1fr; }
+    .admissions-summary .card-body { align-items: stretch; flex-direction: column; }
+    .admissions-export-actions .btn { flex: 1; }
     .admissions-camera { aspect-ratio: 1 / 1; max-height: 54vh; }
     .admissions-ticket-list { max-height: none; }
     .admissions-ticket { padding: .75rem; }

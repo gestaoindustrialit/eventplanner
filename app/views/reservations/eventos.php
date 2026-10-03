@@ -14,6 +14,34 @@
     <?php if (empty($eventOverview)): ?>
         <div class="alert alert-info">Não existem eventos com reservas disponíveis para este utilizador.</div>
     <?php else: ?>
+        <?php
+            $selectedEvent = null;
+            foreach ($eventOverview as $event) {
+                if ((int)$event['id'] === (int)$selectedEventId) {
+                    $selectedEvent = $event;
+                    break;
+                }
+            }
+            $initialTotal = (int)($selectedEvent['active_tickets'] ?? count($ticketsOverview));
+            $initialAdmitted = (int)($selectedEvent['admitted_tickets'] ?? 0);
+            $initialPercentage = $initialTotal > 0 ? (int)round(($initialAdmitted / $initialTotal) * 100) : 0;
+        ?>
+        <section class="admissions-summary card shadow-sm mb-3" aria-label="Resumo de entradas">
+            <div class="card-body">
+                <div class="admissions-summary-copy">
+                    <span class="text-uppercase text-muted fw-semibold small">Entradas no evento</span>
+                    <div class="admissions-summary-value"><strong id="admittedCount"><?= $initialAdmitted ?></strong> <span>de <strong id="totalReservations"><?= $initialTotal ?></strong> reservas entraram</span></div>
+                    <div class="progress mt-2" role="progressbar" aria-label="Percentagem de entradas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= $initialPercentage ?>">
+                        <div id="admissionsProgress" class="progress-bar bg-success" style="width: <?= $initialPercentage ?>%"></div>
+                    </div>
+                    <small class="text-muted"><strong id="pendingCount"><?= max(0, $initialTotal - $initialAdmitted) ?></strong> ainda por entrar · <strong id="admissionsPercentage"><?= $initialPercentage ?>%</strong> validado</small>
+                </div>
+                <div class="admissions-export-actions">
+                    <a id="exportExcel" class="btn btn-outline-success" href="<?= BASE_URL ?>?controller=reservation&amp;action=exportAdmissions&amp;format=excel&amp;event_id=<?= (int)$selectedEventId ?>"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar Excel</a>
+                    <a id="exportPdf" class="btn btn-outline-danger" href="<?= BASE_URL ?>?controller=reservation&amp;action=exportAdmissions&amp;format=pdf&amp;event_id=<?= (int)$selectedEventId ?>"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</a>
+                </div>
+            </div>
+        </section>
         <div class="admissions-grid">
             <section class="card shadow-sm admissions-scanner-card">
                 <div class="card-body">
@@ -80,6 +108,8 @@
   const eventFilter = document.getElementById('eventFilter');
   const feedback = document.getElementById('validationFeedback');
   const list = document.getElementById('ticketsOverview');
+  const exportExcel = document.getElementById('exportExcel');
+  const exportPdf = document.getElementById('exportPdf');
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   let stream = null, rafId = null, submitting = false, lastPayload = '';
@@ -103,6 +133,15 @@
     }).join('');
     document.getElementById('ticketCount').textContent = `${data.tickets.length} bilhetes`;
     document.getElementById('emptyTickets').classList.toggle('d-none', data.tickets.length > 0);
+    const summary = data.summary || {total: data.tickets.length, admitted: 0, pending: data.tickets.length};
+    const percentage = summary.total > 0 ? Math.round((summary.admitted / summary.total) * 100) : 0;
+    document.getElementById('admittedCount').textContent = summary.admitted;
+    document.getElementById('totalReservations').textContent = summary.total;
+    document.getElementById('pendingCount').textContent = summary.pending;
+    document.getElementById('admissionsPercentage').textContent = `${percentage}%`;
+    const progress = document.getElementById('admissionsProgress');
+    progress.style.width = `${percentage}%`;
+    progress.closest('[role="progressbar"]').setAttribute('aria-valuenow', percentage);
   }
 
   async function validateTicket(event) {
@@ -164,7 +203,14 @@
   form.addEventListener('submit', validateTicket);
   startBtn.addEventListener('click', start);
   stopBtn.addEventListener('click', stop);
-  eventFilter.addEventListener('change', () => { history.replaceState(null, '', `${endpoint}?controller=reservation&action=eventos&event_id=${encodeURIComponent(eventFilter.value)}`); feedback.innerHTML = ''; refreshTickets(); });
+  eventFilter.addEventListener('change', () => {
+    const eventId = encodeURIComponent(eventFilter.value);
+    history.replaceState(null, '', `${endpoint}?controller=reservation&action=eventos&event_id=${eventId}`);
+    exportExcel.href = `${endpoint}?controller=reservation&action=exportAdmissions&format=excel&event_id=${eventId}`;
+    exportPdf.href = `${endpoint}?controller=reservation&action=exportAdmissions&format=pdf&event_id=${eventId}`;
+    feedback.innerHTML = '';
+    refreshTickets();
+  });
   list.addEventListener('click', async event => {
     const button = event.target.closest('.reset-ticket'); if (!button) return;
     button.disabled = true;
