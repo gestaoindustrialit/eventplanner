@@ -97,7 +97,7 @@ class Reservation
 
     public function admissionsEventOverview(?int $userId = null): array
     {
-        $sql = "SELECT e.id, e.title, e.date, e.time,
+        $sql = "SELECT e.id, e.title, e.date, e.time, e.location,
                        COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets,
                        COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN COALESCE(t.used_tickets, 0) ELSE 0 END), 0) AS admitted_tickets
                 FROM events e
@@ -252,7 +252,8 @@ class Reservation
     public function ticketsOverview(?int $eventId = null, ?int $userId = null): array
     {
         $sql = 'SELECT t.id, t.event_id, t.reservation_id, t.ticket_no, t.ticket_token, t.is_used, t.used_at,
-                       r.customer_name, r.status AS reservation_status, r.admission_status, e.title AS event_title
+                       r.customer_name, r.customer_email, r.customer_phone, r.status AS reservation_status, r.admission_status,
+                       e.title AS event_title, e.date AS event_date, e.time AS event_time, e.location AS event_location
                 FROM event_reservation_tickets t
                 JOIN event_reservations r ON r.id = t.reservation_id
                 JOIN events e ON e.id = t.event_id';

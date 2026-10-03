@@ -30,7 +30,7 @@
             <div class="card-body">
                 <div class="admissions-summary-copy">
                     <span class="text-uppercase text-muted fw-semibold small">Entradas no evento</span>
-                    <div class="admissions-summary-value"><strong id="admittedCount"><?= $initialAdmitted ?></strong> <span>de <strong id="totalReservations"><?= $initialTotal ?></strong> reservas entraram</span></div>
+                    <div class="admissions-summary-value"><strong id="admittedCount"><?= $initialAdmitted ?></strong> <span>de <strong id="totalReservations"><?= $initialTotal ?></strong> bilhetes validados</span></div>
                     <div class="progress mt-2" role="progressbar" aria-label="Percentagem de entradas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= $initialPercentage ?>">
                         <div id="admissionsProgress" class="progress-bar bg-success" style="width: <?= $initialPercentage ?>%"></div>
                     </div>
