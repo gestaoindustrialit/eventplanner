@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../helpers/SimplePdf.php';
+
 class ReservationController extends BaseController
 {
     public function eventos(): void
