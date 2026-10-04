@@ -421,6 +421,16 @@ class ReservationController extends BaseController
 
     private function exportAdmissionsPdf(array $event, array $tickets, string $filename): void
     {
+        if (!class_exists('SimplePdf', false)) {
+            $helperPath = __DIR__ . '/../helpers/SimplePdf.php';
+            if (!is_file($helperPath)) {
+                http_response_code(500);
+                echo 'Não foi possível carregar o gerador de PDF.';
+                exit;
+            }
+            require_once $helperPath;
+        }
+
         $pdf = new SimplePdf();
         $total = count($tickets);
         $admitted = $this->countAdmittedTickets($tickets);
