@@ -8,7 +8,8 @@
  */
 class SimplePdf
 {
-    private array $pages = [];
+    /** @var array<int, string> */
+    private $pages = [];
 
     public function addPage(array $commands): void
     {
