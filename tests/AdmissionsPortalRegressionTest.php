@@ -7,6 +7,21 @@ require_once __DIR__ . '/../app/controllers/ReservationController.php';
 if (!method_exists(ReservationController::class, 'exportAdmissions')) {
     throw new RuntimeException('Admissions export action is not available to the application router.');
 }
+$controllerSource = (string)file_get_contents(__DIR__ . '/../app/controllers/ReservationController.php');
+$menuSource = (string)file_get_contents(__DIR__ . '/../app/views/partials/header.php');
+$portalHeaderSource = (string)file_get_contents(__DIR__ . '/../app/views/partials/admissions_header.php');
+if (strpos($controllerSource, "'admissions'") === false) {
+    throw new RuntimeException('Admissions does not use its standalone layout.');
+}
+if (strpos($menuSource, "['Reservas','journal-check'") === false
+    || strpos($menuSource, 'target="_blank"') === false
+    || strpos($menuSource, '>Admissões ') === false) {
+    throw new RuntimeException('Reservations and admissions menu entries are not separated.');
+}
+if (strpos($portalHeaderSource, 'sidebar') !== false
+    || strpos($portalHeaderSource, 'action=logout&amp;portal=admissions') === false) {
+    throw new RuntimeException('Standalone admissions navigation is invalid.');
+}
 $path = tempnam(sys_get_temp_dir(), 'admissions-');
 try {
     $db = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
