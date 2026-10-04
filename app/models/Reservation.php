@@ -95,6 +95,22 @@ class Reservation
         return $stmt->fetchAll();
     }
 
+    public function eventOverviewCount(string $filter = 'upcoming'): int
+    {
+        $where = $filter === 'open' ? 'reservations_open = 1' : "date >= date('now')";
+        return (int)$this->db->query("SELECT COUNT(*) FROM events WHERE {$where}")->fetchColumn();
+    }
+
+    public function reservationEvents(): array
+    {
+        return $this->db->query(
+            'SELECT DISTINCT e.id, e.title, e.date, e.time
+             FROM events e
+             JOIN event_reservations r ON r.event_id = e.id
+             ORDER BY e.date DESC, e.time DESC'
+        )->fetchAll();
+    }
+
     public function admissionsEventOverview(?int $userId = null): array
     {
         $sql = "SELECT e.id, e.title, e.date, e.time, e.location,
