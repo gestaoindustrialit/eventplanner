@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../helpers/SimplePdf.php';
+
 class ReservationController extends BaseController
 {
     public function eventos(): void
@@ -361,6 +363,125 @@ class ReservationController extends BaseController
         $this->json(['ok' => true, 'tickets' => $tickets]);
     }
 
+    public function exportAdmissions(): void
+    {
+        requireLogin();
+        $this->requireAdmissionAccess();
+
+        $eventId = max(0, (int)($_GET['event_id'] ?? 0));
+        $format = strtolower((string)($_GET['format'] ?? 'pdf'));
+        $accessUserId = isAdmin() ? null : (int)(currentUser()['id'] ?? 0);
+        $model = new Reservation($this->db);
+        $events = $model->admissionsEventOverview($accessUserId);
+        $event = null;
+        foreach ($events as $candidate) {
+            if ((int)$candidate['id'] === $eventId) {
+                $event = $candidate;
+                break;
+            }
+        }
+        if (!$event) {
+            http_response_code(404);
+            echo 'Evento não encontrado ou sem acesso.';
+            exit;
+        }
+
+        $tickets = $model->ticketsOverview($eventId, $accessUserId);
+        $safeTitle = preg_replace('/[^a-z0-9]+/i', '-', iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', (string)$event['title']) ?: 'evento');
+        $filename = 'admissoes-' . trim(strtolower((string)$safeTitle), '-') . '-' . (string)$event['date'];
+        if ($format === 'excel') {
+            $this->exportAdmissionsCsv($event, $tickets, $filename);
+        }
+        if ($format !== 'pdf') {
+            http_response_code(400);
+            echo 'Formato de exportação inválido.';
+            exit;
+        }
+        $this->exportAdmissionsPdf($event, $tickets, $filename);
+    }
+
+    private function exportAdmissionsCsv(array $event, array $tickets, string $filename): void
+    {
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '.csv"');
+        $output = fopen('php://output', 'wb');
+        fwrite($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['Evento', 'Data', 'Cliente', 'Email', 'Telefone', 'Bilhete', 'Estado', 'Entrada'], ';');
+        foreach ($tickets as $ticket) {
+            fputcsv($output, [
+                $event['title'], $event['date'] . ' ' . substr((string)$event['time'], 0, 5),
+                $ticket['customer_name'], $ticket['customer_email'], $ticket['customer_phone'], '#' . $ticket['ticket_no'],
+                (int)$ticket['is_used'] === 1 ? 'Validado' : 'A validar',
+                (int)$ticket['is_used'] === 1 ? (string)$ticket['used_at'] : '',
+            ], ';');
+        }
+        fclose($output);
+        exit;
+    }
+
+    private function exportAdmissionsPdf(array $event, array $tickets, string $filename): void
+    {
+        $pdf = new SimplePdf();
+        $total = count($tickets);
+        $admitted = $this->countAdmittedTickets($tickets);
+        $chunks = array_chunk($tickets, 27);
+        if (!$chunks) {
+            $chunks = [[]];
+        }
+        $pageTotal = count($chunks);
+        foreach ($chunks as $pageIndex => $rows) {
+            $commands = [
+                SimplePdf::rectangle(0, 760, 595.28, 81.89, [0.04, 0.04, 0.05]),
+                SimplePdf::rectangle(0, 754, 595.28, 6, [0.70, 0.02, 0.04]),
+                SimplePdf::text(32, 809, 'CHORAR DE RIR', 10, true, [1, 1, 1]),
+                SimplePdf::text(32, 782, 'Relatório de admissões', 21, true, [1, 1, 1]),
+                SimplePdf::text(32, 730, SimplePdf::truncate((string)$event['title'], 72), 16, true),
+                SimplePdf::text(32, 711, 'Data: ' . $event['date'] . ' às ' . substr((string)$event['time'], 0, 5), 10),
+                SimplePdf::text(32, 697, 'Local: ' . SimplePdf::truncate((string)($event['location'] ?? '—'), 70), 9, false, [0.35, 0.35, 0.35]),
+                SimplePdf::text(312, 711, 'Emitido: ' . date('Y-m-d H:i'), 9, false, [0.35, 0.35, 0.35]),
+                SimplePdf::rectangle(32, 657, 164, 38, [0.94, 0.95, 0.96]),
+                SimplePdf::rectangle(206, 657, 164, 38, [0.90, 0.97, 0.92]),
+                SimplePdf::rectangle(380, 657, 183, 38, [0.99, 0.94, 0.94]),
+                SimplePdf::text(44, 678, 'TOTAL DE BILHETES', 7, true, [0.35, 0.35, 0.35]),
+                SimplePdf::text(44, 662, (string)$total, 13, true),
+                SimplePdf::text(218, 678, 'VALIDADOS', 7, true, [0.18, 0.45, 0.24]),
+                SimplePdf::text(218, 662, $admitted . '  (' . ($total ? (int)round($admitted * 100 / $total) : 0) . '%)', 13, true, [0.10, 0.38, 0.18]),
+                SimplePdf::text(392, 678, 'POR VALIDAR', 7, true, [0.55, 0.15, 0.16]),
+                SimplePdf::text(392, 662, (string)($total - $admitted), 13, true, [0.55, 0.10, 0.12]),
+                SimplePdf::rectangle(32, 623, 531, 22, [0.15, 0.16, 0.18]),
+                SimplePdf::text(40, 630, 'Cliente', 8, true, [1, 1, 1]),
+                SimplePdf::text(250, 630, 'Bilhete', 8, true, [1, 1, 1]),
+                SimplePdf::text(310, 630, 'Estado', 8, true, [1, 1, 1]),
+                SimplePdf::text(420, 630, 'Entrada', 8, true, [1, 1, 1]),
+            ];
+            $y = 604;
+            foreach ($rows as $index => $ticket) {
+                if ($index % 2 === 1) {
+                    $commands[] = SimplePdf::rectangle(32, $y - 6, 531, 21, [0.97, 0.97, 0.97]);
+                }
+                $isUsed = (int)$ticket['is_used'] === 1;
+                $commands[] = SimplePdf::text(40, $y, SimplePdf::truncate((string)$ticket['customer_name'], 37), 8);
+                $commands[] = SimplePdf::text(250, $y, '#' . $ticket['ticket_no'], 8, true);
+                $commands[] = SimplePdf::text(310, $y, $isUsed ? 'Validado' : 'A validar', 8, true, $isUsed ? [0.08, 0.45, 0.19] : [0.50, 0.25, 0.08]);
+                $commands[] = SimplePdf::text(420, $y, $isUsed ? substr((string)$ticket['used_at'], 0, 16) : '—', 8);
+                $y -= 21;
+            }
+            if (!$rows) {
+                $commands[] = SimplePdf::text(40, 600, 'Não existem bilhetes para apresentar.', 10, false, [0.4, 0.4, 0.4]);
+            }
+            $commands[] = SimplePdf::text(32, 25, 'chorarderir.com  |  Relatório confidencial', 8, false, [0.45, 0.45, 0.45]);
+            $commands[] = SimplePdf::text(515, 25, ($pageIndex + 1) . ' / ' . $pageTotal, 8, false, [0.45, 0.45, 0.45]);
+            $pdf->addPage($commands);
+        }
+
+        $content = $pdf->render();
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . $filename . '.pdf"');
+        header('Content-Length: ' . strlen($content));
+        echo $content;
+        exit;
+    }
+
     public function markTicketPending(): void
     {
         requireLogin();
@@ -371,6 +492,17 @@ class ReservationController extends BaseController
         $reservationModel = new Reservation($this->db);
         $ok = $ticketId > 0 && $reservationModel->markTicketPending($ticketId, $accessUserId);
         $this->json(['ok' => $ok], $ok ? 200 : 404);
+    }
+
+    private function countAdmittedTickets(array $tickets): int
+    {
+        $admitted = 0;
+        foreach ($tickets as $ticket) {
+            if ((int)($ticket['is_used'] ?? 0) === 1) {
+                $admitted++;
+            }
+        }
+        return $admitted;
     }
 
     private function wantsJson(): bool
