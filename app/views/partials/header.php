@@ -29,7 +29,7 @@ $isActiveLink = static function (string $controller, ?string $action = null) use
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<?= BASE_PATH ?>/assets/css/app.css">
 </head>
-<body>
+<body class="<?= isLoggedIn() ? 'is-authenticated' : 'is-guest' ?>">
 <?php
 $items = [
  'dashboard'=>['Dashboard','speedometer2',BASE_URL], 'comedian'=>['Comediantes','mic',BASE_URL.'?controller=comedian&action=index'],
@@ -46,9 +46,23 @@ $renderMenu = static function () use ($items, $isActiveLink, $showAdmissionsLink
 <a class="nav-link nav-link-logout text-warning mt-2 sidebar-nav-link" href="<?= BASE_URL ?>?controller=auth&action=logout"><i class="bi bi-box-arrow-right"></i><span>Terminar sessão</span></a><?php };
 ?>
 <div class="app-shell d-flex" id="app-shell">
-<?php if(isLoggedIn()): ?><aside class="sidebar text-white p-3 d-none d-lg-flex flex-column"><h5 class="mb-4 sidebar-brand"><i class="bi bi-mic-fill"></i> <span><?= APP_NAME ?></span></h5><div class="sidebar-user mb-3"><p class="small mb-1">Olá, <?= htmlspecialchars($user['name']) ?></p><span class="badge bg-light text-dark"><?= htmlspecialchars($user['profile_type']??$user['role']) ?></span></div><nav class="nav flex-column gap-1 sidebar-nav"><?php $renderMenu(); ?></nav></aside><?php endif; ?>
+<?php if(isLoggedIn()): ?><aside class="sidebar text-white d-none d-lg-flex flex-column" aria-label="Navegação principal">
+    <div class="sidebar-header">
+        <a class="sidebar-brand text-white text-decoration-none" href="<?= BASE_URL ?>" aria-label="Ir para o dashboard"><span class="sidebar-brand-mark"><i class="bi bi-mic-fill"></i></span><span class="sidebar-label"><?= APP_NAME ?></span></a>
+        <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Recolher menu" aria-expanded="true"><i class="bi bi-layout-sidebar-inset"></i></button>
+    </div>
+    <div class="sidebar-user"><span class="sidebar-avatar"><?= htmlspecialchars(strtoupper(substr((string)($user['name'] ?? 'U'), 0, 1))) ?></span><div class="sidebar-user-copy"><p class="mb-0 text-truncate"><?= htmlspecialchars($user['name']) ?></p><small><?= htmlspecialchars($user['profile_type']??$user['role']) ?></small></div></div>
+    <nav class="nav flex-column gap-1 sidebar-nav"><?php $renderMenu(); ?></nav>
+</aside><?php endif; ?>
 <main class="content flex-grow-1">
-<?php if(isLoggedIn()): ?><header class="topbar d-flex d-lg-none align-items-center justify-content-between px-3 py-2 sticky-top"><button class="btn btn-sm btn-outline-light" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu">☰</button><strong>🎤 <?= APP_NAME ?></strong></header><div class="offcanvas offcanvas-start text-bg-dark d-lg-none" id="mobileMenu"><div class="offcanvas-header"><h5>Menu</h5><button class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button></div><div class="offcanvas-body"><nav class="nav flex-column gap-2"><?php $renderMenu(); ?></nav></div></div><?php endif; ?>
+<?php if(isLoggedIn()): ?><header class="topbar d-flex d-lg-none align-items-center justify-content-between sticky-top"><button class="topbar-menu-btn" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu" aria-label="Abrir menu"><i class="bi bi-list"></i></button><a class="topbar-brand" href="<?= BASE_URL ?>"><span class="sidebar-brand-mark"><i class="bi bi-mic-fill"></i></span><span><?= APP_NAME ?></span></a><span class="mobile-avatar" aria-hidden="true"><?= htmlspecialchars(strtoupper(substr((string)($user['name'] ?? 'U'), 0, 1))) ?></span></header>
+<div class="offcanvas offcanvas-start mobile-menu text-bg-dark d-lg-none" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel"><div class="offcanvas-header"><div><span class="text-uppercase small text-white-50">Navegação</span><h5 class="mb-0" id="mobileMenuLabel"><?= APP_NAME ?></h5></div><button class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Fechar"></button></div><div class="offcanvas-user"><span class="sidebar-avatar"><?= htmlspecialchars(strtoupper(substr((string)($user['name'] ?? 'U'), 0, 1))) ?></span><div><strong><?= htmlspecialchars($user['name']) ?></strong><small><?= htmlspecialchars($user['profile_type']??$user['role']) ?></small></div></div><div class="offcanvas-body"><nav class="nav flex-column gap-1"><?php $renderMenu(); ?></nav></div></div>
+<nav class="mobile-bottom-nav d-lg-none" aria-label="Acesso rápido">
+    <a href="<?= BASE_URL ?>" class="<?= $isActiveLink('dashboard') ? 'active' : '' ?>"><i class="bi bi-grid-1x2"></i><span>Início</span></a>
+    <?php if (can('event')): ?><a href="<?= BASE_URL ?>?controller=event&action=index" class="<?= $isActiveLink('event') ? 'active' : '' ?>"><i class="bi bi-calendar-event"></i><span>Eventos</span></a><?php endif; ?>
+    <?php if ($showAdmissionsLink): ?><a href="<?= BASE_PATH ?>/eventos/" class="<?= $isActiveLink('reservation', 'eventos') ? 'active' : '' ?>"><i class="bi bi-qr-code-scan"></i><span>Entradas</span></a><?php endif; ?>
+    <button type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu"><i class="bi bi-three-dots"></i><span>Mais</span></button>
+</nav><?php endif; ?>
         <section class="content-body p-3 p-md-4 p-xl-5">
-        <?php if ($msg = flash('success')): ?><div class="alert alert-success"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
-        <?php if ($msg = flash('error')): ?><div class="alert alert-danger"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
+        <?php if ($msg = flash('success')): ?><div class="alert alert-success alert-dismissible fade show" role="alert"><i class="bi bi-check-circle-fill"></i> <?= htmlspecialchars($msg) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button></div><?php endif; ?>
+        <?php if ($msg = flash('error')): ?><div class="alert alert-danger alert-dismissible fade show" role="alert"><i class="bi bi-exclamation-circle-fill"></i> <?= htmlspecialchars($msg) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button></div><?php endif; ?>

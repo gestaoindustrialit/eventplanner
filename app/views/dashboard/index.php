@@ -6,26 +6,26 @@
 </div>
 <div class="row g-3 mb-4">
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="card h-100">
+        <div class="card metric-card metric-card-events h-100">
             <div class="card-body">
-                <h6 class="text-muted">Total eventos</h6>
-                <h3 class="mb-0"><?= $stats['totalEvents'] ?></h3>
+                <span class="metric-icon"><i class="bi bi-calendar2-week"></i></span><div><h6 class="text-muted">Total eventos</h6>
+                <h3 class="mb-0"><?= $stats['totalEvents'] ?></h3></div>
             </div>
         </div>
     </div>
     <div class="col-12 col-md-6 col-xl-4">
-        <div class="card h-100">
+        <div class="card metric-card metric-card-upcoming h-100">
             <div class="card-body">
-                <h6 class="text-muted">Próximos eventos</h6>
-                <h3 class="mb-0"><?= $stats['upcomingEvents'] ?></h3>
+                <span class="metric-icon"><i class="bi bi-arrow-up-right-circle"></i></span><div><h6 class="text-muted">Próximos eventos</h6>
+                <h3 class="mb-0"><?= $stats['upcomingEvents'] ?></h3></div>
             </div>
         </div>
     </div>
     <div class="col-12 col-xl-4">
-        <div class="card h-100">
+        <div class="card metric-card metric-card-value h-100">
             <div class="card-body">
-                <h6 class="text-muted">Total cachets</h6>
-                <h3 class="mb-0">€<?= number_format($stats['totalCachet'], 2, ',', '.') ?></h3>
+                <span class="metric-icon"><i class="bi bi-wallet2"></i></span><div><h6 class="text-muted">Total cachets</h6>
+                <h3 class="mb-0">€<?= number_format($stats['totalCachet'], 2, ',', '.') ?></h3></div>
             </div>
         </div>
     </div>

@@ -356,3 +356,77 @@ function enhanceEvaluationDepartmentSelector() {
 }
 
 enhanceEvaluationDepartmentSelector();
+
+/**
+ * Shared responsive behaviour for the back office. Keeping it here means old
+ * and new views receive the same mobile treatment without changing workflows.
+ */
+function enhanceApplicationShell() {
+  const shell = document.getElementById('app-shell');
+  const sidebarToggle = document.getElementById('sidebarToggle');
+
+  if (shell && sidebarToggle) {
+    const storageKey = 'eventplanner.sidebarCollapsed';
+    let isCollapsed = false;
+    try {
+      isCollapsed = window.localStorage.getItem(storageKey) === 'true';
+    } catch (error) {
+      // Storage can be unavailable in private browsing; the menu still works.
+    }
+
+    const setSidebarState = (collapsed) => {
+      shell.classList.toggle('sidebar-collapsed', collapsed);
+      sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
+      sidebarToggle.setAttribute('aria-label', collapsed ? 'Expandir menu' : 'Recolher menu');
+      sidebarToggle.querySelector('i')?.classList.toggle('bi-layout-sidebar-inset-reverse', collapsed);
+      sidebarToggle.querySelector('i')?.classList.toggle('bi-layout-sidebar-inset', !collapsed);
+    };
+
+    setSidebarState(isCollapsed);
+    sidebarToggle.addEventListener('click', () => {
+      isCollapsed = !shell.classList.contains('sidebar-collapsed');
+      setSidebarState(isCollapsed);
+      try {
+        window.localStorage.setItem(storageKey, String(isCollapsed));
+      } catch (error) {
+        // State persistence is an enhancement, not a requirement.
+      }
+    });
+  }
+
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (mobileMenu && window.bootstrap?.Offcanvas) {
+    mobileMenu.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => window.bootstrap.Offcanvas.getOrCreateInstance(mobileMenu).hide());
+    });
+  }
+}
+
+function enhanceResponsiveTables() {
+  document.querySelectorAll('.content-body .table').forEach((table) => {
+    if (table.dataset.mobileLayout === 'scroll' || table.closest('.admissions-page')) return;
+
+    const headers = Array.from(table.querySelectorAll('thead th')).map((header) => header.textContent.trim());
+    if (headers.length === 0) return;
+
+    let wrapper = table.closest('.table-responsive');
+    if (!wrapper) {
+      wrapper = document.createElement('div');
+      wrapper.className = 'table-responsive';
+      table.parentNode.insertBefore(wrapper, table);
+      wrapper.appendChild(table);
+    }
+    wrapper.classList.add('mobile-cards');
+
+    table.querySelectorAll('tbody tr').forEach((row) => {
+      Array.from(row.children).forEach((cell, index) => {
+        if (cell.tagName === 'TD' && !cell.hasAttribute('data-label')) {
+          cell.setAttribute('data-label', headers[index] || '');
+        }
+      });
+    });
+  });
+}
+
+enhanceApplicationShell();
+enhanceResponsiveTables();
