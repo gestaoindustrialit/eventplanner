@@ -34,23 +34,47 @@ class NewsletterSubscription
 
     public function subscribeFromReservation(array $data): void
     {
-        $stmt = $this->db->prepare('INSERT INTO newsletter_subscriptions (email, name, gdpr_consent, consent_text, source, segment, status)
-            VALUES (:email, :name, 1, :consent_text, :source, :segment, \'active\')
-            ON CONFLICT(email) DO UPDATE SET
-                name = COALESCE(NULLIF(excluded.name, \'\'), newsletter_subscriptions.name),
-                gdpr_consent = 1,
-                consent_text = excluded.consent_text,
-                source = excluded.source,
-                segment = excluded.segment,
-                status = \'active\',
-                unsubscribed_at = NULL');
-        $stmt->execute([
+        $values = [
             'email' => trim((string)$data['email']),
-            'name' => trim((string)($data['name'] ?? '')),
+            'name' => trim((string)($data['name'] ?? '')) ?: null,
             'consent_text' => trim((string)($data['consent_text'] ?? '')),
             'source' => trim((string)($data['source'] ?? 'reserva')),
             'segment' => trim((string)($data['segment'] ?? 'Sem cidade')),
-        ]);
+        ];
+
+        // Some shared hosts still run SQLite versions older than 3.24, which
+        // do not support the "ON CONFLICT ... DO UPDATE" upsert syntax.
+        $find = $this->db->prepare('SELECT id FROM newsletter_subscriptions WHERE email = :email LIMIT 1');
+        $find->execute(['email' => $values['email']]);
+        $subscriptionId = $find->fetchColumn();
+
+        if ($subscriptionId !== false) {
+            $update = $this->db->prepare(
+                'UPDATE newsletter_subscriptions
+                 SET name = COALESCE(:name, name),
+                     gdpr_consent = 1,
+                     consent_text = :consent_text,
+                     source = :source,
+                     segment = :segment,
+                     status = \'active\',
+                     unsubscribed_at = NULL
+                 WHERE id = :id'
+            );
+            $update->execute([
+                'id' => (int)$subscriptionId,
+                'name' => $values['name'],
+                'consent_text' => $values['consent_text'],
+                'source' => $values['source'],
+                'segment' => $values['segment'],
+            ]);
+            return;
+        }
+
+        $insert = $this->db->prepare(
+            'INSERT INTO newsletter_subscriptions (email, name, gdpr_consent, consent_text, source, segment, status)
+             VALUES (:email, :name, 1, :consent_text, :source, :segment, \'active\')'
+        );
+        $insert->execute($values);
     }
 
     public function deactivate(int $id): void
