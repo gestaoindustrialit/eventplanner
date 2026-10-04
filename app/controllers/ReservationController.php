@@ -31,7 +31,7 @@ class ReservationController extends BaseController
         $validationResult = $_SESSION['reservation_validation_result'] ?? null;
         unset($_SESSION['reservation_validation_result']);
         $ticketsOverview = $reservationModel->ticketsOverview($selectedEventId > 0 ? $selectedEventId : null, $accessUserId);
-        $this->render('reservations/eventos', compact('eventOverview', 'validationResult', 'ticketsOverview', 'selectedEventId'));
+        $this->render('reservations/eventos', compact('eventOverview', 'validationResult', 'ticketsOverview', 'selectedEventId'), 'admissions');
     }
 
     public function index(): void

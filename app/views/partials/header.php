@@ -35,14 +35,15 @@ $items = [
  'dashboard'=>['Dashboard','speedometer2',BASE_URL], 'comedian'=>['Comediantes','mic',BASE_URL.'?controller=comedian&action=index'],
  'client'=>['Clientes','people',BASE_URL.'?controller=client&action=index'], 'crm'=>['CRM','kanban',BASE_URL.'?controller=crm&action=index'],
  'event'=>['Eventos','calendar-event',BASE_URL.'?controller=event&action=index'], 'eventseries'=>['Séries','calendar2-range',BASE_URL.'?controller=eventseries&action=index'], 'checklist'=>['Checklists','check2-square',BASE_URL.'?controller=checklist&action=index'],
- 'reservation'=>['Admissões','ticket-detailed',BASE_PATH.'/eventos/'], 'publicpage'=>['Páginas públicas','layout-text-window-reverse',BASE_URL.'?controller=publicpage&action=index'],
+ 'reservation'=>['Reservas','journal-check',BASE_URL.'?controller=reservation&action=index'], 'publicpage'=>['Páginas públicas','layout-text-window-reverse',BASE_URL.'?controller=publicpage&action=index'],
  'blogpost'=>['Blog','journal-richtext',BASE_URL.'?controller=blogpost&action=index'], 'partner'=>['Parceiros','diagram-3',BASE_URL.'?controller=partner&action=index'],
  'publicsite'=>['Publicar website','globe2',BASE_URL.'?controller=publicsite&action=index'], 'newsletter'=>['Newsletter','envelope-paper',BASE_URL.'?controller=newsletter&action=index'],
  'presscontact'=>['Contactos Press','newspaper',BASE_URL.'?controller=presscontact&action=index'],
 ];
-$renderMenu = static function () use ($items, $isActiveLink, $showAdmissionsLink): void { foreach ($items as $permission=>$item) { if ($permission === 'reservation' ? !$showAdmissionsLink : !can($permission)) continue; ?>
+$renderMenu = static function () use ($items, $isActiveLink, $showAdmissionsLink): void { foreach ($items as $permission=>$item) { if (!can($permission)) continue; ?>
 <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink($permission)?'active':'' ?>" href="<?= $item[2] ?>"><i class="bi bi-<?= $item[1] ?>"></i><span><?= $item[0] ?></span></a><?php } if (isAdmin()) { ?>
 <a class="nav-link text-white sidebar-nav-link <?= $isActiveLink('user')?'active':'' ?>" href="<?= BASE_URL ?>?controller=user"><i class="bi bi-person-gear"></i><span>Perfis e permissões</span></a><?php } ?>
+<?php if ($showAdmissionsLink): ?><a class="nav-link text-white sidebar-nav-link" href="<?= BASE_PATH ?>/eventos/" target="_blank" rel="noopener"><i class="bi bi-ticket-detailed"></i><span>Admissões <i class="bi bi-box-arrow-up-right small ms-1" aria-hidden="true"></i></span></a><?php endif; ?>
 <a class="nav-link nav-link-logout text-warning mt-2 sidebar-nav-link" href="<?= BASE_URL ?>?controller=auth&action=logout"><i class="bi bi-box-arrow-right"></i><span>Terminar sessão</span></a><?php };
 ?>
 <div class="app-shell d-flex" id="app-shell">
