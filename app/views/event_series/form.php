@@ -18,7 +18,7 @@
 <?php $today = date('Y-m-d'); foreach (['Próximas sessões' => true, 'Eventos passados' => false] as $heading => $future): ?>
   <h3 class="h6 text-uppercase text-muted mt-4"><?= $heading ?></h3><div class="session-list">
   <?php $count = 0; foreach ($sessions as $session): if (($session['date'] >= $today) !== $future) continue; $count++; ?>
-    <a class="session-row" href="<?= BASE_URL ?>?controller=event&action=edit&id=<?= (int)$session['id'] ?>"><span><strong><?= htmlspecialchars(date('d M Y', strtotime($session['date']))) ?></strong> — <?= htmlspecialchars(substr($session['time'], 0, 5)) ?></span><span class="badge <?= (int)$session['is_visible'] === 1 ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= (int)$session['is_visible'] === 1 ? 'Publicada' : 'Oculta' ?></span></a>
+    <a class="session-row" href="<?= BASE_URL ?>?controller=event&action=edit&id=<?= (int)$session['id'] ?>"><span><strong><?= htmlspecialchars(formatPtPtShortDate((string)$session['date'])) ?></strong> — <?= htmlspecialchars(substr($session['time'], 0, 5)) ?></span><span class="badge <?= (int)$session['is_visible'] === 1 ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= (int)$session['is_visible'] === 1 ? 'Publicada' : 'Oculta' ?></span></a>
   <?php endforeach; if ($count === 0): ?><p class="small text-muted">Sem sessões.</p><?php endif; ?></div>
 <?php endforeach; ?></div></section>
 <?php endif; ?>
