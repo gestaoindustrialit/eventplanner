@@ -13,7 +13,9 @@ class UserController extends BaseController
         $name=trim($_POST['name']??''); $email=trim($_POST['email']??''); $password=(string)($_POST['password']??'');
         if ($name==='' || !filter_var($email,FILTER_VALIDATE_EMAIL) || ($passwordRequired && $password==='')) throw new RuntimeException('Preencha nome, email válido e palavra-passe.');
         $allowed=array_keys(availablePermissions());
-        return ['name'=>$name,'email'=>$email,'password'=>$password,'profile_type'=>in_array($_POST['profile_type']??'', ['comedian','partner','editor'],true)?$_POST['profile_type']:'editor','permissions'=>array_values(array_intersect($allowed,$_POST['permissions']??[])), 'admission_event_ids'=>(array)($_POST['admission_event_ids']??[]), 'admission_groups'=>(array)($_POST['admission_groups']??[])];
+        $permissions=array_values(array_intersect($allowed,$_POST['permissions']??[]));
+        if (in_array('admissions',$permissions,true)) $permissions=['admissions'];
+        return ['name'=>$name,'email'=>$email,'password'=>$password,'profile_type'=>in_array($_POST['profile_type']??'', ['comedian','partner','editor'],true)?$_POST['profile_type']:'editor','permissions'=>$permissions, 'admission_event_ids'=>(array)($_POST['admission_event_ids']??[]), 'admission_groups'=>(array)($_POST['admission_groups']??[])];
     }
 
     private function renderForm(?array $profile): void

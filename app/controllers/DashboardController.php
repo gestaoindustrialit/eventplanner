@@ -5,6 +5,9 @@ class DashboardController extends BaseController
     public function index(): void
     {
         requireLogin();
+        if (isAdmissionsOnly()) {
+            $this->redirect(BASE_PATH . '/eventos/');
+        }
         if (!can('dashboard')) {
             $destinations = [
                 'event' => '?controller=event&action=index', 'comedian' => '?controller=comedian&action=index',

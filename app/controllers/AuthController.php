@@ -44,7 +44,7 @@ class AuthController extends BaseController
 
         flash('success', 'Sessão iniciada com sucesso.');
         $defaultRedirect = BASE_URL;
-        if (!isAdmin() && $userModel->hasAdmissionAccess((int)$user['id']) && empty($_SESSION['user']['permissions'])) {
+        if (!isAdmin() && $userModel->hasAdmissionAccess((int)$user['id']) && (empty($_SESSION['user']['permissions']) || isAdmissionsOnly())) {
             $defaultRedirect = BASE_PATH . '/eventos/';
         }
         $redirect = (string)($_SESSION['login_redirect'] ?? $defaultRedirect);
