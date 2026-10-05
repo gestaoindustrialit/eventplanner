@@ -191,6 +191,21 @@ $sessionSlug = trim((string)($_GET['sessao'] ?? ''));
 $recaptchaSiteKey = trim((string)'__RECAPTCHA_SITE_KEY__');
 $hasRecaptcha = $recaptchaSiteKey !== '';
 
+function formatPtPtShortDate(string $date, bool $includeYear = true, bool $uppercaseMonth = false): string
+{
+    $dateTime = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+    $errors = DateTimeImmutable::getLastErrors();
+    if ($dateTime === false || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0)) || $dateTime->format('Y-m-d') !== $date) {
+        return $date;
+    }
+    $months = [1 => 'Jan', 2 => 'Fev', 3 => 'Mar', 4 => 'Abr', 5 => 'Mai', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago', 9 => 'Set', 10 => 'Out', 11 => 'Nov', 12 => 'Dez'];
+    $month = $months[(int)$dateTime->format('n')];
+    if ($uppercaseMonth) {
+        $month = strtoupper($month);
+    }
+    return $dateTime->format('d') . ' ' . $month . ($includeYear ? ' ' . $dateTime->format('Y') : '');
+}
+
 // Keep old, indexed query-string links working, but consolidate their SEO value
 // on the public URL. This is also a fallback for servers that do not apply the
 // Apache rewrite rules generated below.
@@ -1448,7 +1463,7 @@ function render_partners_section(array $partners): void {
           <div class="series-session-grid">
           <?php foreach ($seriesSessions as $session): $capacity=(int)($session['reservation_capacity']??0); $available=$capacity>0?max(0,$capacity-(int)($session['active_tickets']??0)):null; ?>
             <article class="series-session-card surface-card">
-              <div class="series-session-date"><strong><?php echo htmlspecialchars(strtoupper(date('d M', strtotime((string)$session['date'])))); ?></strong><span><?php echo htmlspecialchars(substr((string)$session['time'],0,5)); ?></span></div>
+              <div class="series-session-date"><strong><?php echo htmlspecialchars(formatPtPtShortDate((string)$session['date'], false, true)); ?></strong><span><?php echo htmlspecialchars(substr((string)$session['time'],0,5)); ?></span></div>
               <div class="series-session-info"><h3 class="h5 mb-1"><?php echo htmlspecialchars((string)$session['title']); ?></h3><p class="text-secondary mb-0"><i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars((string)$session['location']); ?></p><?php if ($available !== null): ?><small><?php echo $available; ?> lugares disponíveis</small><?php endif; ?></div>
               <div class="series-session-actions"><a class="btn btn-sm btn-outline-light" href="/eventos/<?php echo rawurlencode((string)$selectedSeries['slug']); ?>/<?php echo rawurlencode((string)$session['slug']); ?>">Detalhes</a>
               <?php if ((int)$session['reservations_open'] === 1 && ($available === null || $available > 0)): ?><button class="btn btn-brand reserve-trigger" data-bs-toggle="modal" data-bs-target="#seriesReserveModal" data-event-id="<?php echo (int)$session['id']; ?>" data-event-info="<?php echo htmlspecialchars((string)$selectedSeries['name'].' · '.date('d/m/Y',strtotime((string)$session['date'])).' · '.substr((string)$session['time'],0,5).' · '.$session['location']); ?>">Reservar</button><?php elseif (!empty($session['external_ticket_url'])): ?><a class="btn btn-brand" href="<?php echo htmlspecialchars((string)$session['external_ticket_url']); ?>">Bilhetes</a><?php else: ?><span class="badge text-bg-secondary">Indisponível</span><?php endif; ?></div>
