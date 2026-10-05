@@ -41,6 +41,13 @@ try {
 $controllerName = strtolower($_GET['controller'] ?? 'dashboard');
 $actionName = $_GET['action'] ?? 'index';
 
+if (isAdmissionsOnly()) {
+    $admissionsActions = ['eventos', 'validateTicket', 'admissionsData', 'exportAdmissions', 'markTicketPending'];
+    if ($controllerName !== 'reservation' || !in_array($actionName, $admissionsActions, true)) {
+        header('Location: ' . BASE_PATH . '/eventos/');
+        exit;
+    }
+}
 
 if ($controllerName === 'presscontact' && !can('presscontact')) {
     http_response_code(404);

@@ -23,7 +23,18 @@ function availablePermissions(): array
         'reservation' => 'Reservas e admissões', 'publicpage' => 'Páginas públicas',
         'blogpost' => 'Blog', 'partner' => 'Parceiros', 'publicsite' => 'Publicar website',
         'newsletter' => 'Newsletter', 'presscontact' => 'Contactos Press',
+        'admissions' => 'Apenas página de admissões',
     ];
+}
+
+function isAdmissionsOnly(): bool
+{
+    if (!isLoggedIn() || isAdmin()) {
+        return false;
+    }
+
+    $permissions = currentUser()['permissions'] ?? [];
+    return $permissions === ['admissions'];
 }
 
 function can(string $permission): bool

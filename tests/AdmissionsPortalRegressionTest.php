@@ -10,6 +10,9 @@ if (!method_exists(ReservationController::class, 'exportAdmissions')) {
 $controllerSource = (string)file_get_contents(__DIR__ . '/../app/controllers/ReservationController.php');
 $menuSource = (string)file_get_contents(__DIR__ . '/../app/views/partials/header.php');
 $portalHeaderSource = (string)file_get_contents(__DIR__ . '/../app/views/partials/admissions_header.php');
+$authSource = (string)file_get_contents(__DIR__ . '/../includes/auth.php');
+$userFormSource = (string)file_get_contents(__DIR__ . '/../app/views/users/form.php');
+$routerSource = (string)file_get_contents(__DIR__ . '/../public/index.php');
 if (strpos($controllerSource, "'admissions'") === false) {
     throw new RuntimeException('Admissions does not use its standalone layout.');
 }
@@ -21,6 +24,11 @@ if (strpos($menuSource, "['Reservas','journal-check'") === false
 if (strpos($portalHeaderSource, 'sidebar') !== false
     || strpos($portalHeaderSource, 'action=logout&amp;portal=admissions') === false) {
     throw new RuntimeException('Standalone admissions navigation is invalid.');
+}
+if (strpos($authSource, "'admissions' => 'Apenas página de admissões'") === false
+    || strpos($userFormSource, 'Abre diretamente o portal') === false
+    || strpos($routerSource, 'isAdmissionsOnly()') === false) {
+    throw new RuntimeException('The admissions-only profile option is not fully wired.');
 }
 $path = tempnam(sys_get_temp_dir(), 'admissions-');
 try {
