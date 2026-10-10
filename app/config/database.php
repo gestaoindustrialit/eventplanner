@@ -67,6 +67,9 @@ class Database
             )'
         );
 
+        require_once __DIR__ . '/../helpers/public_page_migration.php';
+        public_page_migrate($db);
+
         $publicPageColumns = array_column($db->query('PRAGMA table_info(public_pages)')->fetchAll(), 'name');
         if (!in_array('display_mode', $publicPageColumns, true)) {
             $db->exec('ALTER TABLE public_pages ADD COLUMN display_mode TEXT NOT NULL DEFAULT \'section\'');
