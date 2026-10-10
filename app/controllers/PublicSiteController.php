@@ -175,9 +175,11 @@ class PublicSiteController extends BaseController
 
         $template = <<<'PHP'
 <?php
+__PUBLIC_PAGE_HELPERS__
 $events = [];
 $eventSeries = [];
 $pages = [];
+$legacyAnchors = [];
 $partners = [];
 $blogPosts = [];
 $homeCopy = json_decode('__HOME_COPY_JSON__', true) ?: [];
@@ -259,6 +261,14 @@ try {
         $pageSql .= ' ORDER BY title ASC';
     }
     $pages = $db->query($pageSql)->fetchAll() ?: [];
+    $redirectColumns = $db->query('PRAGMA table_info(public_page_redirects)')->fetchAll();
+    if ($redirectColumns) {
+        foreach ($db->query("SELECT r.old_slug,p.* FROM public_page_redirects r JOIN public_pages p ON p.id=r.page_id WHERE r.old_mode='section' AND p.is_published=1")->fetchAll() as $legacy) { $legacyAnchors[$legacy['old_slug']] = public_page_url($legacy); }
+        $redirect = $db->prepare('SELECT p.* FROM public_page_redirects r JOIN public_pages p ON p.id = r.page_id WHERE r.old_slug = :slug AND p.is_published = 1 LIMIT 1');
+        $redirect->execute(['slug'=>$pageSlug ?: $requestPath]);
+        $target = $redirect->fetch();
+        if ($target) { header('Location: ' . public_page_url($target), true, 301); exit; }
+    }
 
     $partnerColumns = array_column($db->query('PRAGMA table_info(partners)')->fetchAll(), 'name');
     if (count($partnerColumns) > 0) {
@@ -371,7 +381,7 @@ function truncate_text(string $value, int $limit = 155): string {
 function seo_page_url(string $slug): string { return absolute_url($slug); }
 
 function safe_content(?string $html): string {
-    return strip_tags((string)$html, '<h1><h2><h3><h4><p><ul><ol><li><strong><em><a><blockquote><br><hr>');
+    return public_page_safe_html((string)$html);
 }
 
 function build_event_schema_payload(array $event): array {
@@ -583,6 +593,10 @@ if ($activeBlogPost !== null) {
 }
 if ($activeVirtualPage !== null || $activeBlogIndex || $activeBlogPost !== null) { $isStandaloneView = false; $isEventView = false; $isSeriesView = false; }
 
+if (($pageSlug !== '' || ($currentPath !== '' && $currentPath !== 'index.php')) && !$isStandaloneView && !$isEventView && !$isSeriesView && !$activeVirtualPage && !$activeBlogIndex && !$activeBlogPost) {
+    http_response_code(404); echo 'Página não encontrada.'; exit;
+}
+
 function render_corporate_proposal_form(array $corporateEventsPage, string $recaptchaSiteKey, bool $hasRecaptcha, string $msg, string $pageSlug = 'eventos-corporativos', string $subject = 'Pedido de proposta - eventos corporativos'): void {
     ?>
     <section id="pedido-proposta" class="surface-card seo-content-card proposal-form-card p-4 p-lg-5 mt-4 fade-in">
@@ -675,10 +689,12 @@ function render_partners_section(array $partners): void {
         $ogImage = !empty($selectedSeries['cover_image_url']) ? absolute_url((string)$selectedSeries['cover_image_url']) : $ogImage;
         $schemaType = 'Event';
     } elseif ($activeStandalonePage) {
-        $seoTitle = truncate_text((string)$activeStandalonePage['title'] . ' | Chorar de Rir', 62);
-        $seoDescription = truncate_text((string)($activeStandalonePage['excerpt'] ?: $activeStandalonePage['content'] ?: $seoDescription), 158);
-        $canonicalUrl = absolute_url((string)$activeStandalonePage['slug']);
-        $ogImage = !empty($activeStandalonePage['hero_image_url']) ? absolute_url((string)$activeStandalonePage['hero_image_url']) : $ogImage;
+        $seoTitle = trim((string)($activeStandalonePage['meta_title'] ?? '')) ?: (string)$activeStandalonePage['title'] . ' | Chorar de Rir';
+        $seoDescription = trim((string)($activeStandalonePage['meta_description'] ?? '')) ?: truncate_text((string)($activeStandalonePage['excerpt'] ?: $activeStandalonePage['content'] ?: $seoDescription), 158);
+        $customCanonical = trim((string)($activeStandalonePage['canonical_url'] ?? ''));
+        $canonicalUrl = public_page_http_url($customCanonical) ? $customCanonical : absolute_url((string)$activeStandalonePage['slug']);
+        $socialImage = trim((string)($activeStandalonePage['og_image_url'] ?? '')) ?: (string)($activeStandalonePage['hero_image_url'] ?? '');
+        $ogImage = public_page_http_url($socialImage) ? $socialImage : $ogImage;
     } elseif ($activeVirtualPage) {
         $seoTitle = truncate_text((string)$activeVirtualPage['title'] . ' | Chorar de Rir', 62);
         $seoDescription = truncate_text((string)$activeVirtualPage['description'], 158);
@@ -699,6 +715,7 @@ function render_partners_section(array $partners): void {
         $canonicalUrl = absolute_url('blog');
     }
   ?>
+  <?php if ($activeStandalonePage && (int)($activeStandalonePage['allow_indexing'] ?? 1) !== 1): ?><meta name="robots" content="noindex, follow"><?php endif; ?>
   <title><?php echo htmlspecialchars($seoTitle); ?></title>
   <meta name="description" content="<?php echo htmlspecialchars($seoDescription); ?>">
   <link rel="canonical" href="<?php echo htmlspecialchars($canonicalUrl); ?>">
@@ -715,10 +732,21 @@ function render_partners_section(array $partners): void {
   <link rel="icon" type="image/svg+xml" href="/chorarderir-logo.svg">
   <?php
     $jsonLd = [
-      ['@context'=>'https://schema.org','@type'=>'Organization','name'=>'Chorar de Rir','url'=>absolute_url('/'),'logo'=>absolute_url('/chorarderir-logo.svg'),'sameAs'=>[]],
+      ['@context'=>'https://schema.org','@type'=>'Organization','@id'=>absolute_url('/#organization'),'name'=>'Chorar de Rir','url'=>absolute_url('/'),'logo'=>absolute_url('/chorarderir-logo.svg'),'sameAs'=>[]],
       ['@context'=>'https://schema.org','@type'=>'LocalBusiness','name'=>'Chorar de Rir','url'=>absolute_url('/'),'image'=>$ogImage,'areaServed'=>['Portugal','Suíça','França','Luxemburgo'],'priceRange'=>'€€','description'=>$seoDescription],
-      ['@context'=>'https://schema.org','@type'=>'WebSite','name'=>'Chorar de Rir','url'=>absolute_url('/'),'inLanguage'=>'pt-PT'],
+      ['@context'=>'https://schema.org','@type'=>'WebSite','@id'=>absolute_url('/#website'),'name'=>'Chorar de Rir','url'=>absolute_url('/'),'inLanguage'=>'pt-PT'],
     ];
+    if ($activeStandalonePage) {
+        $jsonLd = array_values(array_filter($jsonLd, static function (array $schema): bool { return $schema['@type'] !== 'LocalBusiness'; }));
+        $pageSchema = ['@context'=>'https://schema.org', '@type'=>($activeStandalonePage['schema_type'] ?? 'WebPage') === 'Service' ? 'Service' : 'WebPage',
+            'name'=>$activeStandalonePage['title'], 'description'=>$seoDescription, 'url'=>$canonicalUrl,
+            'mainEntityOfPage'=>['@type'=>'WebPage','@id'=>$canonicalUrl, 'isPartOf'=>['@id'=>absolute_url('/#website')]]];
+        if ($pageSchema['@type'] === 'Service') {
+            $pageSchema['provider'] = ['@id'=>absolute_url('/#organization')];
+            if (trim((string)($activeStandalonePage['service_area'] ?? '')) !== '') { $pageSchema['areaServed'] = $activeStandalonePage['service_area']; }
+        }
+        $jsonLd[] = $pageSchema;
+    }
     $breadcrumbs = [['@type'=>'ListItem','position'=>1,'name'=>'Início','item'=>absolute_url('/')]];
     if ($activeVirtualPage) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>$activeVirtualPage['title'],'item'=>$canonicalUrl]; }
     if ($activeBlogIndex) { $breadcrumbs[] = ['@type'=>'ListItem','position'=>2,'name'=>'Blog','item'=>$canonicalUrl]; }
@@ -736,7 +764,7 @@ function render_partners_section(array $partners): void {
       $jsonLd[] = ['@context'=>'https://schema.org','@type'=>'Article','headline'=>$activeBlogPost['title'],'description'=>$seoDescription,'datePublished'=>(string)($activeBlogPost['published_at'] ?? ''),'author'=>['@type'=>'Organization','name'=>'Chorar de Rir'],'publisher'=>['@type'=>'Organization','name'=>'Chorar de Rir','logo'=>['@type'=>'ImageObject','url'=>absolute_url('/chorarderir-logo.svg')]],'mainEntityOfPage'=>$canonicalUrl];
     }
   ?>
-  <?php foreach ($jsonLd as $schema): ?><script type="application/ld+json"><?php echo json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?></script><?php endforeach; ?>
+  <?php foreach ($jsonLd as $schema): ?><script type="application/ld+json"><?php echo json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script><?php endforeach; ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -785,6 +813,12 @@ function render_partners_section(array $partners): void {
       position: relative;
       z-index: 30;
     }
+    .public-menu-item { position: relative; }
+    .submenu-toggle { background:transparent; border:0; color:inherit; padding:.5rem; }
+    .public-submenu { list-style:none; padding:.6rem; margin:0; background:#141923; min-width:230px; border-radius:.5rem; }
+    .public-submenu[hidden] { display:none; }
+    .navbar a:focus-visible, .submenu-toggle:focus-visible { outline:2px solid #fff; outline-offset:3px; }
+    @media (min-width:992px) { .public-submenu { position:absolute; top:100%; right:0; box-shadow:0 12px 25px #0008; } }
     .navbar.scrolled { box-shadow: 0 16px 44px rgba(0, 0, 0, .48); }
     .navbar-brand { display: inline-flex; align-items: center; line-height: 1; padding-top: .2rem; padding-bottom: .2rem; }
     .navbar-brand img { height: 28px; max-height: 28px; width: auto; display: block; filter: brightness(0) invert(1); }
@@ -1093,24 +1127,16 @@ function render_partners_section(array $partners): void {
       </button>
       <div class="collapse navbar-collapse" id="menuPublico">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link <?php echo (!$isStandaloneView && !$isEventView && !$isSeriesView) ? 'active' : ''; ?>" href="/#inicio">Início</a></li>
-          <?php foreach ($sectionPages as $page): ?>
-            <?php $menuSlug = trim((string)($page['slug'] ?? '')); ?>
-            <?php if ($menuSlug === '' || ($menuSlug === 'agenda' && !$hasAgendaEvents)) { continue; } ?>
-            <li class="nav-item"><a class="nav-link" href="/#<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
+          <?php $menuItems = public_page_menu($pages, $hasAgendaEvents, $hasPartners, !empty($corporateEventsPage['enabled'])); ?>
+          <?php foreach ($menuItems as $menuIndex=>$item): ?>
+          <li class="nav-item public-menu-item">
+            <div class="d-flex align-items-center"><a class="nav-link <?php echo ($activeStandalonePage && $item['url'] === public_page_url($activeStandalonePage)) || ($activeVirtualSlug === 'eventos-corporativos' && $item['key'] === 'static:corporativos') || (!$isStandaloneView && !$isEventView && !$isSeriesView && $item['key'] === 'static:inicio') ? 'active' : ''; ?>" href="<?php echo htmlspecialchars($item['url']); ?>"><?php echo htmlspecialchars($item['title']); ?></a>
+            <?php if ($item['children']): ?><button class="submenu-toggle" type="button" aria-expanded="false" aria-controls="public-submenu-<?php echo $menuIndex; ?>" aria-label="<?php echo htmlspecialchars('Abrir submenu ' . $item['title']); ?>">▾</button><?php endif; ?></div>
+            <?php if ($item['children']): ?><ul id="public-submenu-<?php echo $menuIndex; ?>" class="public-submenu" hidden>
+            <?php foreach ($item['children'] as $child): ?><li><a class="nav-link" href="<?php echo htmlspecialchars($child['url']); ?>"><?php echo htmlspecialchars($child['title']); ?></a></li><?php endforeach; ?>
+            </ul><?php endif; ?>
+          </li>
           <?php endforeach; ?>
-          <?php foreach ($standalonePages as $page): ?>
-            <?php $menuSlug = trim((string)($page['slug'] ?? '')); ?>
-            <?php if ($menuSlug === '' || $menuSlug === 'eventos-corporativos') { continue; } ?>
-            <li class="nav-item"><a class="nav-link <?php echo $activeStandalonePage && (int)($activeStandalonePage['id'] ?? 0) === (int)($page['id'] ?? 0) ? 'active' : ''; ?>" href="/<?php echo htmlspecialchars($menuSlug); ?>"><?php echo htmlspecialchars((string)($page['title'] ?? ucfirst(str_replace('-', ' ', $menuSlug)))); ?></a></li>
-          <?php endforeach; ?>
-          <?php if (!empty($corporateEventsPage['enabled'])): ?>
-            <li class="nav-item"><a class="nav-link <?php echo $activeVirtualSlug === 'eventos-corporativos' ? 'active' : ''; ?>" href="/eventos-corporativos/">Corporativos</a></li>
-          <?php endif; ?>
-          <li class="nav-item"><a class="nav-link" href="/blog">Blog</a></li>
-          <?php if ($hasPartners): ?>
-            <li class="nav-item"><a class="nav-link" href="/#parceiros">Parceiros</a></li>
-          <?php endif; ?>
         </ul>
       </div>
     </div>
@@ -1336,7 +1362,7 @@ function render_partners_section(array $partners): void {
                     <?php if (!empty($sectionConfig['cta_text'])): ?><p class="mb-0 fw-semibold"><?php echo htmlspecialchars((string)$sectionConfig['cta_text']); ?></p><?php endif; ?>
                   </div>
                   <div class="col-lg-5">
-                    <div class="about-split-image" style="background-image:url('<?php echo htmlspecialchars((string)($page['hero_image_url'] ?: 'https://images.unsplash.com/photo-1509824227185-9c5a01ceba0d?auto=format&fit=crop&w=1400&q=80')); ?>');"></div>
+                    <div class="about-split-image" style="background-image:url('<?php echo htmlspecialchars(public_page_css_url((string)($page['hero_image_url'] ?: 'https://images.unsplash.com/photo-1509824227185-9c5a01ceba0d?auto=format&fit=crop&w=1400&q=80'))); ?>');"></div>
                   </div>
                 </div>
               </div>
@@ -1394,7 +1420,7 @@ function render_partners_section(array $partners): void {
             <?php else: ?>
               <div class="p-4 p-lg-5 fade-in">
                 <?php if (!empty($page['hero_image_url'])): ?>
-                  <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars((string)$page['hero_image_url']); ?>');"></div>
+                  <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars(public_page_css_url((string)$page['hero_image_url'])); ?>');"></div>
                 <?php endif; ?>
                 <h2 class="section-heading mb-3"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
                 <?php if (!empty($page['excerpt'])): ?>
@@ -1403,6 +1429,8 @@ function render_partners_section(array $partners): void {
                 <div class="page-content"><?php echo safe_content($page['content'] ?? ''); ?></div>
               </div>
             <?php endif; ?>
+            <?php $sectionRelated = public_page_related($page, $pages, $blogPosts, $events); ?>
+            <?php if ($sectionRelated): ?><aside class="p-4" aria-label="Conteúdos relacionados"><h3 class="h5">Conteúdos relacionados</h3><ul class="seo-link-list"><?php foreach ($sectionRelated as $related): ?><li><a href="<?php echo htmlspecialchars($related['url']); ?>"><?php echo htmlspecialchars($related['title']); ?></a></li><?php endforeach; ?></ul></aside><?php endif; ?>
           </div>
         </section>
       <?php endforeach; ?>
@@ -1572,13 +1600,15 @@ function render_partners_section(array $partners): void {
         <div class="container">
           <div class="surface-card p-4 p-lg-5 fade-in show">
             <?php if (!empty($activeStandalonePage['hero_image_url'])): ?>
-              <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars((string)$activeStandalonePage['hero_image_url']); ?>');"></div>
+              <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars(public_page_css_url((string)$activeStandalonePage['hero_image_url'])); ?>');"></div>
             <?php endif; ?>
             <h1 class="section-heading mb-3"><?php echo htmlspecialchars((string)$activeStandalonePage['title']); ?></h1>
             <?php if (!empty($activeStandalonePage['excerpt'])): ?>
               <p class="lead text-secondary"><?php echo htmlspecialchars((string)$activeStandalonePage['excerpt']); ?></p>
             <?php endif; ?>
             <div class="page-content"><?php echo safe_content($activeStandalonePage['content'] ?? ''); ?></div>
+            <?php $relatedContent = public_page_related($activeStandalonePage, $pages, $blogPosts, $events); ?>
+            <?php if ($relatedContent): ?><aside class="mt-4" aria-label="Conteúdos relacionados"><h2 class="h4">Conteúdos relacionados</h2><ul class="seo-link-list"><?php foreach ($relatedContent as $related): ?><li><a href="<?php echo htmlspecialchars($related['url']); ?>"><?php echo htmlspecialchars($related['title']); ?></a></li><?php endforeach; ?></ul></aside><?php endif; ?>
           </div>
         </div>
       </section>
@@ -1607,6 +1637,33 @@ function render_partners_section(array $partners): void {
   <?php endif; ?>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    const legacyAnchors = <?php echo json_encode($legacyAnchors, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    const resolveLegacyAnchor = () => {
+      const legacyAnchor = location.hash.slice(1);
+      if (location.pathname === '/' && Object.prototype.hasOwnProperty.call(legacyAnchors, legacyAnchor)) { location.replace(legacyAnchors[legacyAnchor]); }
+    };
+    window.addEventListener('hashchange', resolveLegacyAnchor);
+    resolveLegacyAnchor();
+    document.querySelectorAll('.public-menu-item').forEach(item => {
+      const button = item.querySelector('.submenu-toggle');
+      const submenu = item.querySelector('.public-submenu');
+      if (!button || !submenu) return;
+      const setOpen = open => { button.setAttribute('aria-expanded', String(open)); submenu.hidden = !open; };
+      button.addEventListener('click', () => setOpen(submenu.hidden));
+      item.addEventListener('mouseenter', () => { if (matchMedia('(hover: hover) and (min-width:992px)').matches) setOpen(true); });
+      item.addEventListener('mouseleave', () => { if (!item.contains(document.activeElement)) setOpen(false); });
+      item.addEventListener('focusout', event => { if (!item.contains(event.relatedTarget)) setOpen(false); });
+      item.addEventListener('keydown', event => {
+        const links = Array.from(submenu.querySelectorAll('a'));
+        if (event.key === 'Escape') { setOpen(false); button.focus(); event.preventDefault(); }
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault(); setOpen(true);
+          const index = links.indexOf(document.activeElement);
+          links[(index + (event.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length]?.focus();
+        }
+      });
+      document.addEventListener('click', event => { if (!item.contains(event.target)) setOpen(false); });
+    });
     const navbar = document.querySelector('.navbar');
     const fadeItems = document.querySelectorAll('.fade-in');
     const navLinks = document.querySelectorAll('.navbar .nav-link[href*="#"]');
@@ -1644,7 +1701,7 @@ function render_partners_section(array $partners): void {
       document.querySelectorAll('section[id]').forEach((section) => sectionObserver.observe(section));
     }
 
-    navLinks.forEach((link) => {
+    document.querySelectorAll('.navbar a.nav-link').forEach((link) => {
       link.addEventListener('click', () => {
         if (window.innerWidth < 992 && bsCollapse && menuCollapse.classList.contains('show')) {
           bsCollapse.hide();
@@ -1702,6 +1759,8 @@ function render_partners_section(array $partners): void {
 </html>
 PHP;
 
+        $helper = file_get_contents(__DIR__ . '/../helpers/public_pages.php');
+        $template = str_replace('__PUBLIC_PAGE_HELPERS__', preg_replace('/^<\?php\s*/', '', $helper), $template);
         $template = str_replace('__SITE_BANNER_JSON__', addslashes($siteBannerJson), $template);
         $template = str_replace('__CORPORATE_EVENTS_PAGE_JSON__', str_replace("'", "\\'", (string)$corporateEventsPageJson), $template);
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
@@ -1800,28 +1859,37 @@ function sitemap_slug(string $value): string {
     $value = preg_replace('/[^a-z0-9]+/', '-', $value) ?: '';
     return trim($value, '-') ?: 'pagina';
 }
-$urls = [['loc' => $baseUrl . '/', 'priority' => '1.0']];
+$urls = [['loc' => $baseUrl . '/']];
 $static = ['stand-up-comedy','eventos-de-humor','eventos-corporativos','humoristas-para-eventos-empresas','humorista-jantar-natal-empresa','team-building-com-humor','stand-up-comedy-para-empresas','booking-humoristas','mestre-cerimonias-com-humor','comedy-club-para-bares-restaurantes','producao-eventos-stand-up-comedy','booking-de-humoristas','producao-de-eventos','stand-up-comedy-portugal','stand-up-comedy-aveiro','stand-up-comedy-porto','stand-up-comedy-lisboa','stand-up-comedy-braga','stand-up-comedy-coimbra','stand-up-comedy-faro','stand-up-comedy-suica','stand-up-comedy-franca','stand-up-comedy-luxemburgo'];
 if ('__INCLUDE_CORPORATE_EVENTS_PAGE__' !== '1') {
     $static = array_values(array_diff($static, ['eventos-corporativos']));
 }
-foreach ($static as $slug) { $urls[] = ['loc' => $baseUrl . '/' . $slug . ($slug === 'eventos-corporativos' ? '/' : ''), 'priority' => '0.8']; }
+foreach ($static as $slug) { $urls[] = ['loc' => $baseUrl . '/' . $slug . ($slug === 'eventos-corporativos' ? '/' : '')]; }
 try {
     $db = new PDO('sqlite:__DB_PATH__', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
     $pageColumns = array_column($db->query('PRAGMA table_info(public_pages)')->fetchAll(), 'name');
     if ($pageColumns) {
         $where = in_array('is_published', $pageColumns, true) ? ' WHERE is_published = 1' : '';
-        foreach (($db->query('SELECT slug FROM public_pages' . $where)->fetchAll() ?: []) as $page) {
+        foreach (($db->query('SELECT * FROM public_pages' . $where)->fetchAll() ?: []) as $page) {
             $slug = trim((string)($page['slug'] ?? ''));
-            if ($slug !== '') { $urls[] = ['loc' => $baseUrl . '/' . sitemap_slug($slug), 'priority' => '0.7']; }
+            if ($slug === '' || ($page['display_mode'] ?? 'section') !== 'page' || (int)($page['allow_indexing'] ?? 1) !== 1) { continue; }
+            $loc = $baseUrl . '/' . $slug;
+            $canonical = trim((string)($page['canonical_url'] ?? ''));
+            if ($canonical !== '') {
+                if (rtrim($canonical, '/') !== $loc) { continue; }
+                $loc = $canonical;
+            }
+            $entry = ['loc'=>$loc];
+            if (!empty($page['updated_at'])) { $entry['lastmod'] = gmdate('c', strtotime($page['updated_at'] . ' UTC')); }
+            $urls[] = $entry;
         }
     }
     $blogColumns = array_column($db->query('PRAGMA table_info(blog_posts)')->fetchAll(), 'name');
     if ($blogColumns) {
         $publishedPosts = $db->query('SELECT slug, published_at FROM blog_posts WHERE is_published = 1 ORDER BY sort_order ASC, published_at DESC')->fetchAll() ?: [];
-        $urls[] = ['loc' => $baseUrl . '/blog', 'priority' => '0.8'];
+        $urls[] = ['loc' => $baseUrl . '/blog'];
         foreach ($publishedPosts as $post) {
-            $urls[] = ['loc' => $baseUrl . '/blog/' . sitemap_slug((string)$post['slug']), 'priority' => '0.7', 'lastmod' => (string)($post['published_at'] ?? '')];
+            $urls[] = ['loc' => $baseUrl . '/blog/' . sitemap_slug((string)$post['slug']), 'lastmod' => (string)($post['published_at'] ?? '')];
         }
     }
 
@@ -1829,13 +1897,13 @@ try {
     if ($eventColumns) {
         $where = in_array('is_visible', $eventColumns, true) ? ' AND is_visible = 1' : '';
         foreach (($db->query("SELECT id, title, slug, date FROM events WHERE date >= date('now')" . $where . " ORDER BY date ASC")->fetchAll() ?: []) as $event) {
-            $urls[] = ['loc' => $baseUrl . '/eventos/' . ((string)($event['slug'] ?? '') ?: sitemap_slug((string)$event['title'])), 'priority' => '0.9', 'lastmod' => (string)$event['date']];
+            $urls[] = ['loc' => $baseUrl . '/eventos/' . ((string)($event['slug'] ?? '') ?: sitemap_slug((string)$event['title']))];
         }
     }
     $seriesColumns = array_column($db->query('PRAGMA table_info(event_series)')->fetchAll(), 'name');
     if ($seriesColumns) {
         foreach (($db->query('SELECT slug, updated_at FROM event_series WHERE is_active = 1')->fetchAll() ?: []) as $series) {
-            $urls[] = ['loc' => $baseUrl . '/eventos/' . (string)$series['slug'], 'priority' => '0.9', 'lastmod' => substr((string)$series['updated_at'], 0, 10)];
+            $urls[] = ['loc' => $baseUrl . '/eventos/' . (string)$series['slug'], 'lastmod' => substr((string)$series['updated_at'], 0, 10)];
         }
     }
 } catch (Throwable $e) {}
@@ -1846,7 +1914,7 @@ foreach ($urls as $url) {
     $seen[$url['loc']] = true;
     echo "  <url><loc>" . htmlspecialchars($url['loc'], ENT_XML1) . "</loc>";
     if (!empty($url['lastmod'])) { echo "<lastmod>" . htmlspecialchars($url['lastmod'], ENT_XML1) . "</lastmod>"; }
-    echo "<changefreq>weekly</changefreq><priority>" . htmlspecialchars($url['priority'], ENT_XML1) . "</priority></url>\n";
+    echo "</url>\n";
 }
 echo "</urlset>\n";
 PHP;

@@ -1,6 +1,9 @@
-<h2 class="mb-3"><?= $page ? 'Editar' : 'Nova' ?> página pública</h2>
+<?php $editing = !empty($page['id']) && empty($isNew); ?>
+<?php if (!empty($formError)): ?><div class="alert alert-danger" role="alert"><?= htmlspecialchars($formError) ?></div><?php endif; ?>
+<h2 class="mb-3"><?= $editing ? 'Editar' : 'Nova' ?> página pública</h2>
 
-<form method="post" action="<?= BASE_URL ?>?controller=publicpage&action=<?= $page ? 'update&id=' . (int)$page['id'] : 'store' ?>">
+<form method="post" action="<?= BASE_URL ?>?controller=publicpage&action=<?= $editing ? 'update&id=' . (int)$page['id'] : 'store' ?>">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['public_page_csrf']) ?>">
     <div class="row g-3">
         <div class="col-md-6">
             <label class="form-label">Título</label>
@@ -9,6 +12,8 @@
         <div class="col-md-6">
             <label class="form-label">Slug (URL)</label>
             <input class="form-control" name="slug" value="<?= htmlspecialchars($page['slug'] ?? '') ?>" placeholder="ex.: sobre-nos" required>
+            <p id="slug-status" class="small" aria-live="polite"></p>
+            <p id="slug-warning" class="small text-warning" hidden>Ao alterar o slug publicado, será criado um redirecionamento permanente 301 do URL antigo.</p>
         </div>
         <div class="col-12">
             <label class="form-label">Resumo</label>
@@ -115,6 +120,34 @@
                 </div>
             </div>
         </div>
+        <div class="col-12"><fieldset class="card card-body"><legend class="h5">Configuração de navegação</legend>
+            <label for="menu_location" class="form-label">Localização no menu</label>
+            <select id="menu_location" class="form-select" name="menu_location">
+            <?php foreach (['none'=>'Não apresentar no menu','main'=>'Item principal do menu','submenu'=>'Submenu de um item existente'] as $key=>$label): ?>
+                <option value="<?= $key ?>" <?= ($page['menu_location'] ?? ($editing ? 'main' : 'none')) === $key ? 'selected' : '' ?>><?= $label ?></option>
+            <?php endforeach; ?></select>
+            <div id="menu-parent-field"><label for="menu_parent" class="form-label mt-2">Menu-pai</label>
+            <select id="menu_parent" name="menu_parent" class="form-select"><option value="">Selecionar…</option>
+            <?php foreach ($menuParents as $item): ?><option value="<?= htmlspecialchars($item['key']) ?>" <?= ($page['menu_parent'] ?? '') === $item['key'] ? 'selected' : '' ?>><?= htmlspecialchars($item['title']) ?></option><?php endforeach; ?>
+            </select></div>
+            <div id="menu-label-fields" class="row g-2 mt-1"><div class="col-md-8"><label for="menu_label" class="form-label">Texto do menu</label><input id="menu_label" name="menu_label" class="form-control" value="<?= htmlspecialchars($page['menu_label'] ?? '') ?>" placeholder="Título da página"></div>
+            <div class="col-md-4"><label for="menu_order" class="form-label">Ordem no menu</label><input id="menu_order" type="number" name="menu_order" class="form-control" value="<?= htmlspecialchars((string)($page['menu_order'] ?? '')) ?>" placeholder="Ordem atual"></div></div>
+            <p id="menu-preview" class="small mt-3 mb-0" aria-live="polite"></p>
+        </fieldset></div>
+        <div class="col-12"><details class="card card-body"><summary class="h5">SEO e partilha</summary><p class="small text-muted mt-2">As tags SEO, a indexação e o Schema aplicam-se ao modo Página própria. Os setores partilham o documento e o SEO da homepage.</p>
+            <label for="meta_title" class="form-label mt-3">Meta title</label><input id="meta_title" class="form-control" name="meta_title" value="<?= htmlspecialchars($page['meta_title'] ?? '') ?>"><p id="title-count" class="small text-muted"></p>
+            <label for="meta_description" class="form-label">Meta description</label><textarea id="meta_description" class="form-control" name="meta_description" rows="3"><?= htmlspecialchars($page['meta_description'] ?? '') ?></textarea><p id="description-count" class="small text-muted"></p>
+            <label for="canonical_url" class="form-label">URL canónica (opcional)</label><input type="url" id="canonical_url" class="form-control" name="canonical_url" value="<?= htmlspecialchars($page['canonical_url'] ?? '') ?>"><p class="small text-muted">Em branco: usa automaticamente o URL público real. Setores da home usam a homepage.</p>
+            <label for="og_image_url" class="form-label">Imagem Open Graph (URL)</label><input type="url" id="og_image_url" class="form-control" name="og_image_url" value="<?= htmlspecialchars($page['og_image_url'] ?? '') ?>"><p class="small text-muted">Em branco: usa a capa ou a imagem social do website.</p>
+            <label class="form-check-label"><input class="form-check-input me-2" type="checkbox" name="allow_indexing" <?= (int)($page['allow_indexing'] ?? 1) === 1 ? 'checked' : '' ?>>Permitir indexação nos motores de pesquisa</label>
+            <label for="schema_type" class="form-label mt-3">Dados estruturados</label><select id="schema_type" name="schema_type" class="form-select"><option value="WebPage">Página geral</option><option value="Service" <?= ($page['schema_type'] ?? '') === 'Service' ? 'selected' : '' ?>>Serviço comercial</option></select>
+            <label for="service_area" class="form-label mt-2">Área geográfica do serviço (opcional)</label><input id="service_area" name="service_area" class="form-control" value="<?= htmlspecialchars($page['service_area'] ?? '') ?>">
+            <div class="border rounded p-3 mt-3"><p class="small">Pré-visualização indicativa no Google</p><div id="seo-url" class="small"></div><div id="seo-title" class="text-primary fs-5"></div><div id="seo-description"></div></div>
+        </details></div>
+        <div class="col-12"><details class="card card-body"><summary class="h5">Conteúdos relacionados</summary><p class="small text-muted mt-2">Seleciona conteúdos publicados. As ligações são ocultadas se deixarem de estar disponíveis.</p>
+        <?php $selectedRelated = json_decode((string)($page['related_json'] ?? '[]'), true) ?: []; ?>
+        <?php foreach ($relatedOptions as $key=>$label): ?><label class="form-check-label mb-2"><input class="form-check-input me-2" type="checkbox" name="related[]" value="<?= htmlspecialchars($key) ?>" <?= in_array($key, $selectedRelated, true) ? 'checked' : '' ?>><?= htmlspecialchars($label) ?></label><?php endforeach; ?>
+        </details></div>
         <div class="col-md-12 d-flex align-items-end">
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="is_published" id="is_published" <?= (!$page || (int)($page['is_published'] ?? 0) === 1) ? 'checked' : '' ?>>
@@ -143,5 +176,50 @@
 
   typeSelect.addEventListener('change', syncBlocks);
   syncBlocks();
+})();
+</script>
+
+<script>
+(() => {
+  const field = name => document.querySelector('[name="' + name + '"]');
+  const originalSlug = field('slug').value;
+  const published = <?= !empty($page['is_published']) && $editing ? 'true' : 'false' ?>;
+  let timer, revision = 0;
+  function preview() {
+    const title = field('title').value;
+    const slug = field('slug').value;
+    const canonical = field('display_mode').value === 'page' ? 'https://chorarderir.com/' + slug : 'https://chorarderir.com/';
+    field('canonical_url').placeholder = canonical;
+    document.getElementById('seo-url').textContent = field('canonical_url').value || canonical;
+    document.getElementById('seo-title').textContent = field('meta_title').value || title + ' | Chorar de Rir';
+    const contentText = new DOMParser().parseFromString(field('content').value, 'text/html').body.textContent || '';
+    const description = (field('excerpt').value || contentText).replace(/\s+/g, ' ').trim();
+    document.getElementById('seo-description').textContent = field('meta_description').value || (Array.from(description).length > 158 ? Array.from(description).slice(0, 157).join('') + '…' : description);
+    document.getElementById('title-count').textContent = Array.from(field('meta_title').value).length + ' caracteres — recomendação: 50–60';
+    document.getElementById('description-count').textContent = Array.from(field('meta_description').value).length + ' caracteres — recomendação: 140–160';
+    const location = field('menu_location').value;
+    document.getElementById('menu-parent-field').hidden = location !== 'submenu';
+    field('menu_parent').required = location === 'submenu';
+    document.getElementById('menu-label-fields').hidden = location === 'none';
+    const parent = field('menu_parent').selectedOptions[0]?.textContent || '';
+    document.getElementById('menu-preview').textContent = location === 'none' ? 'Não aparece no menu. O URL público mantém-se acessível.' : (location === 'submenu' ? parent + ' → ' : 'Menu principal → ') + (field('menu_label').value || title) + ' · ' + (field('display_mode').value === 'page' ? '/' + slug : '/#' + slug);
+    document.getElementById('slug-warning').hidden = !published || slug === originalSlug;
+  }
+  document.querySelector('form').addEventListener('input', preview);
+  document.querySelector('form').addEventListener('change', preview);
+  field('slug').addEventListener('input', () => {
+    clearTimeout(timer);
+    const current = ++revision;
+    timer = setTimeout(async () => {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('controller', 'publicpage'); url.searchParams.set('action', 'checkSlug');
+        url.searchParams.set('slug', field('slug').value);
+        const data = await (await fetch(url)).json();
+        if (current === revision) document.getElementById('slug-status').textContent = data.available ? 'Slug disponível: ' + data.slug : 'Slug duplicado ou reservado.';
+      } catch (_) { document.getElementById('slug-status').textContent = 'A disponibilidade será verificada ao guardar.'; }
+    }, 300);
+  });
+  preview();
 })();
 </script>
