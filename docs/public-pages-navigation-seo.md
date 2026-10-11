@@ -52,6 +52,20 @@ A nova tabela `public_page_redirects` contém `old_slug` (chave primária), `pag
 4. Em **Publicar website**, utilizar a pasta de destino habitual e republicar uma vez. Isto atualiza o `index.php` e o gerador do sitemap exportados; mantém `/sitemap.xml` e as regras de rotas atuais.
 5. Depois desta exportação, a criação e edição das páginas são lidas da mesma base de dados pelo website, como anteriormente. Não é necessário editar manualmente o código do site para cada página.
 
+### Corrigir um 404 num slug criado pelo painel
+
+Se uma página publicada em modo **Página própria**, como `/contratar-humorista`, devolve 404 enquanto as páginas fixas funcionam, verificar a regra genérica no `.htaccess` do website exportado. A exportação deve conter, depois das rotas específicas de blog e eventos:
+
+```apache
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z0-9-]+)/?$ index.php?page=$1 [L,QSA]
+```
+
+Esta regra permite ao `index.php` consultar a página ou o histórico de slugs na base de dados, preservando ficheiros e diretórios existentes. Aplicar a atualização e **republicar o website** para instalar a regra no destino. Não é necessário alterar o slug nem recriar a página.
+
+A correção foi validada com Apache 2.4.68 e PHP via FastCGI: o `.htaccess` anterior reproduziu o 404, e o corrigido passou 13 cenários HTTP, incluindo páginas novas, barra final, query string, redirecionamentos 301, rascunhos, ficheiros, diretórios, blog, eventos e sitemap.
+
 ## Criar e verificar uma página
 
 1. Abrir **Páginas Públicas → Nova página** e escolher **Página própria** para obter um URL como `/contratar-humorista`.

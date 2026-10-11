@@ -1829,6 +1829,11 @@ RewriteRule ^eventos/([^/]+)/?$ index.php?serie=$1&evento=$1 [L,QSA]
 RewriteRule ^blog/?$ index.php?page=blog [L,QSA]
 RewriteRule ^blog/([^/]+)/?$ index.php?page=blog/$1 [L,QSA]
 RewriteRule ^(stand-up-comedy|eventos-de-humor|eventos-corporativos|humoristas-para-eventos-empresas|humorista-jantar-natal-empresa|team-building-com-humor|stand-up-comedy-para-empresas|booking-humoristas|mestre-cerimonias-com-humor|comedy-club-para-bares-restaurantes|producao-eventos-stand-up-comedy|booking-de-humoristas|producao-de-eventos|stand-up-comedy-portugal|stand-up-comedy-aveiro|stand-up-comedy-porto|stand-up-comedy-lisboa|stand-up-comedy-braga|stand-up-comedy-coimbra|stand-up-comedy-faro|stand-up-comedy-suica|stand-up-comedy-franca|stand-up-comedy-luxemburgo)/?$ index.php?page=$1 [L,QSA]
+# Public pages and their old slugs are resolved from the database by index.php.
+# Preserve real assets, handlers and directories rather than rewriting them.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z0-9-]+)/?$ index.php?page=$1 [L,QSA]
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/xml image/svg+xml
 </IfModule>
