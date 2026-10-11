@@ -37,4 +37,23 @@ $assert(
     'index.php must continue to redirect direct legacy query-string requests.'
 );
 
+$dynamicRoute = 'RewriteRule ^([a-z0-9-]+)/?$ index.php?page=$1 [L,QSA]';
+$assert(
+    str_contains($htaccess, "RewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-d\n" . $dynamicRoute),
+    'New public page slugs and old redirect slugs must reach index.php without intercepting real files or directories.'
+);
+$assert(
+    strpos($htaccess, $dynamicRoute) > strpos($htaccess, 'RewriteRule ^blog/'),
+    'The generic page route must follow the existing event and blog routes.'
+);
+
+foreach (['contratar-humorista', 'servico-antigo', 'pagina-nova/'] as $path) {
+    $matches = [];
+    $assert(preg_match('#^([a-z0-9-]+)/?$#', $path, $matches) === 1, 'Dynamic slug is not routable: ' . $path);
+    $assert($matches[1] === rtrim($path, '/'), 'The route must preserve the slug: ' . $path);
+}
+foreach (['index.php', 'reserve.php', 'assets/site.css', 'blog/artigo', 'eventos/sessao'] as $path) {
+    $assert(preg_match('#^([a-z0-9-]+)/?$#', $path) === 0, 'Generic route intercepts an existing handler or nested route: ' . $path);
+}
+
 fwrite(STDOUT, "Public-site rewrite regression test passed.\n");
