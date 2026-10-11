@@ -88,25 +88,50 @@ function public_page_related(array $page, array $pages, array $posts, array $eve
     return array_values($result);
 }
 
-function public_page_safe_html(string $html): string
+function public_page_safe_html(string $html, bool $standalone = false, string $ctaLabel = ''): string
 {
-    // Strip attributes on allowed markup; preserve only validated links and their titles.
+    // Preserve validated links/titles; dedicated pages may use controlled brand button classes.
     $html = strip_tags($html, '<h1><h2><h3><h4><p><ul><ol><li><strong><em><a><blockquote><br><hr>');
-    return preg_replace_callback('/<([a-z0-9]+)\b[^>]*>/i', static function (array $match): string {
+    if ($standalone) { $html = preg_replace('/<(\/?\s*)h1\b/i', '<$1h2', $html) ?: ''; }
+    $html = preg_replace_callback('/<([a-z0-9]+)\b[^>]*>/i', static function (array $match) use ($standalone): string {
         $tag = strtolower($match[1]);
         if ($tag !== 'a') { return '<' . $tag . '>'; }
         $attrs = [];
-        preg_match_all('/\b(href|title)\s*=\s*(?:"([^"]*)"|\x27([^\x27]*)\x27|([^\s>]+))/i', $match[0], $attrs, PREG_SET_ORDER);
+        preg_match_all('/\b(href|title|class)\s*=\s*(?:"([^"]*)"|\x27([^\x27]*)\x27|([^\s>]+))/i', $match[0], $attrs, PREG_SET_ORDER);
         $link = '<a';
+        $href = ''; $buttonClass = '';
         foreach ($attrs as $attr) {
             $name = strtolower($attr[1]);
             $quoted = (string)($attr[2] ?? '') ?: (string)($attr[3] ?? '');
             $value = html_entity_decode($quoted !== '' ? $quoted : (string)($attr[4] ?? ''), ENT_QUOTES, 'UTF-8');
-            if ($name === 'href' && !public_page_safe_link($value)) { continue; }
+            if ($name === 'class') {
+                if ($standalone && preg_match('/(?:^|\s)(?:btn(?:-[a-z-]+)?|cta|page-cta)(?:\s|$)/i', $value)) {
+                    $buttonClass = preg_match('/(?:^|\s)btn-outline-[a-z-]+(?:\s|$)/i', $value) ? 'btn-outline-brand' : 'btn-brand';
+                }
+                continue;
+            }
+            if ($name === 'href') {
+                if (!public_page_safe_link($value) && !($standalone && preg_match('/^tel:\+?[0-9][0-9().-]*$/i', $value))) { continue; }
+                $href = $value;
+            }
             $link .= ' ' . $name . '="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '"';
+        }
+        if ($standalone && $href !== '') {
+            $contact = preg_match('#^(?:mailto:|tel:|/?\#(?:contactos|pedido-proposta)$|https://(?:wa\.me/|(?:api|web)\.whatsapp\.com/send\b))#i', $href);
+            if ($buttonClass !== '' || $contact) { $link .= ' class="btn ' . ($buttonClass ?: 'btn-brand') . ' page-cta"'; }
         }
         return $link . '>';
     }, $html) ?: '';
+    if ($standalone && trim($ctaLabel) !== '') {
+        $html = preg_replace_callback('#<a\b([^>]*)>(.*?)</a>#is', static function (array $match) use ($ctaLabel): string {
+            $label = trim(html_entity_decode(strip_tags($match[2]), ENT_QUOTES, 'UTF-8'));
+            if (strpos($match[1], 'href=') !== false && strpos($match[1], 'page-cta') === false && strcasecmp($label, trim($ctaLabel)) === 0) {
+                return '<a' . $match[1] . ' class="btn btn-brand page-cta">' . $match[2] . '</a>';
+            }
+            return $match[0];
+        }, $html) ?: '';
+    }
+    return $html;
 }
 
 function public_page_reserved_slugs(): array

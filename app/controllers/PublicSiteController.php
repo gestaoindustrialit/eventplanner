@@ -936,6 +936,35 @@ function render_partners_section(array $partners): void {
     .btn-outline-brand:hover { border-color: var(--primary-hover); color: #fff; box-shadow: 0 0 18px rgba(225,6,0,.38); }
     .page-cover { min-height: 240px; border-radius: .95rem; background-size: cover; background-position: center; margin-bottom: 1.2rem; }
     .page-content { line-height: 1.8; color: var(--text-secondary); }
+    /* Dedicated pages share the homepage palette, without changing other templates. */
+    .standalone-hero { position:relative; z-index:1; width:100%; background:var(--background-main); border-bottom:1px solid rgba(225,6,0,.3); }
+    .standalone-hero img { display:block; width:100%; height:auto; object-fit:contain; }
+    .standalone-page { position:relative; z-index:1; background:var(--background-main); padding:clamp(2.5rem,6vw,5rem) 0; }
+    .standalone-page > .container { max-width:1040px; }
+    .standalone-intro { padding-bottom:clamp(2rem,4vw,3rem); border-bottom:1px solid rgba(255,255,255,.12); margin-bottom:clamp(2rem,4vw,3rem); }
+    .standalone-intro h1 { color:var(--text-primary); font-size:clamp(2.25rem,5vw,4.75rem); font-weight:800; letter-spacing:-.045em; line-height:1.08; margin:0 0 1.25rem; overflow-wrap:anywhere; }
+    .standalone-summary { color:var(--text-secondary); font-size:clamp(1.1rem,2vw,1.4rem); line-height:1.7; max-width:64ch; margin:0; }
+    .standalone-content { color:var(--text-secondary); font-size:1.08rem; line-height:1.85; overflow-wrap:anywhere; }
+    .standalone-content p { margin-bottom:1.5rem; }
+    .standalone-content h2, .standalone-content h3, .standalone-content h4 { color:var(--text-primary); font-weight:750; line-height:1.25; letter-spacing:-.025em; }
+    .standalone-content h2 { font-size:clamp(1.75rem,3vw,2.5rem); margin:3.5rem 0 1.25rem; padding-top:2.5rem; border-top:1px solid rgba(255,255,255,.1); }
+    .standalone-content > h2:first-child { margin-top:0; padding-top:0; border-top:0; }
+    .standalone-content h3 { font-size:clamp(1.35rem,2vw,1.65rem); margin:2.25rem 0 1rem; }
+    .standalone-content h4 { font-size:1.2rem; margin:1.75rem 0 .75rem; }
+    .standalone-content strong { color:var(--text-primary); }
+    .standalone-content ul, .standalone-content ol { padding-left:1.4rem; margin:1.5rem 0 2rem; }
+    .standalone-content li { padding-left:.4rem; margin-bottom:.85rem; }
+    .standalone-content li::marker { color:var(--primary-hover); font-weight:700; }
+    .standalone-content hr { border:0; height:1px; background:linear-gradient(90deg,var(--primary),rgba(255,255,255,.08)); opacity:1; margin:3rem 0; }
+    .standalone-content hr + h2 { margin-top:0; padding-top:0; border-top:0; }
+    .standalone-content blockquote { border-left:3px solid var(--primary); padding:.5rem 0 .5rem 1.5rem; margin:2rem 0; color:var(--text-primary); }
+    .standalone-content a, .standalone-related a { color:var(--accent); text-decoration:underline; text-underline-offset:.25em; text-decoration-color:rgba(255,195,0,.4); }
+    .standalone-content a:hover, .standalone-related a:hover { color:#fff; text-decoration-color:var(--primary-hover); }
+    .standalone-page .page-cta { display:inline-flex; align-items:center; justify-content:center; gap:.65rem; padding:.9rem 1.6rem; margin:.6rem .5rem .6rem 0; min-height:48px; max-width:100%; color:#fff; text-decoration:none; font-weight:700; line-height:1.4; white-space:normal; }
+    .standalone-page a:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+    .standalone-cta, .standalone-related { border-top:1px solid rgba(255,255,255,.12); margin-top:3rem; padding-top:2rem; }
+    .standalone-cta p { color:var(--text-primary); font-size:1.25rem; line-height:1.6; }
+    @media (max-width:575.98px) { .standalone-page > .container { padding-inline:1.25rem; } .standalone-content { font-size:1rem; } .standalone-page .page-cta { width:100%; margin-right:0; } }
     .newsletter-panel {
       background: linear-gradient(145deg, rgba(42,15,46,.45), rgba(26,26,29,.92));
       border: 1px solid rgba(255,255,255,.09);
@@ -1141,6 +1170,12 @@ function render_partners_section(array $partners): void {
       </div>
     </div>
   </nav>
+
+  <?php if ($isStandaloneView && $activeStandalonePage && public_page_http_url((string)($activeStandalonePage['hero_image_url'] ?? ''))): ?>
+    <div class="standalone-hero">
+      <img src="<?php echo htmlspecialchars((string)$activeStandalonePage['hero_image_url']); ?>" alt="<?php echo htmlspecialchars((string)$activeStandalonePage['title']); ?>" fetchpriority="high" decoding="async">
+    </div>
+  <?php endif; ?>
 
   <?php if (!empty($siteBanner['enabled']) && ($siteBanner['text'] !== '' || $siteBanner['image_url'] !== '')): ?>
     <aside class="site-banner py-3" aria-label="Destaque">
@@ -1596,22 +1631,33 @@ function render_partners_section(array $partners): void {
         </div>
       </div>
     <?php else: ?>
-      <section class="section-block">
+      <?php
+        $standaloneConfig = section_config($activeStandalonePage);
+        $ctaLabel = trim((string)($standaloneConfig['cta_button_text'] ?? ''));
+        $ctaText = trim((string)($standaloneConfig['cta_text'] ?? ''));
+        $standaloneHtml = public_page_safe_html((string)($activeStandalonePage['content'] ?? ''), true, $ctaLabel);
+        $hasEditorialCta = strpos($standaloneHtml, ' page-cta"') !== false;
+        $showConfiguredCta = $ctaText !== '' || ($ctaLabel !== '' && $ctaLabel !== 'Enviar mensagem');
+      ?>
+      <article class="standalone-page">
         <div class="container">
-          <div class="surface-card p-4 p-lg-5 fade-in show">
-            <?php if (!empty($activeStandalonePage['hero_image_url'])): ?>
-              <div class="page-cover" style="background-image:url('<?php echo htmlspecialchars(public_page_css_url((string)$activeStandalonePage['hero_image_url'])); ?>');"></div>
-            <?php endif; ?>
-            <h1 class="section-heading mb-3"><?php echo htmlspecialchars((string)$activeStandalonePage['title']); ?></h1>
+          <header class="standalone-intro">
+            <h1><?php echo htmlspecialchars((string)$activeStandalonePage['title']); ?></h1>
             <?php if (!empty($activeStandalonePage['excerpt'])): ?>
-              <p class="lead text-secondary"><?php echo htmlspecialchars((string)$activeStandalonePage['excerpt']); ?></p>
+              <p class="standalone-summary"><?php echo htmlspecialchars((string)$activeStandalonePage['excerpt']); ?></p>
             <?php endif; ?>
-            <div class="page-content"><?php echo safe_content($activeStandalonePage['content'] ?? ''); ?></div>
-            <?php $relatedContent = public_page_related($activeStandalonePage, $pages, $blogPosts, $events); ?>
-            <?php if ($relatedContent): ?><aside class="mt-4" aria-label="Conteúdos relacionados"><h2 class="h4">Conteúdos relacionados</h2><ul class="seo-link-list"><?php foreach ($relatedContent as $related): ?><li><a href="<?php echo htmlspecialchars($related['url']); ?>"><?php echo htmlspecialchars($related['title']); ?></a></li><?php endforeach; ?></ul></aside><?php endif; ?>
-          </div>
+          </header>
+          <div class="standalone-content"><?php echo $standaloneHtml; ?></div>
+          <?php if ($showConfiguredCta && !$hasEditorialCta): ?>
+            <aside class="standalone-cta" aria-label="Contacto">
+              <?php if ($ctaText !== ''): ?><p><?php echo htmlspecialchars($ctaText); ?></p><?php endif; ?>
+              <?php if ($ctaLabel !== ''): ?><a class="btn btn-brand page-cta" href="/#contactos"><?php echo htmlspecialchars($ctaLabel); ?></a><?php endif; ?>
+            </aside>
+          <?php endif; ?>
+          <?php $relatedContent = public_page_related($activeStandalonePage, $pages, $blogPosts, $events); ?>
+          <?php if ($relatedContent): ?><aside class="standalone-related" aria-label="Conteúdos relacionados"><h2 class="h4">Conteúdos relacionados</h2><ul class="seo-link-list"><?php foreach ($relatedContent as $related): ?><li><a href="<?php echo htmlspecialchars($related['url']); ?>"><?php echo htmlspecialchars($related['title']); ?></a></li><?php endforeach; ?></ul></aside><?php endif; ?>
         </div>
-      </section>
+      </article>
     <?php endif; ?>
 
   </main>
