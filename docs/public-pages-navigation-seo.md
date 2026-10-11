@@ -79,6 +79,18 @@ A correção foi validada com Apache 2.4.68 e PHP via FastCGI: o `.htaccess` ant
 9. Alterar apenas a localização no menu e confirmar que o URL permanece igual. Despublicar e confirmar que desaparece da navegação, do sitemap e dos conteúdos relacionados; o acesso direto devolve 404.
 10. Alterar o slug de uma página publicada e verificar o aviso no editor. O URL antigo deve responder com HTTP 301 para o novo, incluindo após várias alterações consecutivas.
 
+## Apresentação das páginas próprias
+
+A imagem de capa aparece imediatamente abaixo do menu, a toda a largura do ecrã. Mantém a proporção original, sem recortes ou distorção; para um banner baixo, usar uma imagem panorâmica. O título e o resumo aparecem abaixo, sobre o fundo escuro da marca, e o conteúdo apresenta secções sem uma caixa exterior.
+
+O título é o único H1. Os H1 introduzidos no conteúdo são apresentados como H2, sem alterar o HTML guardado. Mantêm-se parágrafos, listas, H2/H3 e separadores do editor.
+
+Os links de contacto e os links com classes `btn`, `btn-*`, `cta` ou `page-cta` recebem o estilo dos botões da marca. Por exemplo, `<a class="btn" href="/#contactos">Pedir proposta</a>`. `btn-outline-brand` e `btn-outline-*` recebem a variante de contorno. Os restantes links usam dourado. Apenas estas classes controladas são emitidas; estilos e atributos executáveis continuam removidos.
+
+Se já existir um CTA no conteúdo, o template não acrescenta outro. Caso contrário, utiliza o texto e o botão configurados no gestor, com o destino de contacto existente. O layout aplica-se também às futuras páginas próprias, sem alterar a homepage ou o blog. Após instalar esta alteração, republicar em **Publicar website**.
+
+O template passou 21 verificações PHP e 48 verificações no Chromium, nas larguras de 320, 390, 768 e 1440 px, com uma imagem de teste. Foram verificados largura total, proporção, ausência de scroll horizontal, H1 único, CTA sem duplicação, cores e foco de teclado.
+
 ## Particularidades da arquitetura preservada
 
 - **Setores da home** continuam a usar `/#slug` e a partilhar o documento, a canónica e o SEO da homepage. Para SEO e indexação individuais, selecionar **Página própria**. Os setores não recebem URLs inventados no sitemap.
