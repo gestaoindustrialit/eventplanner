@@ -182,7 +182,8 @@ $pages = [];
 $legacyAnchors = [];
 $partners = [];
 $blogPosts = [];
-$homeCopy = json_decode('__HOME_COPY_JSON__', true) ?: [];
+$homeCopy = json_decode(__HOME_COPY_JSON__, true) ?: [];
+$configuredHomeTitle = trim((string)($homeCopy['title'] ?? ''));
 $siteBanner = json_decode('__SITE_BANNER_JSON__', true) ?: [];
 $corporateEventsPage = json_decode('__CORPORATE_EVENTS_PAGE_JSON__', true) ?: [];
 $msg = $_GET['msg'] ?? '';
@@ -672,8 +673,8 @@ function render_partners_section(array $partners): void {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php
-    $seoTitle = 'Stand Up Comedy e Eventos de Humor em Portugal | Chorar de Rir';
-    $seoDescription = truncate_text((string)($homeCopy['description'] ?? 'Eventos de stand up comedy, humor ao vivo, eventos corporativos de humor, booking de humoristas e produção de eventos em Portugal.'), 158);
+    $seoTitle = $configuredHomeTitle !== '' ? $configuredHomeTitle : 'Stand Up Comedy e Eventos de Humor em Portugal | Chorar de Rir';
+    $seoDescription = (string)$homeCopy['description'];
     $canonicalUrl = absolute_url('/');
     $ogImage = absolute_url((string)$heroBackgroundUrl);
     $schemaType = 'WebPage';
@@ -1810,7 +1811,7 @@ PHP;
         $template = str_replace('__SITE_BANNER_JSON__', addslashes($siteBannerJson), $template);
         $template = str_replace('__CORPORATE_EVENTS_PAGE_JSON__', str_replace("'", "\\'", (string)$corporateEventsPageJson), $template);
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
-        $template = str_replace('__HOME_COPY_JSON__', addslashes((string)$homeCopyJson), $template);
+        $template = str_replace('__HOME_COPY_JSON__', var_export((string)$homeCopyJson, true), $template);
         $template = str_replace('__NEWSLETTER_CONSENT__', addslashes($newsletterConsentText), $template);
         return str_replace('__RECAPTCHA_SITE_KEY__', addslashes(trim($recaptchaSiteKey)), $template);
     }
