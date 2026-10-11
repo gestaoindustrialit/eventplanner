@@ -1903,13 +1903,28 @@ HTACCESS;
         $includeCorporateEventsPage = !empty($corporateEventsPage['enabled']) ? '1' : '0';
         $template = <<<'PHP'
 <?php
+// Keep PHP diagnostics out of the XML response, including on shared hosting.
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ob_start();
 header('Content-Type: application/xml; charset=UTF-8');
+header('X-Content-Type-Options: nosniff');
 $baseUrl = 'https://chorarderir.com';
 function sitemap_slug(string $value): string {
     $value = trim(function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value));
     $value = strtr($value, ['á'=>'a','à'=>'a','ã'=>'a','â'=>'a','ä'=>'a','é'=>'e','è'=>'e','ê'=>'e','ë'=>'e','í'=>'i','ì'=>'i','î'=>'i','ï'=>'i','ó'=>'o','ò'=>'o','õ'=>'o','ô'=>'o','ö'=>'o','ú'=>'u','ù'=>'u','û'=>'u','ü'=>'u','ç'=>'c','ñ'=>'n']);
     $value = preg_replace('/[^a-z0-9]+/', '-', $value) ?: '';
     return trim($value, '-') ?: 'pagina';
+}
+function sitemap_lastmod(string $value): string {
+    $value = trim($value);
+    if ($value === '' || !preg_match('/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})?)?$/', $value)) { return ''; }
+    try {
+        $date = new DateTimeImmutable($value, new DateTimeZone('UTC'));
+        $errors = DateTimeImmutable::getLastErrors();
+        if ($errors && ($errors['warning_count'] || $errors['error_count'])) { return ''; }
+        return strlen($value) === 10 ? $date->format('Y-m-d') : $date->format('c');
+    } catch (Throwable $e) { return ''; }
 }
 $urls = [['loc' => $baseUrl . '/']];
 $static = ['stand-up-comedy','eventos-de-humor','eventos-corporativos','humoristas-para-eventos-empresas','humorista-jantar-natal-empresa','team-building-com-humor','stand-up-comedy-para-empresas','booking-humoristas','mestre-cerimonias-com-humor','comedy-club-para-bares-restaurantes','producao-eventos-stand-up-comedy','booking-de-humoristas','producao-de-eventos','stand-up-comedy-portugal','stand-up-comedy-aveiro','stand-up-comedy-porto','stand-up-comedy-lisboa','stand-up-comedy-braga','stand-up-comedy-coimbra','stand-up-comedy-faro','stand-up-comedy-suica','stand-up-comedy-franca','stand-up-comedy-luxemburgo'];
@@ -1918,21 +1933,27 @@ if ('__INCLUDE_CORPORATE_EVENTS_PAGE__' !== '1') {
 }
 foreach ($static as $slug) { $urls[] = ['loc' => $baseUrl . '/' . $slug . ($slug === 'eventos-corporativos' ? '/' : '')]; }
 try {
-    $db = new PDO('sqlite:__DB_PATH__', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+    $dbPath = __SITEMAP_DB_PATH__;
+    if (!is_file($dbPath) || !is_readable($dbPath)) { throw new RuntimeException('Sitemap database is not readable.'); }
+    $db = new PDO('sqlite:' . $dbPath, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+    $excluded = [];
     $pageColumns = array_column($db->query('PRAGMA table_info(public_pages)')->fetchAll(), 'name');
     if ($pageColumns) {
         $where = in_array('is_published', $pageColumns, true) ? ' WHERE is_published = 1' : '';
         foreach (($db->query('SELECT * FROM public_pages' . $where)->fetchAll() ?: []) as $page) {
             $slug = trim((string)($page['slug'] ?? ''));
-            if ($slug === '' || ($page['display_mode'] ?? 'section') !== 'page' || (int)($page['allow_indexing'] ?? 1) !== 1) { continue; }
+            if (!preg_match('/^[a-z0-9-]+$/', $slug) || ($page['display_mode'] ?? 'section') !== 'page') { continue; }
             $loc = $baseUrl . '/' . $slug;
+            if ((int)($page['allow_indexing'] ?? 1) !== 1) { $excluded[rtrim($loc, '/')] = true; continue; }
             $canonical = trim((string)($page['canonical_url'] ?? ''));
             if ($canonical !== '') {
-                if (rtrim($canonical, '/') !== $loc) { continue; }
+                if (rtrim($canonical, '/') !== $loc) { $excluded[$loc] = true; continue; }
                 $loc = $canonical;
             }
             $entry = ['loc'=>$loc];
-            if (!empty($page['updated_at'])) { $entry['lastmod'] = gmdate('c', strtotime($page['updated_at'] . ' UTC')); }
+            // Replace static candidates when a published page owns the same slug.
+            $urls = array_values(array_filter($urls, static function (array $url) use ($loc): bool { return rtrim($url['loc'], '/') !== rtrim($loc, '/'); }));
+            if (!empty($page['updated_at'])) { $entry['lastmod'] = (string)$page['updated_at']; }
             $urls[] = $entry;
         }
     }
@@ -1941,37 +1962,61 @@ try {
         $publishedPosts = $db->query('SELECT slug, published_at FROM blog_posts WHERE is_published = 1 ORDER BY sort_order ASC, published_at DESC')->fetchAll() ?: [];
         $urls[] = ['loc' => $baseUrl . '/blog'];
         foreach ($publishedPosts as $post) {
-            $urls[] = ['loc' => $baseUrl . '/blog/' . sitemap_slug((string)$post['slug']), 'lastmod' => (string)($post['published_at'] ?? '')];
+            if (!preg_match('/^[a-z0-9-]+$/', (string)$post['slug'])) { continue; }
+            $urls[] = ['loc' => $baseUrl . '/blog/' . (string)$post['slug'], 'lastmod' => (string)($post['published_at'] ?? '')];
         }
     }
 
     $eventColumns = array_column($db->query('PRAGMA table_info(events)')->fetchAll(), 'name');
     if ($eventColumns) {
         $where = in_array('is_visible', $eventColumns, true) ? ' AND is_visible = 1' : '';
-        foreach (($db->query("SELECT id, title, slug, date FROM events WHERE date >= date('now')" . $where . " ORDER BY date ASC")->fetchAll() ?: []) as $event) {
-            $urls[] = ['loc' => $baseUrl . '/eventos/' . ((string)($event['slug'] ?? '') ?: sitemap_slug((string)$event['title']))];
+        $usedSlugs = [];
+        foreach (($db->query("SELECT id, title, slug, date FROM events WHERE date >= date('now')" . $where . " ORDER BY date ASC, time ASC")->fetchAll() ?: []) as $event) {
+            // Match the exported index's ordering and duplicate-slug resolution.
+            $baseSlug = trim((string)($event['slug'] ?? '')) ?: sitemap_slug((string)$event['title']);
+            $slug = $baseSlug; $suffix = 2;
+            while (isset($usedSlugs[$slug])) { $slug = $baseSlug . '-' . $suffix++; }
+            $usedSlugs[$slug] = true;
+            if (preg_match('/^[a-z0-9-]+$/', $slug)) { $urls[] = ['loc' => $baseUrl . '/eventos/' . $slug]; }
         }
     }
     $seriesColumns = array_column($db->query('PRAGMA table_info(event_series)')->fetchAll(), 'name');
     if ($seriesColumns) {
         foreach (($db->query('SELECT slug, updated_at FROM event_series WHERE is_active = 1')->fetchAll() ?: []) as $series) {
-            $urls[] = ['loc' => $baseUrl . '/eventos/' . (string)$series['slug'], 'lastmod' => substr((string)$series['updated_at'], 0, 10)];
+            if (preg_match('/^[a-z0-9-]+$/', (string)$series['slug'])) { $urls[] = ['loc' => $baseUrl . '/eventos/' . (string)$series['slug'], 'lastmod' => (string)$series['updated_at']]; }
         }
     }
-} catch (Throwable $e) {}
+    $redirectColumns = $db->query('PRAGMA table_info(public_page_redirects)')->fetchAll();
+    if ($redirectColumns) {
+        foreach ($db->query('SELECT r.old_slug FROM public_page_redirects r JOIN public_pages p ON p.id=r.page_id WHERE p.is_published=1')->fetchAll() as $redirect) {
+            $excluded[$baseUrl . '/' . $redirect['old_slug']] = true;
+        }
+    }
+} catch (Throwable $e) {
+    error_log('Sitemap generation failed: ' . $e->getMessage());
+    ob_end_clean();
+    http_response_code(503);
+    header('Retry-After: 300');
+    echo '<?xml version="1.0" encoding="UTF-8"?><error>Sitemap temporarily unavailable</error>';
+    exit;
+}
+ob_clean();
+http_response_code(200);
 echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n";
 $seen = [];
 foreach ($urls as $url) {
-    if (isset($seen[$url['loc']])) { continue; }
+    if (isset($seen[$url['loc']]) || isset($excluded[rtrim($url['loc'], '/')])) { continue; }
     $seen[$url['loc']] = true;
-    echo "  <url><loc>" . htmlspecialchars($url['loc'], ENT_XML1) . "</loc>";
-    if (!empty($url['lastmod'])) { echo "<lastmod>" . htmlspecialchars($url['lastmod'], ENT_XML1) . "</lastmod>"; }
+    echo "  <url><loc>" . htmlspecialchars($url['loc'], ENT_XML1 | ENT_QUOTES, 'UTF-8') . "</loc>";
+    $lastmod = sitemap_lastmod((string)($url['lastmod'] ?? ''));
+    if ($lastmod !== '') { echo "<lastmod>" . htmlspecialchars($lastmod, ENT_XML1 | ENT_QUOTES, 'UTF-8') . "</lastmod>"; }
     echo "</url>\n";
 }
 echo "</urlset>\n";
+ob_end_flush();
 PHP;
         $template = str_replace('__INCLUDE_CORPORATE_EVENTS_PAGE__', $includeCorporateEventsPage, $template);
-        return str_replace('__DB_PATH__', addslashes($dbPath), $template);
+        return str_replace('__SITEMAP_DB_PATH__', var_export($dbPath, true), $template);
     }
 
     private function buildReserveHandler(string $dbPath, string $recaptchaSecretKey): string
