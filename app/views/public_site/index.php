@@ -122,6 +122,24 @@
                 <textarea name="newsletter_consent_text" class="form-control" rows="2" required><?= htmlspecialchars($newsletterConsentText ?? '') ?></textarea>
             </div>
             <div class="col-md-6">
+                <label class="form-label" for="recaptcha-mode">Tipo de reCAPTCHA</label>
+                <select class="form-select" id="recaptcha-mode" name="recaptcha_mode">
+                    <option value="v3" <?= ($captchaConfig['mode'] ?? 'v2') === 'v3' ? 'selected' : '' ?>>v3 — automático, sem desafios</option>
+                    <option value="v2" <?= ($captchaConfig['mode'] ?? 'v2') === 'v2' ? 'selected' : '' ?>>v2 — caixa Não sou um robô</option>
+                </select>
+                <div class="form-text">Para filtragem silenciosa, escolhe v3 e indica um par de chaves v3 da Google. Ao mudar o tipo, preenche ambas as chaves.</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="recaptcha-score">Confiança mínima para v3</label>
+                <input class="form-control" id="recaptcha-score" type="number" name="recaptcha_min_score" min="0.1" max="0.9" step="0.1" value="<?= htmlspecialchars((string)($captchaConfig['score'] ?? 0.5)) ?>">
+                <div class="form-text">Começa em 0.5. Um valor maior bloqueia mais pedidos e pode recusar visitantes legítimos.</div>
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="recaptcha-hosts">Domínios autorizados para v3</label>
+                <input class="form-control" id="recaptcha-hosts" name="recaptcha_allowed_hosts" value="<?= htmlspecialchars(implode(', ', $captchaConfig['hosts'] ?? ['chorarderir.com', 'www.chorarderir.com'])) ?>" required>
+                <div class="form-text">Domínios separados por vírgulas, sem https://. Autoriza-os também na consola Google.</div>
+            </div>
+            <div class="col-md-6">
                 <label class="form-label">reCAPTCHA chave de site</label>
                 <input type="text" name="recaptcha_site_key" class="form-control" value="<?= htmlspecialchars($recaptchaSiteKey ?? '') ?>" placeholder="6Lc...">
                 <div class="form-text">Chave pública usada no HTML dos formulários públicos.</div>
@@ -129,7 +147,7 @@
             <div class="col-md-6">
                 <label class="form-label">reCAPTCHA chave secreta</label>
                 <input type="password" name="recaptcha_secret_key" class="form-control" value="" autocomplete="new-password" placeholder="<?= !empty($recaptchaSecretConfigured) ? 'Guardada — deixa vazio para manter' : 'Indica a chave secreta' ?>">
-                <div class="form-text"><?= !empty($recaptchaSecretConfigured) ? 'Existe uma chave secreta guardada. Deixa vazio para a manter ou cola uma nova para substituir.' : 'Ainda não existe chave secreta guardada.' ?> As reservas exigem as duas chaves reCAPTCHA v2 válidas e nova publicação do website.</div>
+                <div class="form-text"><?= !empty($recaptchaSecretConfigured) ? 'Existe uma chave secreta guardada. Deixa vazio para a manter ou cola uma nova para substituir.' : 'Ainda não existe chave secreta guardada.' ?> As duas chaves devem corresponder ao tipo selecionado. Guarda e publica novamente para aplicar.</div>
             </div>
             <div class="col-12">
                 <button class="btn btn-primary">Guardar e publicar website</button>

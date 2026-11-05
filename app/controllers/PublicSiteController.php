@@ -16,6 +16,7 @@ class PublicSiteController extends BaseController
         $newsletterConsentText = $settings->get('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.');
         $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
         $recaptchaSecretConfigured = trim((string)$settings->get('recaptcha_secret_key', '')) !== '';
+        $captchaConfig = $settings->captchaConfiguration();
         $siteBannerEnabled = $settings->get('site_banner_enabled', '0');
         $siteBannerText = $settings->get('site_banner_text', '');
         $siteBannerButtonText = $settings->get('site_banner_button_text', 'Ver eventos');
@@ -23,7 +24,7 @@ class PublicSiteController extends BaseController
         $siteBannerImageUrl = $settings->get('site_banner_image_url', '');
         $corporateEventsPage = $this->corporateEventsPageSettings($settings);
 
-        $this->render('public_site/index', compact('defaultPath', 'pages', 'corporateEventsPage', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText', 'recaptchaSiteKey', 'recaptchaSecretConfigured', 'siteBannerEnabled', 'siteBannerText', 'siteBannerButtonText', 'siteBannerUrl', 'siteBannerImageUrl'));
+        $this->render('public_site/index', compact('defaultPath', 'pages', 'corporateEventsPage', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText', 'recaptchaSiteKey', 'recaptchaSecretConfigured', 'captchaConfig', 'siteBannerEnabled', 'siteBannerText', 'siteBannerButtonText', 'siteBannerUrl', 'siteBannerImageUrl'));
     }
 
     public function publish(): void
@@ -47,6 +48,7 @@ class PublicSiteController extends BaseController
         try {
             $settings = new SiteSetting($this->db);
             $captchaKeys = $settings->saveRecaptchaKeys($_POST);
+            $captchaConfig = $settings->captchaConfiguration();
             $settings->set('home_tagline', trim((string)($_POST['home_tagline'] ?? '')));
             $settings->set('home_title', trim((string)($_POST['home_title'] ?? '')));
             $settings->set('home_description', trim((string)($_POST['home_description'] ?? '')));
@@ -86,19 +88,19 @@ class PublicSiteController extends BaseController
             ];
             $corporateEventsPage = $this->corporateEventsPageSettings($settings);
 
-            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($dbPath, $homeCopy, $siteBanner, $newsletterConsentText, $recaptchaSiteKey, $corporateEventsPage)) === false) {
+            if (file_put_contents($targetPath . '/index.php', $this->buildPublicIndex($dbPath, $homeCopy, $siteBanner, $newsletterConsentText, $recaptchaSiteKey, $corporateEventsPage, $captchaConfig)) === false) {
                 throw new RuntimeException('Falha ao escrever index.php no destino.');
             }
             if (file_put_contents($targetPath . '/index.html', $this->buildIndexHtmlRedirect()) === false) {
                 throw new RuntimeException('Falha ao escrever index.html no destino.');
             }
-            if (file_put_contents($targetPath . '/reserve.php', $this->buildReserveHandler($dbPath, $recaptchaSecretKey)) === false) {
+            if (file_put_contents($targetPath . '/reserve.php', $this->buildReserveHandler($dbPath, $recaptchaSecretKey, $captchaConfig)) === false) {
                 throw new RuntimeException('Falha ao escrever reserve.php no destino.');
             }
-            if (file_put_contents($targetPath . '/subscribe.php', $this->buildSubscribeHandler($dbPath, $recaptchaSecretKey)) === false) {
+            if (file_put_contents($targetPath . '/subscribe.php', $this->buildSubscribeHandler($dbPath, $recaptchaSecretKey, $captchaConfig)) === false) {
                 throw new RuntimeException('Falha ao escrever subscribe.php no destino.');
             }
-            if (file_put_contents($targetPath . '/contact.php', $this->buildContactHandler($dbPath, $recaptchaSecretKey)) === false) {
+            if (file_put_contents($targetPath . '/contact.php', $this->buildContactHandler($dbPath, $recaptchaSecretKey, $captchaConfig)) === false) {
                 throw new RuntimeException('Falha ao escrever contact.php no destino.');
             }
             if (file_put_contents($targetPath . '/sitemap.php', $this->buildSitemapGenerator($dbPath, $corporateEventsPage)) === false) {
@@ -166,7 +168,7 @@ class PublicSiteController extends BaseController
         ];
     }
 
-    private function buildPublicIndex(string $dbPath, array $homeCopy, array $siteBanner, string $newsletterConsentText, string $recaptchaSiteKey, array $corporateEventsPage): string
+    private function buildPublicIndex(string $dbPath, array $homeCopy, array $siteBanner, string $newsletterConsentText, string $recaptchaSiteKey, array $corporateEventsPage, array $captchaConfig = []): string
     {
         $homeCopyJson = json_encode($homeCopy, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $siteBannerJson = json_encode($siteBanner, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
@@ -175,6 +177,7 @@ class PublicSiteController extends BaseController
         $template = <<<'PHP'
 <?php
 __PUBLIC_PAGE_HELPERS__
+__PUBLIC_CAPTCHA_SUPPORT__
 __RESERVATION_SECURITY__
 $reservationFormToken = reservation_form_token();
 $events = [];
@@ -618,7 +621,7 @@ function render_corporate_proposal_form(array $corporateEventsPage, string $reca
         <div class="col-md-6"><label class="form-label" for="proposal_audience">Nº de participantes</label><input id="proposal_audience" type="number" min="1" class="form-control form-control-lg" name="audience_size" placeholder="Ex.: 120"></div>
         <div class="col-md-6"><label class="form-label" for="proposal_format">Formato pretendido</label><select id="proposal_format" class="form-select form-select-lg" name="event_format"><option value="">Selecionar formato</option><option>Stand up comedy</option><option>Apresentação / hosting</option><option>Team building com humor</option><option>Ativação de marca</option><option>Outro formato</option></select></div>
         <div class="col-12"><label class="form-label" for="proposal_message">Objetivo e briefing</label><textarea id="proposal_message" class="form-control form-control-lg" name="message" rows="5" placeholder="Objetivo do evento, perfil do público, timings, orçamento indicativo ou notas relevantes." required></textarea></div>
-        <?php if ($hasRecaptcha): ?><div class="col-12"><div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div></div><?php endif; ?>
+        <?php if ($hasRecaptcha): ?><div class="col-12"><?php public_captcha_widget($recaptchaSiteKey, $hasRecaptcha); ?></div><?php endif; ?>
         <div class="col-12"><button class="btn btn-brand btn-lg px-5">Enviar pedido de proposta</button></div>
       </form>
     </section>
@@ -1314,7 +1317,7 @@ function render_partners_section(array $partners): void {
               <?php elseif ($msg === 'captcha_unavailable'): ?>
                 <div class="alert alert-warning">As reservas online estão temporariamente indisponíveis. Contacta a organização.</div>
               <?php elseif ($msg === 'captcha'): ?>
-                <div class="alert alert-warning">Validação de segurança falhou. Confirma o reCAPTCHA e tenta novamente.</div>
+                <div class="alert alert-warning">Não foi possível validar este pedido. Atualiza a página e tenta novamente.</div>
               <?php endif; ?>
               <h2 class="section-heading"><?php echo htmlspecialchars((string)$page['title']); ?></h2>
               <?php if ($selectedEvent !== null): ?>
@@ -1453,7 +1456,7 @@ function render_partners_section(array $partners): void {
                     <?php if (in_array('message', $contactFields, true)): ?><div class="col-md-8"><textarea class="form-control form-control-lg" name="message" rows="4" placeholder="Mensagem" required></textarea></div><?php endif; ?>
                     <?php if ($hasRecaptcha): ?>
                       <div class="col-md-8 d-flex justify-content-center">
-                        <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div>
+                        <?php public_captcha_widget($recaptchaSiteKey, $hasRecaptcha); ?>
                       </div>
                     <?php endif; ?>
                     <div class="col-md-8 text-center">
@@ -1514,7 +1517,7 @@ function render_partners_section(array $partners): void {
                 </div>
                 <?php if ($hasRecaptcha): ?>
                   <div class="col-12 d-flex justify-content-center">
-                    <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div>
+                    <?php public_captcha_widget($recaptchaSiteKey, $hasRecaptcha); ?>
                   </div>
                 <?php endif; ?>
                 <div class="col-md-6"><button class="btn btn-brand w-100">Confirmar reserva</button></div>
@@ -1546,7 +1549,7 @@ function render_partners_section(array $partners): void {
           </div>
         </div>
       </section>
-      <div class="modal fade" id="seriesReserveModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content bg-dark text-white"><div class="modal-header border-secondary"><div><h2 class="modal-title h5">Reservar sessão</h2><p class="small text-secondary mb-0" id="seriesReserveInfo"></p></div><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="post" action="/reserve.php" class="row g-3"><input type="hidden" name="reservation_token" value="<?php echo htmlspecialchars($reservationFormToken, ENT_QUOTES, 'UTF-8'); ?>"><div hidden aria-hidden="true"><input name="reservation_website" tabindex="-1" autocomplete="off" value=""></div><input type="hidden" name="event_id" id="seriesReserveEventId"><div class="col-12"><label class="form-label">Nome</label><input name="customer_name" required class="form-control" autocomplete="name"></div><div class="col-12"><label class="form-label">Email</label><input type="email" name="customer_email" required class="form-control" autocomplete="email"></div><div class="col-7"><label class="form-label">Telefone</label><input name="customer_phone" class="form-control" autocomplete="tel"></div><div class="col-5"><label class="form-label">Lugares</label><input type="number" min="1" max="20" value="1" name="tickets" class="form-control"></div><div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" value="1" name="gdpr_consent" id="seriesGdpr" required><label class="form-check-label small" for="seriesGdpr">Autorizo o tratamento dos meus dados para gerir esta reserva.</label></div></div><?php if ($hasRecaptcha): ?><div class="col-12 d-flex justify-content-center"><div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div></div><?php endif; ?><div class="col-12"><button class="btn btn-brand btn-lg w-100">Confirmar reserva</button></div></form></div></div></div></div>
+      <div class="modal fade" id="seriesReserveModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content bg-dark text-white"><div class="modal-header border-secondary"><div><h2 class="modal-title h5">Reservar sessão</h2><p class="small text-secondary mb-0" id="seriesReserveInfo"></p></div><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="post" action="/reserve.php" class="row g-3"><input type="hidden" name="reservation_token" value="<?php echo htmlspecialchars($reservationFormToken, ENT_QUOTES, 'UTF-8'); ?>"><div hidden aria-hidden="true"><input name="reservation_website" tabindex="-1" autocomplete="off" value=""></div><input type="hidden" name="event_id" id="seriesReserveEventId"><div class="col-12"><label class="form-label">Nome</label><input name="customer_name" required class="form-control" autocomplete="name"></div><div class="col-12"><label class="form-label">Email</label><input type="email" name="customer_email" required class="form-control" autocomplete="email"></div><div class="col-7"><label class="form-label">Telefone</label><input name="customer_phone" class="form-control" autocomplete="tel"></div><div class="col-5"><label class="form-label">Lugares</label><input type="number" min="1" max="20" value="1" name="tickets" class="form-control"></div><div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" value="1" name="gdpr_consent" id="seriesGdpr" required><label class="form-check-label small" for="seriesGdpr">Autorizo o tratamento dos meus dados para gerir esta reserva.</label></div></div><?php if ($hasRecaptcha): ?><div class="col-12 d-flex justify-content-center"><?php public_captcha_widget($recaptchaSiteKey, $hasRecaptcha); ?></div><?php endif; ?><div class="col-12"><button class="btn btn-brand btn-lg w-100">Confirmar reserva</button></div></form></div></div></div></div>
       <script>document.querySelectorAll('.reserve-trigger').forEach(function(button){button.addEventListener('click',function(){document.getElementById('seriesReserveEventId').value=this.dataset.eventId;document.getElementById('seriesReserveInfo').textContent=this.dataset.eventInfo;});});</script>
     <?php elseif ($isEventView): ?>
       <section class="section-block agenda-section pt-5">
@@ -1595,7 +1598,7 @@ function render_partners_section(array $partners): void {
                   <div class="col-md-4"><label class="form-label" for="eventReserveTickets">N.º de bilhetes</label><input id="eventReserveTickets" type="number" min="1" <?php if ($selectedAvailable !== null): ?>max="<?php echo min(20, (int)$selectedAvailable); ?>"<?php else: ?>max="20"<?php endif; ?> value="1" name="tickets" required class="form-control"></div>
                   <div class="col-12"><label class="form-label" for="eventReserveNotes">Notas <span class="text-secondary">(opcional)</span></label><textarea id="eventReserveNotes" name="notes" class="form-control" rows="2"></textarea></div>
                   <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" value="1" name="gdpr_consent" id="eventReserveGdpr" required><label class="form-check-label small text-secondary" for="eventReserveGdpr">Autorizo o tratamento dos meus dados pessoais para gestão desta reserva, nos termos do Regulamento Geral sobre a Proteção de Dados (RGPD). Compreendo que posso retirar o consentimento a qualquer momento, sem comprometer a licitude do tratamento efetuado anteriormente.</label></div></div>
-                  <?php if ($hasRecaptcha): ?><div class="col-12"><div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div></div><?php endif; ?>
+                  <?php if ($hasRecaptcha): ?><div class="col-12"><?php public_captcha_widget($recaptchaSiteKey, $hasRecaptcha); ?></div><?php endif; ?>
                   <div class="col-12 col-md-5"><button class="btn btn-brand btn-lg w-100">Confirmar reserva</button></div>
                 </form>
               </div>
@@ -1630,7 +1633,7 @@ function render_partners_section(array $partners): void {
                 </div>
                 <?php if ($hasRecaptcha): ?>
                   <div class="col-12 d-flex justify-content-center">
-                    <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div>
+                    <?php public_captcha_widget($recaptchaSiteKey, $hasRecaptcha); ?>
                   </div>
                 <?php endif; ?>
                 <div class="col-md-6"><button class="btn btn-brand w-100">Confirmar reserva</button></div>
@@ -1689,7 +1692,14 @@ function render_partners_section(array $partners): void {
   </footer>
 
   <?php if ($hasRecaptcha): ?>
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <?php if ($publicCaptchaConfig['mode'] === 'v3'): ?>
+      <script src="https://www.google.com/recaptcha/api.js?render=<?php echo rawurlencode($recaptchaSiteKey); ?>" async defer></script>
+      <script>window.cdrRecaptchaSiteKey = <?php echo json_encode($recaptchaSiteKey, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+__RECAPTCHA_V3_JS__
+      </script>
+    <?php else: ?>
+      <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <?php endif; ?>
   <?php endif; ?>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
@@ -1817,6 +1827,8 @@ PHP;
 
         $security = file_get_contents(__DIR__ . '/../helpers/reservation_security.php');
         $template = str_replace('__RESERVATION_SECURITY__', preg_replace('/^<\?php\s*/', '', $security), $template);
+        $template = str_replace('__PUBLIC_CAPTCHA_SUPPORT__', $this->buildCaptchaSupport($captchaConfig), $template);
+        $template = str_replace('__RECAPTCHA_V3_JS__', file_get_contents(__DIR__ . '/../helpers/recaptcha_v3.js'), $template);
         $helper = file_get_contents(__DIR__ . '/../helpers/public_pages.php');
         $template = str_replace('__PUBLIC_PAGE_HELPERS__', preg_replace('/^<\?php\s*/', '', $helper), $template);
         $template = str_replace('__SITE_BANNER_JSON__', addslashes($siteBannerJson), $template);
@@ -2030,10 +2042,18 @@ PHP;
         return str_replace('__SITEMAP_DB_PATH__', var_export($dbPath, true), $template);
     }
 
-    private function buildReserveHandler(string $dbPath, string $recaptchaSecretKey): string
+    private function buildCaptchaSupport(array $config): string
+    {
+        $config = array_merge(['mode' => 'v2', 'score' => 0.5, 'hosts' => ['chorarderir.com', 'www.chorarderir.com']], $config);
+        $helper = file_get_contents(__DIR__ . '/../helpers/public_captcha.php');
+        return preg_replace('/^<\?php\s*/', '', $helper) . "\n$" . 'publicCaptchaConfig = ' . var_export($config, true) . ";\n";
+    }
+
+    private function buildReserveHandler(string $dbPath, string $recaptchaSecretKey, array $captchaConfig = []): string
     {
         $template = <<<'PHP'
 <?php
+__PUBLIC_CAPTCHA_SUPPORT__
 __RESERVATION_SECURITY__
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /');
@@ -2076,30 +2096,9 @@ if ($captchaSecret === '') {
     header('Location: /?msg=captcha_unavailable#eventos');
     exit;
 }
-if ($captchaSecret !== '') {
-    $captchaToken = reservation_post_string($_POST, 'g-recaptcha-response');
-    if ($captchaToken === '') {
-        header('Location: /?msg=captcha#eventos');
-        exit;
-    }
-
-    $captchaCheck = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
-            'content' => http_build_query([
-                'secret' => $captchaSecret,
-                'response' => $captchaToken,
-                'remoteip' => $_SERVER['REMOTE_ADDR'] ?? '',
-            ]),
-            'timeout' => 8,
-        ],
-    ]));
-    $captchaResult = is_string($captchaCheck) ? json_decode($captchaCheck, true) : null;
-    if (!is_array($captchaResult) || empty($captchaResult['success'])) {
-        header('Location: /?msg=captcha#eventos');
-        exit;
-    }
+if (!public_captcha_verified($captchaSecret, 'reserve', $publicCaptchaConfig)) {
+    header('Location: /?msg=captcha#eventos');
+    exit;
 }
 
 try {
@@ -2277,44 +2276,25 @@ PHP;
 
         $security = file_get_contents(__DIR__ . '/../helpers/reservation_security.php');
         $template = str_replace('__RESERVATION_SECURITY__', preg_replace('/^<\?php\s*/', '', $security), $template);
+        $template = str_replace('__PUBLIC_CAPTCHA_SUPPORT__', $this->buildCaptchaSupport($captchaConfig), $template);
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
         return str_replace('__RECAPTCHA_SECRET_KEY__', addslashes(trim($recaptchaSecretKey)), $template);
     }
 
-    private function buildSubscribeHandler(string $dbPath, string $recaptchaSecretKey): string
+    private function buildSubscribeHandler(string $dbPath, string $recaptchaSecretKey, array $captchaConfig = []): string
     {
         $template = <<<'PHP'
 <?php
+__PUBLIC_CAPTCHA_SUPPORT__
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /');
     exit;
 }
 
 $captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
-if ($captchaSecret !== '') {
-    $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));
-    if ($captchaToken === '') {
-        header('Location: /?msg=captcha#newsletter');
-        exit;
-    }
-
-    $captchaCheck = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
-            'content' => http_build_query([
-                'secret' => $captchaSecret,
-                'response' => $captchaToken,
-                'remoteip' => $_SERVER['REMOTE_ADDR'] ?? '',
-            ]),
-            'timeout' => 8,
-        ],
-    ]));
-    $captchaResult = is_string($captchaCheck) ? json_decode($captchaCheck, true) : null;
-    if (!is_array($captchaResult) || empty($captchaResult['success'])) {
-        header('Location: /?msg=captcha#newsletter');
-        exit;
-    }
+if (($captchaSecret !== '' || $publicCaptchaConfig['mode'] === 'v3') && !public_captcha_verified($captchaSecret, 'subscribe', $publicCaptchaConfig)) {
+    header('Location: /?msg=captcha#newsletter');
+    exit;
 }
 
 $email = trim((string)($_POST['email'] ?? ''));
@@ -2371,15 +2351,17 @@ try {
 }
 PHP;
 
+        $template = str_replace('__PUBLIC_CAPTCHA_SUPPORT__', $this->buildCaptchaSupport($captchaConfig), $template);
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
         $template = str_replace('__NEWSLETTER_CONSENT__', addslashes(trim((string)($_POST['newsletter_consent_text'] ?? ''))), $template);
         return str_replace('__RECAPTCHA_SECRET_KEY__', addslashes(trim($recaptchaSecretKey)), $template);
     }
 
-    private function buildContactHandler(string $dbPath, string $recaptchaSecretKey): string
+    private function buildContactHandler(string $dbPath, string $recaptchaSecretKey, array $captchaConfig = []): string
     {
         $template = <<<'PHP'
 <?php
+__PUBLIC_CAPTCHA_SUPPORT__
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /');
     exit;
@@ -2390,30 +2372,9 @@ $isBlogPost = preg_match('#^blog/[a-z0-9-]+$#', $pageSlug) === 1;
 $anchor = ($pageSlug === 'eventos-corporativos' || $isBlogPost) ? 'pedido-proposta' : ($pageSlug !== '' ? $pageSlug : 'contactos');
 $returnBase = $pageSlug === 'eventos-corporativos' ? '/eventos-corporativos/' : ($isBlogPost ? '/' . $pageSlug : '/');
 $captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
-if ($captchaSecret !== '') {
-    $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));
-    if ($captchaToken === '') {
-        header('Location: ' . $returnBase . '?msg=contact_captcha#' . rawurlencode($anchor));
-        exit;
-    }
-
-    $captchaCheck = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
-            'content' => http_build_query([
-                'secret' => $captchaSecret,
-                'response' => $captchaToken,
-                'remoteip' => $_SERVER['REMOTE_ADDR'] ?? '',
-            ]),
-            'timeout' => 8,
-        ],
-    ]));
-    $captchaResult = is_string($captchaCheck) ? json_decode($captchaCheck, true) : null;
-    if (!is_array($captchaResult) || empty($captchaResult['success'])) {
-        header('Location: ' . $returnBase . '?msg=contact_captcha#' . rawurlencode($anchor));
-        exit;
-    }
+if (($captchaSecret !== '' || $publicCaptchaConfig['mode'] === 'v3') && !public_captcha_verified($captchaSecret, 'contact', $publicCaptchaConfig)) {
+    header('Location: ' . $returnBase . '?msg=contact_captcha#' . rawurlencode($anchor));
+    exit;
 }
 
 $name = trim((string)($_POST['name'] ?? ''));
@@ -2498,6 +2459,7 @@ try {
 }
 PHP;
 
+        $template = str_replace('__PUBLIC_CAPTCHA_SUPPORT__', $this->buildCaptchaSupport($captchaConfig), $template);
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
         return str_replace('__RECAPTCHA_SECRET_KEY__', addslashes(trim($recaptchaSecretKey)), $template);
     }

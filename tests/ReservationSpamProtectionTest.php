@@ -121,6 +121,18 @@ MOCK;
     $assert(!reservation_rate_allowed($db, 'new-ip', 'SAME@example.test'), 'IP rotation bypassed email limit.');
     $db->exec('UPDATE reservation_attempts SET attempted_at = attempted_at - 3601');
     $assert(reservation_rate_allowed($db, 'new-ip', 'same@example.test'), 'Expired rate window did not reset.');
+    $v3config = ['mode'=>'v3', 'score'=>0.5, 'hosts'=>['chorarderir.com']];
+    $v3source = $handler->invoke($controller, $dbPath, 'test-secret', $v3config);
+    $v3mock = str_replace("json_encode(['success' => (\$_POST['g-recaptcha-response'] ?? '') === 'valid-captcha'])", "json_encode(['success'=>true, 'score'=>(float)(\$_POST['_test_score'] ?? 0.9), 'action'=>\$_POST['_test_action'] ?? 'reserve', 'hostname'=>\$_POST['_test_host'] ?? 'chorarderir.com', 'challenge_ts'=>gmdate('c', time() - (int)(\$_POST['_test_age'] ?? 0))])", $mock);
+    file_put_contents($directory . '/reserve-v3.php', str_replace('<?php', "<?php\n" . $v3mock . "\n", $v3source));
+    $db->exec('UPDATE events SET reservation_capacity=100,reservations_open=1; DELETE FROM reservation_attempts');
+    foreach (['_test_score'=>'0.1', '_test_action'=>'contact', '_test_host'=>'evil.test', '_test_age'=>'180'] as $key=>$value) {
+        $db->exec('DELETE FROM reservation_attempts');
+        $bad = $form(); $bad[$key] = $value;
+        $assert(strpos($request('/reserve-v3.php', $bad)['location'], 'msg=captcha#') !== false, 'Exported v3 handler accepted invalid result: ' . $key);
+    }
+    $db->exec('DELETE FROM reservation_attempts');
+    $assert(strpos($request('/reserve-v3.php', $form())['location'], 'msg=ok') !== false, 'Valid automatic v3 reservation failed.');
     fwrite(STDOUT, "Reservation spam protection passed ($checks checks).\n");
 } finally {
     putenv('SQLITE_PATH');

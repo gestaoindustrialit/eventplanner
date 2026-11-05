@@ -1,3 +1,15 @@
+# Atualização para CAPTCHA v3 automático
+
+Para instalação rápida, descarregar `downloads/reservas-captcha-v3.zip`: contém apenas os nove ficheiros necessários e `INSTALAR.txt`, com os passos. Não contém base de dados nem chaves privadas de produção.
+
+Escolher reCAPTCHA v3 no painel, colar as duas chaves v3 do mesmo registo, usar pontuação mínima inicial 0.5 e indicar os domínios autorizados. Depois carregar em **Guardar e publicar website**. O modo guardado anteriormente mantém-se até esta alteração explícita, para não aplicar v3 a chaves v2 existentes. Trocar o tipo exige preencher ambas as chaves. v2 invisível pode pedir desafios; v3 não apresenta puzzles nem caixa de seleção. O selo da Google mantém-se visível.
+
+O token é criado no envio e o servidor verifica sucesso, pontuação, ação, domínio e idade máxima de 120 segundos (tolerância de relógio futura de 30 segundos). Reservas, contactos e newsletter têm ações distintas. Indisponibilidade da Google, token ausente ou resposta inválida não aprovam pedidos v3. A interface preserva os dados em falhas de carregamento/rede e permite tentar novamente, gerando novo token.
+
+Testes específicos atuais: proteção de reservas 36, ações em grupo 24, gravação/publicação CAPTCHA 21 e validação v3 32: **113 verificações**. Chromium local verificou envio silencioso, inclusão do token, prevenção de duplo envio e recuperação após falha. A verificação real das chaves continua a exigir o teste no domínio publicado.
+
+---
+
 # Reservas: proteção contra spam, ações em grupo e CAPTCHA
 
 A ação administrativa Eliminar não cria reservas. As novas entradas podem ser submissões ao `reserve.php` público que ficam visíveis quando a lista é atualizada. Confirmar a origem real nos registos HTTP do alojamento; o código e as imagens não comprovam uma infeção.
@@ -6,8 +18,8 @@ A ação administrativa Eliminar não cria reservas. As novas entradas podem ser
 
 1. Durante o incidente, fechar as reservas do evento em Reservas → Configuração por evento. O handler já consulta este estado na base de dados.
 2. Fazer backup da base de dados SQLite e dos ficheiros públicos publicados.
-3. Descarregar o ZIP da versão indicada no pull request e extrair para uma pasta temporária. Substituir **apenas os sete ficheiros da lista abaixo**, mantendo os caminhos relativos à pasta `eventplanner` do alojamento. Não substituir a base de dados nem executar `install.php` ou `setup_db.sh`.
-4. Em Publicar website, configurar as duas chaves válidas de reCAPTCHA **v2 checkbox** para o domínio. A antiga chave secreta predefinida estava no repositório: substituí-la na consola Google e guardar a nova apenas nas definições do alojamento. Esta alteração remove o valor predefinido do código; não elimina versões históricas nem roda a chave automaticamente.
+3. Descarregar o ZIP da versão indicada no pull request e extrair para uma pasta temporária. Substituir **apenas os nove ficheiros da lista abaixo**, mantendo os caminhos relativos à pasta `eventplanner` do alojamento. Não substituir a base de dados nem executar `install.php` ou `setup_db.sh`.
+4. Em Publicar website, configurar as duas chaves válidas para o tipo selecionado (**v3** para verificação automática) no domínio. A antiga chave secreta predefinida estava no repositório: substituí-la na consola Google e guardar a nova apenas nas definições do alojamento. Esta alteração remove o valor predefinido do código; não elimina versões históricas nem roda a chave automaticamente.
 5. Carregar em **Guardar e publicar website**. É obrigatório regenerar **index.php e reserve.php em conjunto**: atualizar só o painel não protege o handler já exportado. Limpar caches de página/CDN para não servir formulários antigos. Não usar cache partilhada nas páginas com os formulários e respeitar `Cache-Control: private, no-store`.
 6. Confirmar a configuração PHP de sessões, incluindo uma pasta de sessões gravável. A sessão pública usa o cookie separado `cdr_reservations`.
 7. Reabrir as reservas e verificar manualmente uma reserva legítima com o CAPTCHA real. Apagar a reserva de teste. Confirmar nos registos que os pedidos abusivos já não criam reservas.
@@ -19,11 +31,13 @@ A ação administrativa Eliminar não cria reservas. As novas entradas podem ser
 - `app/controllers/ReservationController.php`
 - `app/models/Reservation.php`
 - `app/models/SiteSetting.php`
-- `app/helpers/reservation_security.php` (novo)
+- `app/helpers/reservation_security.php`
+- `app/helpers/public_captcha.php` (novo)
+- `app/helpers/recaptcha_v3.js` (novo)
 - `app/views/public_site/index.php`
 - `app/views/reservations/index.php`
 
-O ZIP do GitHub contém o projeto completo; para esta atualização bastam os sete ficheiros acima. Os testes e este documento servem para revisão e não precisam de ser copiados para o alojamento. A tabela de limites de submissão é criada automaticamente; não é necessário resetar a base de dados.
+O ZIP do GitHub contém o projeto completo; para esta atualização bastam os nove ficheiros acima. Os testes e este documento servem para revisão e não precisam de ser copiados para o alojamento. A tabela de limites de submissão é criada automaticamente; não é necessário resetar a base de dados.
 
 ## Ações em grupo
 

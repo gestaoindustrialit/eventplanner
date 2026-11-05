@@ -51,6 +51,18 @@ try {
     $assert(strpos($index, $replacement) === false, 'Private key leaked into the public HTML template.');
     $view = file_get_contents(__DIR__ . '/../app/views/public_site/index.php');
     $assert(strpos($view, 'type="password" name="recaptcha_secret_key"') !== false && strpos($view, 'htmlspecialchars($recaptchaSecretKey') === false, 'Admin page exposes the secret value.');
+    try { $settings->saveRecaptchaKeys(['recaptcha_mode' => 'v3']); throw new RuntimeException('Type switch accepted without replacement keys.'); } catch (InvalidArgumentException $expected) {}
+    $v3 = ['recaptcha_mode' => 'v3', 'recaptcha_site_key' => $site, 'recaptcha_secret_key' => $replacement, 'recaptcha_min_score' => '0.6', 'recaptcha_allowed_hosts' => 'chorarderir.com, WWW.chorarderir.com'];
+    $settings->saveRecaptchaKeys($v3);
+    $assert($settings->captchaConfiguration() === ['mode'=>'v3', 'score'=>0.6, 'hosts'=>['chorarderir.com','www.chorarderir.com']], 'v3 configuration did not persist.');
+    foreach ([['recaptcha_mode'=>'enterprise'], ['recaptcha_min_score'=>'0'], ['recaptcha_allowed_hosts'=>'https://evil.test/path']] as $bad) {
+        try { $settings->saveRecaptchaKeys($bad); throw new RuntimeException('Invalid v3 configuration accepted.'); } catch (InvalidArgumentException $expected) {}
+        $assert($settings->captchaConfiguration()['score'] === 0.6, 'Invalid update damaged v3 configuration.');
+    }
+    $_POST = ['target_path' => $directory . '/published', 'recaptcha_secret_key' => ''];
+    try { (new CaptchaPublishTestController($db))->publish(); } catch (CaptchaTestRedirect $expected) {}
+    $assert(strpos(file_get_contents($directory . '/published/reserve.php'), "'mode' => 'v3'") !== false, 'Publish discarded the saved v3 mode.');
+    $assert(strpos(file_get_contents($directory . '/published/index.php'), 'grecaptcha.execute') !== false, 'Publish omitted the v3 client.');
     fwrite(STDOUT, "CAPTCHA persistence and publishing passed ($checks checks).\n");
 } finally {
     putenv('SQLITE_PATH');
