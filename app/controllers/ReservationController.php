@@ -37,6 +37,10 @@ class ReservationController extends BaseController
     public function index(): void
     {
         requireAdmin();
+        if (empty($_SESSION['reservation_bulk_token'])) {
+            $_SESSION['reservation_bulk_token'] = bin2hex(random_bytes(32));
+        }
+        $bulkToken = (string)$_SESSION['reservation_bulk_token'];
         $reservationModel = new Reservation($this->db);
         $selectedEventId = max(0, (int)($_GET['event_id'] ?? 0));
         $admissionFilter = (string)($_GET['admission'] ?? 'all');
@@ -75,6 +79,7 @@ class ReservationController extends BaseController
         ) ?? '';
 
         $this->render('reservations/index', compact(
+            'bulkToken',
             'reservations',
             'eventOverview',
             'emailTemplateA',
@@ -253,11 +258,11 @@ class ReservationController extends BaseController
         $this->redirect(BASE_URL . '?controller=reservation&action=index');
     }
 
-    private function sendConfirmationEmail(Reservation $reservationModel, array $reservation): void
+    private function sendConfirmationEmail(Reservation $reservationModel, array $reservation): bool
     {
         $customerEmail = trim((string)($reservation['customer_email'] ?? ''));
         if ($customerEmail === '') {
-            return;
+            return false;
         }
 
         $subject = 'Reserva confirmada - ' . (string)($reservation['event_title'] ?? 'Evento');
@@ -306,7 +311,64 @@ class ReservationController extends BaseController
             . '</div>'
             . '</div>';
 
-        @mail($customerEmail, $subject, $htmlBody, implode("\r\n", $headers));
+        return @mail($customerEmail, $subject, $htmlBody, implode("\r\n", $headers));
+    }
+
+    public function bulk(): void
+    {
+        requireAdmin();
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            http_response_code(405);
+            header('Allow: POST');
+            return;
+        }
+        $token = $_POST['bulk_token'] ?? null;
+        if (!is_string($token) || empty($_SESSION['reservation_bulk_token'])
+            || !hash_equals((string)$_SESSION['reservation_bulk_token'], $token)) {
+            http_response_code(403);
+            echo 'Sessão inválida. Atualiza a página e tenta novamente.';
+            return;
+        }
+        $ids = $_POST['reservation_ids'] ?? [];
+        $action = $_POST['bulk_action'] ?? '';
+        $eventId = max(0, (int)($_POST['event_id'] ?? 0));
+        $admission = $_POST['admission'] ?? 'all';
+        $url = BASE_URL . '?controller=reservation&action=index&event_id=' . $eventId
+            . '&admission=' . (in_array($admission, ['all', 'pending', 'validated'], true) ? $admission : 'all');
+        try {
+            if (!is_array($ids) || !is_string($action)) {
+                throw new InvalidArgumentException('Seleção de reservas inválida.');
+            }
+            $model = new Reservation($this->db);
+            $changed = $model->applyBulkAction($ids, $action);
+        } catch (InvalidArgumentException $e) {
+            flash('error', $e->getMessage());
+            $this->redirect($url);
+        } catch (Throwable $e) {
+            error_log('Bulk reservation action failed: ' . $e->getMessage());
+            flash('error', 'Não foi possível aplicar a ação. Nenhuma reserva foi alterada.');
+            $this->redirect($url);
+        }
+        $labels = ['confirm' => 'confirmada(s)', 'cancel' => 'cancelada(s)', 'delete' => 'eliminada(s)'];
+        flash('success', count($changed) . ' reserva(s) ' . $labels[$action] . '.');
+        if ($action === 'confirm') {
+            $failed = 0;
+            foreach ($changed as $id) {
+                try {
+                    $reservation = $model->find($id);
+                    if (!$reservation || !$this->sendConfirmationEmail($model, $reservation)) {
+                        $failed++;
+                    }
+                } catch (Throwable $e) {
+                    $failed++;
+                    error_log('Bulk confirmation email failed for reservation ' . $id);
+                }
+            }
+            if ($failed > 0) {
+                flash('error', 'As reservas foram confirmadas, mas não foi possível enviar ' . $failed . ' e-mail(s).');
+            }
+        }
+        $this->redirect($url);
     }
 
     public function delete(): void

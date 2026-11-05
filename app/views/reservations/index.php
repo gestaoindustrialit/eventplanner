@@ -176,10 +176,29 @@
     </div>
 </div>
 
+<form id="reservation-bulk" method="post" action="<?= BASE_URL ?>?controller=reservation&amp;action=bulk" class="card card-body mb-3">
+    <input type="hidden" name="bulk_token" value="<?= htmlspecialchars($bulkToken, ENT_QUOTES, 'UTF-8') ?>">
+    <input type="hidden" name="event_id" value="<?= (int)$selectedEventId ?>">
+    <input type="hidden" name="admission" value="<?= htmlspecialchars($admissionFilter) ?>">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span id="reservation-selection-count" aria-live="polite">0 reservas selecionadas</span>
+        <label class="visually-hidden" for="reservation-bulk-action">Ação para as reservas selecionadas</label>
+        <select name="bulk_action" id="reservation-bulk-action" class="form-select w-auto" required>
+            <option value="">Escolher ação…</option>
+            <option value="confirm">Confirmar selecionadas</option>
+            <option value="cancel">Cancelar selecionadas</option>
+            <option value="delete">Eliminar selecionadas</option>
+        </select>
+        <button class="btn btn-dark" id="reservation-bulk-submit" disabled>Aplicar às selecionadas</button>
+        <button type="button" class="btn btn-outline-secondary" id="reservation-clear-selection">Limpar seleção</button>
+    </div>
+    <small class="text-muted mt-2">Seleciona até 500 reservas de cada vez. Confirmar envia o e-mail de confirmação; eliminar remove também os bilhetes.</small>
+</form>
 <div class="table-responsive">
-    <table class="table table-striped align-middle searchable-table">
+    <table class="table table-striped align-middle searchable-table" id="reservations-table">
         <thead>
             <tr>
+                <th><input type="checkbox" class="form-check-input" id="reservation-select-all" aria-label="Selecionar até 500 reservas visíveis"></th>
                 <th>Evento</th>
                 <th>Cliente</th>
                 <th>Contacto</th>
@@ -192,6 +211,7 @@
         <tbody>
             <?php foreach ($reservations as $reservation): ?>
                 <tr>
+                    <td><input type="checkbox" class="form-check-input reservation-select" name="reservation_ids[]" value="<?= (int)$reservation['id'] ?>" form="reservation-bulk" aria-label="Selecionar reserva de <?= htmlspecialchars($reservation['customer_name'], ENT_QUOTES, 'UTF-8') ?>"></td>
                     <td>
                         <div class="d-flex gap-2 align-items-start">
                             <?php if (!empty($reservation['event_poster_url'])): ?>
@@ -245,8 +265,60 @@
                 </tr>
             <?php endforeach; ?>
             <?php if (empty($reservations)): ?>
-                <tr><td colspan="7" class="text-muted py-4 text-center">Não existem reservas para os filtros selecionados.</td></tr>
+                <tr><td colspan="8" class="text-muted py-4 text-center">Não existem reservas para os filtros selecionados.</td></tr>
             <?php endif; ?>
         </tbody>
     </table>
 </div>
+
+<script>
+(function () {
+    const form = document.getElementById('reservation-bulk');
+    const table = document.getElementById('reservations-table');
+    const all = document.getElementById('reservation-select-all');
+    const boxes = Array.from(table.querySelectorAll('.reservation-select'));
+    const submit = document.getElementById('reservation-bulk-submit');
+    function visibleBoxes() { return boxes.filter(function (box) { return box.closest('tr').getClientRects().length > 0; }); }
+    function update() {
+        const selected = boxes.filter(function (box) { return box.checked; });
+        const visible = visibleBoxes();
+        const checkedVisible = visible.filter(function (box) { return box.checked; }).length;
+        document.getElementById('reservation-selection-count').textContent = selected.length + ' reservas selecionadas';
+        submit.disabled = selected.length === 0;
+        all.checked = visible.length > 0 && checkedVisible === visible.length;
+        all.indeterminate = checkedVisible > 0 && checkedVisible < visible.length;
+    }
+    all.addEventListener('change', function () {
+        let count = boxes.filter(function (box) { return box.checked; }).length;
+        visibleBoxes().forEach(function (box) {
+            if (!all.checked) { if (box.checked) count--; box.checked = false; }
+            else if (!box.checked && count < 500) { box.checked = true; count++; }
+        });
+        update();
+    });
+    boxes.forEach(function (box) { box.addEventListener('change', function () {
+        if (boxes.filter(function (item) { return item.checked; }).length > 500) {
+            box.checked = false;
+            alert('Seleciona no máximo 500 reservas de cada vez.');
+        }
+        update();
+    }); });
+    document.getElementById('reservation-clear-selection').addEventListener('click', function () {
+        boxes.forEach(function (box) { box.checked = false; }); update();
+    });
+    new MutationObserver(function () {
+        boxes.forEach(function (box) { if (!box.closest('tr').getClientRects().length) box.checked = false; });
+        update();
+    }).observe(table.tBodies[0], {subtree: true, attributes: true, attributeFilter: ['style', 'hidden']});
+    form.addEventListener('submit', function (event) {
+        const count = boxes.filter(function (box) { return box.checked; }).length;
+        const action = document.getElementById('reservation-bulk-action').value;
+        const labels = {confirm: 'Confirmar', cancel: 'Cancelar', delete: 'Eliminar definitivamente'};
+        if (!count || !labels[action] || !confirm(labels[action] + ' ' + count + ' reserva(s)?' + (action === 'delete' ? ' Os bilhetes associados também serão eliminados.' : ''))) {
+            event.preventDefault(); return;
+        }
+        submit.disabled = true;
+    });
+    update();
+}());
+</script>

@@ -202,8 +202,53 @@ class Reservation
 
     public function delete(int $id): void
     {
-        $stmt = $this->db->prepare('DELETE FROM event_reservations WHERE id = :id');
-        $stmt->execute(['id' => $id]);
+        $this->db->beginTransaction();
+        try {
+            $this->db->prepare('DELETE FROM event_reservation_tickets WHERE reservation_id = :id')->execute(['id' => $id]);
+            $this->db->prepare('DELETE FROM event_reservations WHERE id = :id')->execute(['id' => $id]);
+            $this->db->commit();
+        } catch (Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    public function applyBulkAction(array $ids, string $action): array
+    {
+        if (!$ids || count($ids) > 500 || !in_array($action, ['confirm', 'cancel', 'delete'], true)) {
+            throw new InvalidArgumentException('Seleciona entre 1 e 500 reservas e uma ação válida.');
+        }
+        foreach ($ids as $id) {
+            if ((!is_int($id) && !is_string($id)) || !preg_match('/^[1-9][0-9]*$/D', (string)$id)) {
+                throw new InvalidArgumentException('Seleção de reservas inválida.');
+            }
+        }
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $this->db->beginTransaction();
+        try {
+            $query = $this->db->prepare('SELECT id, status FROM event_reservations WHERE id IN (' . $placeholders . ')');
+            $query->execute($ids);
+            $rows = $query->fetchAll(PDO::FETCH_ASSOC);
+            $changed = [];
+            $status = $action === 'confirm' ? 'confirmed' : 'cancelled';
+            foreach ($rows as $row) {
+                if ($action === 'delete' || $row['status'] !== $status) {
+                    $changed[] = (int)$row['id'];
+                }
+            }
+            if ($action === 'delete') {
+                $this->db->prepare('DELETE FROM event_reservation_tickets WHERE reservation_id IN (' . $placeholders . ')')->execute($ids);
+                $this->db->prepare('DELETE FROM event_reservations WHERE id IN (' . $placeholders . ')')->execute($ids);
+            } else {
+                $this->db->prepare('UPDATE event_reservations SET status = ? WHERE id IN (' . $placeholders . ')')->execute(array_merge([$status], $ids));
+            }
+            $this->db->commit();
+            return $changed;
+        } catch (Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
     }
 
     public function ticketsByReservation(int $reservationId): array
