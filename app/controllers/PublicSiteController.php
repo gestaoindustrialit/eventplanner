@@ -14,8 +14,8 @@ class PublicSiteController extends BaseController
         $homeDescription = $settings->get('home_description', 'Layout inspirado no visual "Big Picture": imagem de fundo marcante, tipografia forte e conteúdo em cartões translúcidos para foco total no evento.');
         $homeBackgroundUrl = $settings->get('home_background_url', 'https://chorarderir.com/blog-img/cdr-stand-up-comedy-producao-booking.jpg');
         $newsletterConsentText = $settings->get('newsletter_consent_text', 'Autorizo o tratamento dos meus dados para receber comunicações de eventos e novidades, de acordo com o RGPD.');
-        $recaptchaSiteKey = $settings->get('recaptcha_site_key', '6LcrsLOsAAAAAB9NZ-X2s7ugJ7LsNAamg4VXW0wt');
-        $recaptchaSecretKey = $settings->get('recaptcha_secret_key', '6LcrsLOsAAAAAJniWgy3I-C6PPXk_yTlfFc2U-Hi');
+        $recaptchaSiteKey = $settings->get('recaptcha_site_key', '');
+        $recaptchaSecretConfigured = trim((string)$settings->get('recaptcha_secret_key', '')) !== '';
         $siteBannerEnabled = $settings->get('site_banner_enabled', '0');
         $siteBannerText = $settings->get('site_banner_text', '');
         $siteBannerButtonText = $settings->get('site_banner_button_text', 'Ver eventos');
@@ -23,7 +23,7 @@ class PublicSiteController extends BaseController
         $siteBannerImageUrl = $settings->get('site_banner_image_url', '');
         $corporateEventsPage = $this->corporateEventsPageSettings($settings);
 
-        $this->render('public_site/index', compact('defaultPath', 'pages', 'corporateEventsPage', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText', 'recaptchaSiteKey', 'recaptchaSecretKey', 'siteBannerEnabled', 'siteBannerText', 'siteBannerButtonText', 'siteBannerUrl', 'siteBannerImageUrl'));
+        $this->render('public_site/index', compact('defaultPath', 'pages', 'corporateEventsPage', 'homeTagline', 'homeTitle', 'homeDescription', 'homeBackgroundUrl', 'newsletterConsentText', 'recaptchaSiteKey', 'recaptchaSecretConfigured', 'siteBannerEnabled', 'siteBannerText', 'siteBannerButtonText', 'siteBannerUrl', 'siteBannerImageUrl'));
     }
 
     public function publish(): void
@@ -46,13 +46,12 @@ class PublicSiteController extends BaseController
 
         try {
             $settings = new SiteSetting($this->db);
+            $captchaKeys = $settings->saveRecaptchaKeys($_POST);
             $settings->set('home_tagline', trim((string)($_POST['home_tagline'] ?? '')));
             $settings->set('home_title', trim((string)($_POST['home_title'] ?? '')));
             $settings->set('home_description', trim((string)($_POST['home_description'] ?? '')));
             $settings->set('home_background_url', trim((string)($_POST['home_background_url'] ?? '')));
             $settings->set('newsletter_consent_text', trim((string)($_POST['newsletter_consent_text'] ?? '')));
-            $settings->set('recaptcha_site_key', trim((string)($_POST['recaptcha_site_key'] ?? '')));
-            $settings->set('recaptcha_secret_key', trim((string)($_POST['recaptcha_secret_key'] ?? '')));
             $settings->set('site_banner_enabled', isset($_POST['site_banner_enabled']) ? '1' : '0');
             $settings->set('site_banner_text', trim((string)($_POST['site_banner_text'] ?? '')));
             $settings->set('site_banner_button_text', trim((string)($_POST['site_banner_button_text'] ?? '')));
@@ -76,8 +75,8 @@ class PublicSiteController extends BaseController
                 'background_url' => $settings->get('home_background_url', ''),
             ];
             $newsletterConsentText = $settings->get('newsletter_consent_text', '');
-            $recaptchaSiteKey = $settings->get('recaptcha_site_key', '6LcrsLOsAAAAAB9NZ-X2s7ugJ7LsNAamg4VXW0wt');
-            $recaptchaSecretKey = $settings->get('recaptcha_secret_key', '6LcrsLOsAAAAAJniWgy3I-C6PPXk_yTlfFc2U-Hi');
+            $recaptchaSiteKey = $captchaKeys['site'];
+            $recaptchaSecretKey = $captchaKeys['secret'];
             $siteBanner = [
                 'enabled' => $settings->get('site_banner_enabled', '0') === '1',
                 'text' => $settings->get('site_banner_text', ''),
@@ -176,6 +175,8 @@ class PublicSiteController extends BaseController
         $template = <<<'PHP'
 <?php
 __PUBLIC_PAGE_HELPERS__
+__RESERVATION_SECURITY__
+$reservationFormToken = reservation_form_token();
 $events = [];
 $eventSeries = [];
 $pages = [];
@@ -1304,6 +1305,14 @@ function render_partners_section(array $partners): void {
                 <div class="alert alert-warning">As reservas para esse evento estão fechadas.</div>
               <?php elseif ($msg === 'soldout'): ?>
                 <div class="alert alert-warning">Não existem lugares suficientes disponíveis para essa reserva.</div>
+              <?php elseif ($msg === 'security'): ?>
+                <div class="alert alert-warning">Reabre o formulário e tenta novamente. A sessão da reserva expirou ou o pedido já foi enviado.</div>
+              <?php elseif ($msg === 'invalid'): ?>
+                <div class="alert alert-warning">Confirma o nome, email e telefone. Podes reservar entre 1 e 20 bilhetes por pedido.</div>
+              <?php elseif ($msg === 'rate'): ?>
+                <div class="alert alert-warning">Foram enviados demasiados pedidos. Aguarda alguns minutos antes de tentar novamente.</div>
+              <?php elseif ($msg === 'captcha_unavailable'): ?>
+                <div class="alert alert-warning">As reservas online estão temporariamente indisponíveis. Contacta a organização.</div>
               <?php elseif ($msg === 'captcha'): ?>
                 <div class="alert alert-warning">Validação de segurança falhou. Confirma o reCAPTCHA e tenta novamente.</div>
               <?php endif; ?>
@@ -1491,12 +1500,12 @@ function render_partners_section(array $partners): void {
             </div>
             <div class="modal-body">
               <p class="small text-secondary mb-3" id="reserveEventInfo">Preenche os dados para concluir a tua reserva.</p>
-              <form method="post" action="/reserve.php" class="row g-2" id="reserveModalForm">
+              <form method="post" action="/reserve.php" class="row g-2" id="reserveModalForm"><input type="hidden" name="reservation_token" value="<?php echo htmlspecialchars($reservationFormToken, ENT_QUOTES, 'UTF-8'); ?>"><div hidden aria-hidden="true"><input name="reservation_website" tabindex="-1" autocomplete="off" value=""></div>
                 <input type="hidden" name="event_id" id="reserveEventId">
                 <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
                 <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
                 <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
-                <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" id="reserveTickets" class="form-control" placeholder="Nº bilhetes"></div>
+                <div class="col-md-6"><input type="number" min="1" max="20" value="1" name="tickets" id="reserveTickets" class="form-control" placeholder="Nº bilhetes"></div>
                 <div class="col-12">
                   <div class="form-check mt-2">
                     <input class="form-check-input" type="checkbox" value="1" name="gdpr_consent" id="reserveGdprConsent" required>
@@ -1537,7 +1546,7 @@ function render_partners_section(array $partners): void {
           </div>
         </div>
       </section>
-      <div class="modal fade" id="seriesReserveModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content bg-dark text-white"><div class="modal-header border-secondary"><div><h2 class="modal-title h5">Reservar sessão</h2><p class="small text-secondary mb-0" id="seriesReserveInfo"></p></div><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="post" action="/reserve.php" class="row g-3"><input type="hidden" name="event_id" id="seriesReserveEventId"><div class="col-12"><label class="form-label">Nome</label><input name="customer_name" required class="form-control" autocomplete="name"></div><div class="col-12"><label class="form-label">Email</label><input type="email" name="customer_email" required class="form-control" autocomplete="email"></div><div class="col-7"><label class="form-label">Telefone</label><input name="customer_phone" class="form-control" autocomplete="tel"></div><div class="col-5"><label class="form-label">Lugares</label><input type="number" min="1" value="1" name="tickets" class="form-control"></div><div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" value="1" name="gdpr_consent" id="seriesGdpr" required><label class="form-check-label small" for="seriesGdpr">Autorizo o tratamento dos meus dados para gerir esta reserva.</label></div></div><?php if ($hasRecaptcha): ?><div class="col-12 d-flex justify-content-center"><div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div></div><?php endif; ?><div class="col-12"><button class="btn btn-brand btn-lg w-100">Confirmar reserva</button></div></form></div></div></div></div>
+      <div class="modal fade" id="seriesReserveModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content bg-dark text-white"><div class="modal-header border-secondary"><div><h2 class="modal-title h5">Reservar sessão</h2><p class="small text-secondary mb-0" id="seriesReserveInfo"></p></div><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="post" action="/reserve.php" class="row g-3"><input type="hidden" name="reservation_token" value="<?php echo htmlspecialchars($reservationFormToken, ENT_QUOTES, 'UTF-8'); ?>"><div hidden aria-hidden="true"><input name="reservation_website" tabindex="-1" autocomplete="off" value=""></div><input type="hidden" name="event_id" id="seriesReserveEventId"><div class="col-12"><label class="form-label">Nome</label><input name="customer_name" required class="form-control" autocomplete="name"></div><div class="col-12"><label class="form-label">Email</label><input type="email" name="customer_email" required class="form-control" autocomplete="email"></div><div class="col-7"><label class="form-label">Telefone</label><input name="customer_phone" class="form-control" autocomplete="tel"></div><div class="col-5"><label class="form-label">Lugares</label><input type="number" min="1" max="20" value="1" name="tickets" class="form-control"></div><div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" value="1" name="gdpr_consent" id="seriesGdpr" required><label class="form-check-label small" for="seriesGdpr">Autorizo o tratamento dos meus dados para gerir esta reserva.</label></div></div><?php if ($hasRecaptcha): ?><div class="col-12 d-flex justify-content-center"><div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div></div><?php endif; ?><div class="col-12"><button class="btn btn-brand btn-lg w-100">Confirmar reserva</button></div></form></div></div></div></div>
       <script>document.querySelectorAll('.reserve-trigger').forEach(function(button){button.addEventListener('click',function(){document.getElementById('seriesReserveEventId').value=this.dataset.eventId;document.getElementById('seriesReserveInfo').textContent=this.dataset.eventInfo;});});</script>
     <?php elseif ($isEventView): ?>
       <section class="section-block agenda-section pt-5">
@@ -1578,12 +1587,12 @@ function render_partners_section(array $partners): void {
               <div class="surface-card p-3 p-lg-4 mt-4 reservation-inline-card">
                 <h2 class="h4 mb-2">Reserva o teu lugar</h2>
                 <p class="small text-secondary">Preenche os dados abaixo e recebe a confirmação da reserva.</p>
-                <form method="post" action="/reserve.php" class="row g-3">
+                <form method="post" action="/reserve.php" class="row g-3"><input type="hidden" name="reservation_token" value="<?php echo htmlspecialchars($reservationFormToken, ENT_QUOTES, 'UTF-8'); ?>"><div hidden aria-hidden="true"><input name="reservation_website" tabindex="-1" autocomplete="off" value=""></div>
                   <input type="hidden" name="event_id" value="<?php echo (int)$selectedEvent['id']; ?>">
                   <div class="col-12"><label class="form-label" for="eventReserveName">Nome</label><input id="eventReserveName" name="customer_name" required class="form-control" autocomplete="name"></div>
                   <div class="col-md-6"><label class="form-label" for="eventReserveEmail">Email</label><input id="eventReserveEmail" type="email" name="customer_email" required class="form-control" autocomplete="email"></div>
                   <div class="col-md-6"><label class="form-label" for="eventReservePhone">Telefone</label><input id="eventReservePhone" name="customer_phone" class="form-control" autocomplete="tel"></div>
-                  <div class="col-md-4"><label class="form-label" for="eventReserveTickets">N.º de bilhetes</label><input id="eventReserveTickets" type="number" min="1" <?php if ($selectedAvailable !== null): ?>max="<?php echo (int)$selectedAvailable; ?>"<?php endif; ?> value="1" name="tickets" required class="form-control"></div>
+                  <div class="col-md-4"><label class="form-label" for="eventReserveTickets">N.º de bilhetes</label><input id="eventReserveTickets" type="number" min="1" <?php if ($selectedAvailable !== null): ?>max="<?php echo min(20, (int)$selectedAvailable); ?>"<?php else: ?>max="20"<?php endif; ?> value="1" name="tickets" required class="form-control"></div>
                   <div class="col-12"><label class="form-label" for="eventReserveNotes">Notas <span class="text-secondary">(opcional)</span></label><textarea id="eventReserveNotes" name="notes" class="form-control" rows="2"></textarea></div>
                   <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" value="1" name="gdpr_consent" id="eventReserveGdpr" required><label class="form-check-label small text-secondary" for="eventReserveGdpr">Autorizo o tratamento dos meus dados pessoais para gestão desta reserva, nos termos do Regulamento Geral sobre a Proteção de Dados (RGPD). Compreendo que posso retirar o consentimento a qualquer momento, sem comprometer a licitude do tratamento efetuado anteriormente.</label></div></div>
                   <?php if ($hasRecaptcha): ?><div class="col-12"><div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaSiteKey); ?>"></div></div><?php endif; ?>
@@ -1607,12 +1616,12 @@ function render_partners_section(array $partners): void {
             </div>
             <div class="modal-body">
               <p class="small text-secondary mb-3" id="reserveEventInfo">Preenche os dados para concluir a tua reserva.</p>
-              <form method="post" action="/reserve.php" class="row g-2" id="reserveModalForm">
+              <form method="post" action="/reserve.php" class="row g-2" id="reserveModalForm"><input type="hidden" name="reservation_token" value="<?php echo htmlspecialchars($reservationFormToken, ENT_QUOTES, 'UTF-8'); ?>"><div hidden aria-hidden="true"><input name="reservation_website" tabindex="-1" autocomplete="off" value=""></div>
                 <input type="hidden" name="event_id" id="reserveEventId">
                 <div class="col-12"><input name="customer_name" required class="form-control" placeholder="Nome"></div>
                 <div class="col-md-6"><input type="email" name="customer_email" required class="form-control" placeholder="Email"></div>
                 <div class="col-md-6"><input name="customer_phone" class="form-control" placeholder="Telefone"></div>
-                <div class="col-md-6"><input type="number" min="1" value="1" name="tickets" id="reserveTickets" class="form-control" placeholder="Nº bilhetes"></div>
+                <div class="col-md-6"><input type="number" min="1" max="20" value="1" name="tickets" id="reserveTickets" class="form-control" placeholder="Nº bilhetes"></div>
                 <div class="col-12">
                   <div class="form-check mt-2">
                     <input class="form-check-input" type="checkbox" value="1" name="gdpr_consent" id="reserveGdprConsent" required>
@@ -1777,9 +1786,9 @@ function render_partners_section(array $partners): void {
         if (reserveTickets) {
           reserveTickets.value = '1';
           if (!Number.isNaN(maxTickets) && maxTickets > 0) {
-            reserveTickets.max = String(maxTickets);
+            reserveTickets.max = String(Math.min(20, maxTickets));
           } else {
-            reserveTickets.removeAttribute('max');
+            reserveTickets.max = '20';
           }
         }
         if (reserveEventInfo) {
@@ -1806,6 +1815,8 @@ function render_partners_section(array $partners): void {
 </html>
 PHP;
 
+        $security = file_get_contents(__DIR__ . '/../helpers/reservation_security.php');
+        $template = str_replace('__RESERVATION_SECURITY__', preg_replace('/^<\?php\s*/', '', $security), $template);
         $helper = file_get_contents(__DIR__ . '/../helpers/public_pages.php');
         $template = str_replace('__PUBLIC_PAGE_HELPERS__', preg_replace('/^<\?php\s*/', '', $helper), $template);
         $template = str_replace('__SITE_BANNER_JSON__', addslashes($siteBannerJson), $template);
@@ -2023,19 +2034,50 @@ PHP;
     {
         $template = <<<'PHP'
 <?php
+__RESERVATION_SECURITY__
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /');
     exit;
 }
 
-if ((string)($_POST['gdpr_consent'] ?? '') !== '1') {
+if (reservation_post_string($_POST, 'gdpr_consent') !== '1') {
     header('Location: /?msg=gdpr#eventos');
     exit;
 }
 
+if (!reservation_consume_token($_POST)) {
+    header('Location: /?msg=security#eventos');
+    exit;
+}
+if (!reservation_valid_input($_POST)) {
+    header('Location: /?msg=invalid#eventos');
+    exit;
+}
+
+$reservationTransaction = false;
+try {
+    $db = new PDO('sqlite:__DB_PATH__', null, null, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+    $db->exec('PRAGMA busy_timeout = 5000');
+    if (!reservation_rate_allowed($db, (string)($_SERVER['REMOTE_ADDR'] ?? ''), reservation_post_string($_POST, 'customer_email'))) {
+        header('Location: /?msg=rate#eventos');
+        exit;
+    }
+} catch (Throwable $e) {
+    error_log('Reservation protection failed: ' . $e->getMessage());
+    header('Location: /?msg=error#eventos');
+    exit;
+}
+
 $captchaSecret = trim((string)'__RECAPTCHA_SECRET_KEY__');
+if ($captchaSecret === '') {
+    header('Location: /?msg=captcha_unavailable#eventos');
+    exit;
+}
 if ($captchaSecret !== '') {
-    $captchaToken = trim((string)($_POST['g-recaptcha-response'] ?? ''));
+    $captchaToken = reservation_post_string($_POST, 'g-recaptcha-response');
     if ($captchaToken === '') {
         header('Location: /?msg=captcha#eventos');
         exit;
@@ -2067,13 +2109,18 @@ try {
     ]);
 
     $eventId = (int)($_POST['event_id'] ?? 0);
-    $tickets = max(1, (int)($_POST['tickets'] ?? 1));
+    $tickets = (int)$_POST['tickets'];
+    // Serialize the capacity check and inserts to prevent concurrent overbooking.
+    $db->exec('PRAGMA busy_timeout = 5000');
+    $db->exec('BEGIN IMMEDIATE');
+    $reservationTransaction = true;
 
     $eventStmt = $db->prepare("SELECT e.id, e.title, e.date, e.time, e.reservations_open, e.reservation_capacity, COALESCE(SUM(CASE WHEN r.status != 'cancelled' THEN r.tickets ELSE 0 END), 0) AS active_tickets FROM events e LEFT JOIN event_reservations r ON r.event_id = e.id WHERE e.id = :event_id AND e.is_visible = 1 AND e.date >= date('now') GROUP BY e.id");
     $eventStmt->execute(['event_id' => $eventId]);
     $event = $eventStmt->fetch();
 
     if (!$event || (int)$event['reservations_open'] !== 1) {
+        $db->exec('ROLLBACK');
         header('Location: /?msg=closed#eventos');
         exit;
     }
@@ -2081,6 +2128,7 @@ try {
     $capacity = (int)($event['reservation_capacity'] ?? 0);
     $activeTickets = (int)($event['active_tickets'] ?? 0);
     if ($capacity > 0 && ($activeTickets + $tickets) > $capacity) {
+        $db->exec('ROLLBACK');
         header('Location: /?msg=soldout#eventos');
         exit;
     }
@@ -2175,6 +2223,9 @@ try {
         ];
     }
 
+    $db->exec('COMMIT');
+    $reservationTransaction = false;
+
     if ($customerEmail !== '') {
         $subject = 'Confirmação de reserva - ' . (string)($event['title'] ?? 'Evento');
         $headers = [
@@ -2215,11 +2266,17 @@ try {
     header('Location: /?msg=ok#eventos');
     exit;
 } catch (Throwable $e) {
+    if ($reservationTransaction) {
+        $db->exec('ROLLBACK');
+    }
+    error_log('Reservation creation failed: ' . $e->getMessage());
     header('Location: /?msg=error#eventos');
     exit;
 }
 PHP;
 
+        $security = file_get_contents(__DIR__ . '/../helpers/reservation_security.php');
+        $template = str_replace('__RESERVATION_SECURITY__', preg_replace('/^<\?php\s*/', '', $security), $template);
         $template = str_replace('__DB_PATH__', addslashes($dbPath), $template);
         return str_replace('__RECAPTCHA_SECRET_KEY__', addslashes(trim($recaptchaSecretKey)), $template);
     }

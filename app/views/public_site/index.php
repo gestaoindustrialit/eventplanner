@@ -128,8 +128,8 @@
             </div>
             <div class="col-md-6">
                 <label class="form-label">reCAPTCHA chave secreta</label>
-                <input type="text" name="recaptcha_secret_key" class="form-control" value="<?= htmlspecialchars($recaptchaSecretKey ?? '') ?>" placeholder="6Lc...">
-                <div class="form-text">Chave privada usada para validar no servidor (reserve/contact/subscribe).</div>
+                <input type="password" name="recaptcha_secret_key" class="form-control" value="" autocomplete="new-password" placeholder="<?= !empty($recaptchaSecretConfigured) ? 'Guardada — deixa vazio para manter' : 'Indica a chave secreta' ?>">
+                <div class="form-text"><?= !empty($recaptchaSecretConfigured) ? 'Existe uma chave secreta guardada. Deixa vazio para a manter ou cola uma nova para substituir.' : 'Ainda não existe chave secreta guardada.' ?> As reservas exigem as duas chaves reCAPTCHA v2 válidas e nova publicação do website.</div>
             </div>
             <div class="col-12">
                 <button class="btn btn-primary">Guardar e publicar website</button>
